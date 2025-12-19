@@ -1,0 +1,14 @@
+<div id="add-wish-form">
+    <h3 class="text-xl font-semibold text-gray-700 mb-4">Add a Wish</h3>
+    <form hx-post="/member/{{ member.id }}/wishes" hx-target="#member-wishes-{{ member.id }}" hx-swap="beforeend" class="space-y-3">
+        <div>
+            <label for="wish_description" class="sr-only">Wish Description</label>
+            <input type="text" id="wish_description" name="description" placeholder="e.g., A new book, noise-cancelling headphones" required
+                   class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+        </div>
+        <button type="submit"
+                class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            Add Wish
+        </button>
+    </form>
+</div>

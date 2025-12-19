@@ -1,0 +1,8 @@
+<div class="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-lg text-sm mb-4">
+    <i class="ph-bold ph-warning-circle mr-2"></i> {{ error }}
+</div>
+<form hx-post="/register" hx-swap="outerHTML">
+    <!-- Re-render del form (simplificado para este partial) -->
+    <p class="text-xs text-gray-400 mb-4">Ocurrió un error. Por favor, recarga o intenta con otro email.</p>
+    <a href="/" class="block w-full bg-white/10 text-center py-2 rounded-lg">Volver a intentar</a>
+</form>

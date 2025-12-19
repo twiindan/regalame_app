@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Lista de Regalos de {{ profile_user.name }} | Regálame{% endblock %}
+{% block description %}Descubre la lista de deseos de {{ profile_user.name }} y reserva el regalo perfecto. Evita duplicados y acierta siempre con Regálame.{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    
+    <div class="text-center mb-12 animate-fade-in-up">
+        <div class="w-24 h-24 mx-auto rounded-full bg-gradient-to-tr from-pink-500 to-violet-500 flex items-center justify-center text-4xl font-bold mb-4 shadow-2xl">
+            {{ profile_user.name[0]|upper }}
+        </div>
+        <h1 class="text-3xl font-bold">Lista de Deseos de {{ profile_user.name }}</h1>
+        <p class="text-gray-400 mt-2">¿Quieres regalarle algo? Aquí tienes sus favoritos.</p>
+
+        <!-- Share Buttons Public Profile -->
+        <div id="share-container" class="flex flex-wrap justify-center gap-2 mt-6">
+            <a id="btn-whatsapp" target="_blank" class="glass-btn px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 hover:text-green-400 cursor-pointer transition-colors">
+                <i class="ph-fill ph-whatsapp-logo text-lg"></i> WhatsApp
+            </a>
+            <button id="btn-native" class="hidden glass-btn px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 hover:text-blue-400 transition-colors">
+                <i class="ph-fill ph-share-network text-lg"></i> Compartir
+            </button>
+            <button id="btn-copy" class="glass-btn px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 hover:text-yellow-400 transition-colors">
+                <i class="ph-fill ph-copy text-lg"></i> Copiar Link
+            </button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {% for wish in profile_user.wishes %}
+            {% set user = current_user %} <!-- Context switch for include -->
+            {% include "partials/wish_item.html" %}
+        {% else %}
+            <div class="col-span-2 text-center py-12 glass-panel rounded-2xl">
+                <p class="text-gray-500">Aún no hay deseos en esta lista.</p>
+            </div>
+        {% endfor %}
+    </div>
+
+    {% if not current_user %}
+    <div class="mt-12 text-center glass-panel rounded-2xl p-8 bg-gradient-to-t from-pink-900/20">
+        <h3 class="text-xl font-bold mb-2">¿Tú también quieres recibir regalos acertados?</h3>
+        <p class="text-gray-400 mb-6">Crea tu propia lista y organiza sorteos con amigos.</p>
+        <a href="/" class="bg-white text-black font-bold px-8 py-3 rounded-xl hover:bg-gray-200 transition-colors">
+            Crear mi cuenta gratis
+        </a>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- Schema.org JSON-LD -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "itemListElement": [
+    {% for wish in profile_user.wishes %}
+    {
+      "@type": "ListItem",
+      "position": {{ loop.index }},
+      "name": "{{ wish.title }}",
+      "url": "{{ wish.url if wish.url else request.url }}",
+      "image": "{{ wish.image_url if wish.image_url else '' }}"
+    }{{ "," if not loop.last }}
+    {% endfor %}
+  ]
+}
+</script>
+
+<!-- Scripts de Compartición Perfil Público -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const currentUrl = window.location.href;
+        const userName = "{{ profile_user.name }}";
+        const shareText = `¡Echa un vistazo a la lista de regalos de ${userName}! 🎁\n${currentUrl}`;
+
+        // 1. WhatsApp
+        const waBtn = document.getElementById('btn-whatsapp');
+        if (waBtn) {
+            waBtn.href = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+        }
+
+        // 2. Nativo (Móvil)
+        const nativeBtn = document.getElementById('btn-native');
+        if (nativeBtn && navigator.share) {
+            nativeBtn.classList.remove('hidden');
+            nativeBtn.classList.add('inline-flex');
+            nativeBtn.addEventListener('click', () => {
+                navigator.share({
+                    title: `Lista de deseos de ${userName}`,
+                    text: `Mira lo que quiere ${userName} para su regalo`,
+                    url: currentUrl
+                }).catch(console.error);
+            });
+        }
+
+        // 3. Copiar
+        const copyBtn = document.getElementById('btn-copy');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', () => {
+                navigator.clipboard.writeText(currentUrl).then(() => {
+                    const originalHTML = copyBtn.innerHTML;
+                    copyBtn.innerHTML = '<i class="ph-bold ph-check text-lg"></i> ¡Copiado!';
+                    copyBtn.classList.add('text-green-400', 'bg-green-400/10', 'border-green-400/20');
+                    
+                    setTimeout(() => {
+                        copyBtn.innerHTML = originalHTML;
+                        copyBtn.classList.remove('text-green-400', 'bg-green-400/10', 'border-green-400/20');
+                    }, 2000);
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

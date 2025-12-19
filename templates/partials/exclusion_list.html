@@ -1,0 +1,24 @@
+{% for exclusion in group.exclusions %}
+    <!-- Necesitamos buscar los nombres de los usuarios manualmente o pasar un objeto enriquecido -->
+    <!-- Como SQLModel carga lazy, exclusion.giver debería funcionar si definimos la relación inversa en GroupExclusion, 
+         pero no la definimos. Vamos a hacerlo simple iterando members en jinja o asumiendo IDs -->
+    
+    {% set giver = group.members | selectattr("id", "equalto", exclusion.giver_id) | first %}
+    {% set forbidden = group.members | selectattr("id", "equalto", exclusion.forbidden_giftee_id) | first %}
+
+    <div class="flex items-center justify-between bg-white/5 p-3 rounded-lg text-sm mb-2" id="exclusion-{{ exclusion.id }}">
+        <div class="flex items-center gap-2">
+            <span class="font-bold text-pink-300">{{ giver.name if giver else 'Usuario' }}</span>
+            <span class="text-gray-400">no puede regalar a</span>
+            <span class="font-bold text-indigo-300">{{ forbidden.name if forbidden else 'Usuario' }}</span>
+        </div>
+        <button hx-delete="/group/{{ group.id }}/exclusions/{{ exclusion.id }}"
+                hx-target="#exclusion-{{ exclusion.id }}"
+                hx-swap="outerHTML"
+                class="text-gray-500 hover:text-red-400 transition-colors">
+            <i class="ph-bold ph-trash"></i>
+        </button>
+    </div>
+{% else %}
+    <p class="text-gray-500 text-sm italic text-center py-2">No hay restricciones definidas.</p>
+{% endfor %}

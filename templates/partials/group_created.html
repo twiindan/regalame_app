@@ -1,0 +1,5 @@
+<div id="group-creation-response" class="mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-md">
+    <p class="font-bold">Group "{{ group.name }}" created successfully!</p>
+    <p>Share this code with your friends to join: <span class="font-mono bg-green-200 px-2 py-1 rounded">{{ group.join_code }}</span></p>
+    <a href="/group/{{ group.id }}" class="text-indigo-600 hover:text-indigo-800 underline">Go to group page</a>
+</div>

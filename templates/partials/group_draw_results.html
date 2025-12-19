@@ -1,0 +1,9 @@
+<div id="draw-section" class="mt-4 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded-md">
+    <p class="font-bold mb-2">Secret Santa has been drawn!</p>
+    <p>Each member can now see who they drew:</p>
+    <ul class="list-disc list-inside mt-2">
+        {% for member in group.members %}
+            <li><a href="/member/{{ member.id }}/my-draw" class="text-blue-600 hover:underline">{{ member.name }}'s Draw Result</a></li>
+        {% endfor %}
+    </ul>
+</div>

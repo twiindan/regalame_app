@@ -1,0 +1,17 @@
+{% if wish.reserved_by_id == user.id %}
+    <button hx-post="/wishes/{{ wish.id }}/toggle-reserve" 
+            hx-target="#reserve-btn-{{ wish.id }}" 
+            class="w-full bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 py-2 rounded-lg text-xs font-bold transition-all uppercase tracking-wide flex items-center justify-center gap-2">
+        <i class="ph-bold ph-x"></i> Liberar
+    </button>
+{% elif wish.reserved_by_id %}
+    <button disabled class="w-full bg-gray-800 text-gray-500 border border-white/5 py-2 rounded-lg text-xs font-bold cursor-not-allowed uppercase tracking-wide flex items-center justify-center gap-2">
+        <i class="ph-fill ph-lock-key"></i> Reservado
+    </button>
+{% else %}
+    <button hx-post="/wishes/{{ wish.id }}/toggle-reserve" 
+            hx-target="#reserve-btn-{{ wish.id }}"
+            class="w-full bg-green-500/20 hover:bg-green-500/30 text-green-300 border border-green-500/30 py-2 rounded-lg text-xs font-bold transition-all uppercase tracking-wide flex items-center justify-center gap-2">
+        <i class="ph-bold ph-check"></i> Me lo pido
+    </button>
+{% endif %}

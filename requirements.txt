@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+sqlmodel
+jinja2
+python-multipart
+passlib[bcrypt]
+python-dotenv
+beautifulsoup4
+requests
+fastapi-mail
+itsdangerous
+psycopg2-binary
+gunicorn
+alembic
+email-validator
+aiosmtplib

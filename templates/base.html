@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- SEO Blocks -->
+    <title>{% block title %}Regálame - El Amigo Invisible Reinventado{% endblock %}</title>
+    <meta name="description" content="{% block description %}La forma más fácil de organizar tu Amigo Invisible, crear listas de regalos con IA y acertar siempre.{% endblock %}">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://regalame.app/">
+    <meta property="og:title" content="{% block og_title %}{{ self.title() }}{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}{{ self.description() }}{% endblock %}">
+    <meta property="og:image" content="https://regalame.app/static/og-image-default.jpg">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://regalame.app/">
+    <meta property="twitter:title" content="{% block twitter_title %}{{ self.title() }}{% endblock %}">
+    <meta property="twitter:description" content="{% block twitter_description %}{{ self.description() }}{% endblock %}">
+    <meta property="twitter:image" content="https://regalame.app/static/og-image-default.jpg">
+
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- TailwindCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        glass: "rgba(255, 255, 255, 0.1)",
+                        glassBorder: "rgba(255, 255, 255, 0.2)",
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+        
+        /* Mesh Gradient Animation */
+        .mesh-bg {
+            background: radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+                        radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
+                        radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+            background-size: 200% 200%;
+            animation: gradient-move 15s ease infinite;
+        }
+        
+        @keyframes gradient-move {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .glass-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.2s;
+        }
+        .glass-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans">
+
+    <!-- Background -->
+    <div class="fixed inset-0 -z-50 mesh-bg"></div>
+
+    <!-- Navbar -->
+    <nav class="fixed top-0 w-full z-50 glass-panel border-b border-white/10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-violet-500 flex items-center">
+                        <i class="ph-fill ph-gift mr-2 text-pink-500"></i>Regálame
+                    </a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    {% if user %}
+                        <span class="text-sm text-gray-300 hidden sm:block">Hola, {{ user.name }}</span>
+                        <a href="/dashboard" class="glass-btn px-4 py-2 rounded-lg text-sm font-medium hover:text-white">Dashboard</a>
+                        <a href="/logout" class="text-gray-400 hover:text-white transition-colors" title="Cerrar Sesión">
+                            <i class="ph ph-sign-out text-xl"></i>
+                        </a>
+                    {% else %}
+                        <a href="/" class="text-sm font-medium hover:text-pink-400 transition-colors">Login</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <main class="flex-grow container mx-auto px-4 pt-24 pb-12">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/5 py-6 text-center text-sm text-gray-500 mt-auto">
+        <p>&copy; 2025 Regálame App. Hecho con Python & HTMX.</p>
+    </footer>
+
+</body>
+</html>

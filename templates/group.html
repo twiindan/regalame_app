@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-8">
+    
+    <!-- Header -->
+    <div class="glass-panel rounded-2xl p-8 relative overflow-hidden">
+        <div class="absolute top-0 right-0 p-4 opacity-10">
+            <i class="ph-fill ph-users-three text-9xl"></i>
+        </div>
+        
+        <div class="relative z-10">
+            <a href="/dashboard" class="text-sm text-gray-400 hover:text-white mb-4 inline-block">&larr; Volver al Dashboard</a>
+            
+            <div class="mb-6">
+                <h1 class="text-4xl font-bold mb-3 pr-16">{{ group.name }}</h1>
+                
+                <!-- Logistics Info Pills -->
+                <div class="flex flex-wrap gap-2">
+                    {% if group.event_date %}
+                    <div class="bg-indigo-500/20 border border-indigo-500/30 text-indigo-200 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide flex items-center">
+                        <i class="ph-fill ph-calendar-blank mr-2"></i> {{ group.event_date.strftime('%d %B') }}
+                    </div>
+                    {% endif %}
+                    {% if group.budget %}
+                    <div class="bg-emerald-500/20 border border-emerald-500/30 text-emerald-200 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide flex items-center">
+                        <i class="ph-fill ph-currency-eur mr-2"></i> {{ group.budget }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="flex flex-col md:flex-row gap-6 mt-6 border-t border-white/10 pt-6">
+                <!-- Code Box -->
+                <div>
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Código de Acceso</span>
+                    <span class="bg-white/10 px-4 py-2 rounded-lg border border-white/10 font-mono text-xl tracking-wider select-all inline-block">
+                        {{ group.code }}
+                    </span>
+                </div>
+
+                <!-- Share Buttons -->
+                <div>
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Invitar Amigos</span>
+                    <div id="share-container" class="flex flex-wrap gap-2">
+                        <!-- WhatsApp -->
+                        <a id="btn-whatsapp" target="_blank" class="glass-btn px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:text-green-400 cursor-pointer transition-colors">
+                            <i class="ph-fill ph-whatsapp-logo text-lg"></i> <span class="hidden sm:inline">WhatsApp</span>
+                        </a>
+                        <!-- Native Share (Mobile) -->
+                        <button id="btn-native" class="hidden glass-btn px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:text-blue-400 transition-colors">
+                            <i class="ph-fill ph-share-network text-lg"></i> Compartir
+                        </button>
+                        <!-- Copy Link -->
+                        <button id="btn-copy" class="glass-btn px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 hover:text-yellow-400 transition-colors">
+                            <i class="ph-fill ph-copy text-lg"></i> Copiar Link
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 text-sm text-gray-400">
+                <span>{{ group.members|length }} Miembros en el grupo</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Draw Section -->
+    {% if not giftee %}
+        {% if is_admin %}
+            <div class="glass-panel rounded-2xl p-8 text-center bg-gradient-to-b from-indigo-900/40 to-transparent border-indigo-500/30">
+                <i class="ph-duotone ph-ticket text-6xl text-indigo-400 mb-4"></i>
+                <h2 class="text-2xl font-bold mb-2">¡Hora del Sorteo!</h2>
+                <p class="text-gray-300 mb-6">Cuando todos estén dentro, pulsa el botón para repartir la suerte.</p>
+                {% if group.members|length < 2 %}
+                    <p class="text-red-400 text-sm bg-red-900/20 py-2 px-4 rounded-lg inline-block">Necesitas al menos 2 miembros</p>
+                {% else %}
+                    <form action="/group/{{ group.id }}/draw" method="POST">
+                        <button type="submit" class="bg-indigo-500 hover:bg-indigo-400 text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg shadow-indigo-900/50 transition-all hover:scale-105">
+                            Realizar Sorteo
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="glass-panel rounded-2xl p-8 text-center">
+                <p class="text-xl text-gray-400">Esperando al administrador para realizar el sorteo...</p>
+            </div>
+        {% endif %}
+    {% else %}
+        <!-- RESULTADO DEL SORTEO -->
+        <div class="glass-panel rounded-2xl p-1 border-pink-500/50 shadow-pink-900/20 shadow-2xl">
+            <div class="bg-gradient-to-r from-pink-900/40 to-purple-900/40 rounded-xl p-8">
+                <h2 class="text-3xl font-bold text-center mb-6">🎁 Tienes que regalar a:</h2>
+                <div class="text-center mb-10">
+                    <span class="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-yellow-200 drop-shadow-sm">
+                        {{ giftee.name }}
+                    </span>
+                </div>
+                
+                <h3 class="text-xl font-semibold mb-4 border-b border-white/10 pb-2">Su Lista de Deseos:</h3>
+                {% if giftee_wishes %}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% for wish in giftee_wishes %}
+                             {% include "partials/wish_item.html" %}
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-center text-gray-400 italic">Este usuario aún no ha añadido deseos. ¡Dile que se apure!</p>
+                {% endif %}
+
+                <!-- Chat Button for Santa -->
+                <div class="mt-8 text-center">
+                    <button onclick="openChat({{ giftee.id }})" 
+                            class="bg-white/10 hover:bg-white/20 border border-white/20 text-white px-6 py-2 rounded-full text-sm font-bold transition-all flex items-center justify-center mx-auto gap-2">
+                        <i class="ph-fill ph-chat-centered-text"></i> Chat Anónimo con {{ giftee.name }}
+                    </button>
+                    <p class="text-xs text-gray-400 mt-2">Tu identidad permanecerá oculta 🤫</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Button for Giftee (to talk to Santa) -->
+        {% if my_santa_id %}
+        <div class="fixed bottom-6 right-6 z-50">
+            <button onclick="openChat({{ my_santa_id }})" 
+                    class="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white px-6 py-4 rounded-full font-bold shadow-2xl shadow-red-900/50 transition-all hover:scale-105 flex items-center gap-3">
+                <span class="text-2xl">🎅</span>
+                <span class="hidden md:inline">Chat con mi Santa</span>
+            </button>
+        </div>
+        {% endif %}
+
+    {% endif %}
+
+    <!-- Members & Invite -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Members List -->
+        <div class="glass-panel rounded-2xl p-6">
+            <h3 class="text-lg font-bold mb-4">Participantes</h3>
+            <ul class="space-y-3">
+                {% for member in group.members %}
+                <li class="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-400 to-green-400 flex items-center justify-center font-bold text-black shadow-lg">
+                        {{ member.name[0]|upper }}
+                    </div>
+                    <span>{{ member.name }}</span>
+                    {% if member.id == group.admin_id %}
+                        <span class="text-xs bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded border border-yellow-500/30">Admin</span>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- Invite Form -->
+        <div class="glass-panel rounded-2xl p-6">
+            <h3 class="text-lg font-bold mb-4">Invitar por Email</h3>
+            <form hx-post="/group/{{ group.id }}/invite" hx-swap="outerHTML" class="space-y-4">
+                <textarea name="emails" rows="3" placeholder="Correos separados por coma..." 
+                          class="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-sm focus:border-indigo-500 outline-none text-white resize-none"></textarea>
+                <button type="submit" class="w-full glass-btn py-2 rounded-lg text-sm font-medium hover:bg-white/10">
+                    Enviar Invitaciones
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Zone -->
+    {% if is_admin %}
+    <div class="glass-panel rounded-2xl p-6 border-white/20 mt-8">
+        <h3 class="text-lg font-bold mb-4 flex items-center text-gray-300">
+            <i class="ph-fill ph-gear mr-2"></i> Zona Admin
+        </h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Edit Logistics -->
+            <div>
+                <h4 class="text-xs font-bold text-gray-400 uppercase mb-3">Editar Logística</h4>
+                <form action="/group/{{ group.id }}/update-logistics" method="POST" class="space-y-4 bg-black/20 p-4 rounded-xl">
+                    <div>
+                        <label class="text-xs text-gray-500 uppercase block mb-1">Presupuesto</label>
+                        <input type="text" name="budget" value="{{ group.budget or '' }}" placeholder="Ej: 30€" class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500 uppercase block mb-1">Fecha Evento</label>
+                        <input type="date" name="event_date" value="{{ group.event_date or '' }}" class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none dark-calendar">
+                    </div>
+                    <button type="submit" class="w-full glass-btn py-2 rounded-lg text-sm font-bold">
+                        Guardar Cambios
+                    </button>
+                </form>
+            </div>
+
+            <!-- Exclusions (Vetos) -->
+            {% if not giftee %}
+            <div>
+                <h4 class="text-xs font-bold text-red-300 uppercase mb-3">Vetos / Restricciones</h4>
+                <form hx-post="/group/{{ group.id }}/exclusions" hx-target="#exclusion-list" class="space-y-3 bg-black/20 p-4 rounded-xl mb-4">
+                    <div class="flex gap-2">
+                         <select name="giver_id" required class="w-1/2 bg-black/20 border border-white/10 rounded-lg px-2 py-2 text-xs text-white outline-none">
+                            <option value="" disabled selected>Quién...</option>
+                            {% for member in group.members %}
+                                <option value="{{ member.id }}" class="text-black">{{ member.name }}</option>
+                            {% endfor %}
+                        </select>
+                         <select name="forbidden_id" required class="w-1/2 bg-black/20 border border-white/10 rounded-lg px-2 py-2 text-xs text-white outline-none">
+                            <option value="" disabled selected>...no regala a</option>
+                            {% for member in group.members %}
+                                <option value="{{ member.id }}" class="text-black">{{ member.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="w-full bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 py-2 rounded-lg text-sm font-bold transition-all">
+                        Añadir Veto
+                    </button>
+                </form>
+                
+                <div id="exclusion-list" class="space-y-2 max-h-40 overflow-y-auto">
+                    {% include "partials/exclusion_list.html" %}
+                </div>
+            </div>
+            {% else %}
+            <div class="flex items-center justify-center h-full text-center text-gray-500 text-sm italic">
+                El sorteo ya está hecho, no se pueden modificar los vetos.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- Chat Modal -->
+<dialog id="chat-modal" class="backdrop:bg-black/80 bg-gray-900 text-white rounded-2xl shadow-2xl w-full max-w-md border border-white/10 p-0 m-auto">
+    <div id="chat-container">
+        <!-- Content loaded via HTMX -->
+        <div class="p-8 text-center">
+            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+            <p>Cargando chat...</p>
+        </div>
+    </div>
+</dialog>
+
+<script>
+    function openChat(userId) {
+        const modal = document.getElementById('chat-modal');
+        const container = document.getElementById('chat-container');
+        
+        // Open modal first
+        modal.showModal();
+        
+        // Trigger HTMX to load content
+        htmx.ajax('GET', `/group/{{ group.id }}/chat/${userId}`, {target: '#chat-container', swap: 'innerHTML'});
+    }
+
+    // Close modal when clicking outside
+    document.getElementById('chat-modal').addEventListener('click', (e) => {
+        const dialogDimensions = e.target.getBoundingClientRect();
+        if (
+            e.clientX < dialogDimensions.left ||
+            e.clientX > dialogDimensions.right ||
+            e.clientY < dialogDimensions.top ||
+            e.clientY > dialogDimensions.bottom
+        ) {
+            e.target.close();
+        }
+    });
+</script>
+
+<!-- Scripts de Compartición -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Construimos la URL de INVITACIÓN (no la del dashboard actual) 
+        // Usamos window.location.origin para obtener http://dominio.com
+        const inviteUrl = `${window.location.origin}/join/{{ group.code }}`;
+        const groupName = "{{ group.name }}";
+        const shareText = `¡Únete al grupo de Amigo Invisible "${groupName}" 🎁\nCódigo: {{ group.code }}\nEntra aquí: ${inviteUrl}`;
+
+        // 1. WhatsApp
+        const waBtn = document.getElementById('btn-whatsapp');
+        if (waBtn) {
+            waBtn.href = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+        }
+
+        // 2. Nativo (Móvil)
+        const nativeBtn = document.getElementById('btn-native');
+        if (nativeBtn && navigator.share) {
+            nativeBtn.classList.remove('hidden');
+            nativeBtn.classList.add('inline-flex'); // Asegurar display correcto
+            nativeBtn.addEventListener('click', () => {
+                navigator.share({
+                    title: `Amigo Invisible: ${groupName}`,
+                    text: `Únete al grupo "${groupName}"`, 
+                    url: inviteUrl
+                }).catch(console.error);
+            });
+        }
+
+        // 3. Copiar
+        const copyBtn = document.getElementById('btn-copy');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', () => {
+                navigator.clipboard.writeText(inviteUrl).then(() => {
+                    const originalHTML = copyBtn.innerHTML;
+                    copyBtn.innerHTML = '<i class="ph-bold ph-check text-lg"></i> ¡Link Copiado!';
+                    copyBtn.classList.add('text-green-400', 'bg-green-400/10', 'border-green-400/20');
+                    
+                    setTimeout(() => {
+                        copyBtn.innerHTML = originalHTML;
+                        copyBtn.classList.remove('text-green-400', 'bg-green-400/10', 'border-green-400/20');
+                    }, 2000);
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

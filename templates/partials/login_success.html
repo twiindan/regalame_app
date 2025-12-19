@@ -1,0 +1,7 @@
+<div id="login-response" class="mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-md">
+    <p class="font-bold">Login successful!</p>
+    <p>Welcome back, {{ user.username }}!</p>
+    <p>Redirecting to dashboard...</p>
+    <!-- HTMX redirect to dashboard or home page after a short delay -->
+    <meta http-equiv="refresh" content="2;url=/dashboard"> 
+</div>
