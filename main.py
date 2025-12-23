@@ -14,7 +14,7 @@ from sqlmodel import Session, select, or_
 from database import create_db_and_tables, get_session
 from models import User, Group, GroupMember, Wish, GroupExclusion, Message
 from security import get_password_hash, verify_password
-from services import scrape_metadata, generate_amazon_link, perform_draw
+from services import scrape_metadata, generate_amazon_link, perform_draw, get_recommended_gifts
 from email_utils import send_invitation_email
 
 # --- Configuración Inicial ---
@@ -161,7 +161,11 @@ async def dashboard(
     user: User = Depends(require_user),
     session: Session = Depends(get_session)
 ):
-    return templates.TemplateResponse(request, "dashboard.html", {"user": user})
+    recommendations = get_recommended_gifts(3)
+    return templates.TemplateResponse(request, "dashboard.html", {
+        "user": user, 
+        "recommendations": recommendations
+    })
 
 # --- Rutas de Grupos ---
 

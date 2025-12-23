@@ -1,10 +1,62 @@
+import random
+import os
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 import requests
 from bs4 import BeautifulSoup
 from sqlmodel import Session, select
 from models import GroupMember, GroupExclusion
-import random
-import os
-from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+
+RECOMMENDED_GIFTS = [
+    {
+        "title": "Echo Dot (5.ª generación)",
+        "image": "https://m.media-amazon.com/images/I/71y0VqS6x+L._AC_SX679_.jpg",
+        "url": "https://www.amazon.es/dp/B09B8X9R7K",
+        "price": "29.99€"
+    },
+    {
+        "title": "Kindle Paperwhite",
+        "image": "https://m.media-amazon.com/images/I/61H+1+c1uXL._AC_SX679_.jpg",
+        "url": "https://www.amazon.es/dp/B08N6XGV92",
+        "price": "139.99€"
+    },
+    {
+        "title": "LEGO Star Wars: Halcón Milenario",
+        "image": "https://m.media-amazon.com/images/I/817+2L-3vWL._AC_SX679_.jpg",
+        "url": "https://www.amazon.es/dp/B075PT2JH9",
+        "price": "149.99€"
+    },
+    {
+        "title": "Fujifilm Instax Mini 12",
+        "image": "https://m.media-amazon.com/images/I/61eXvW7e83L._AC_SX679_.jpg",
+        "url": "https://www.amazon.es/dp/B0BSNK8P56",
+        "price": "79.00€"
+    },
+    {
+        "title": "Juego de Mesa: Virus!",
+        "image": "https://m.media-amazon.com/images/I/81fCkL7-DYL._AC_SX679_.jpg",
+        "url": "https://www.amazon.es/dp/B00V4L7WJ8",
+        "price": "14.95€"
+    }
+]
+
+def get_recommended_gifts(limit=3):
+    """
+    Devuelve una lista aleatoria de regalos recomendados, inyectando el tag de afiliado.
+    """
+    selected = random.sample(RECOMMENDED_GIFTS, min(limit, len(RECOMMENDED_GIFTS)))
+    tag = os.getenv("AMAZON_TAG", "tu_tag_defecto-21")
+    
+    # Procesar para añadir tag (creando copias para no mutar el global)
+    processed = []
+    for item in selected:
+        new_item = item.copy()
+        if "?" in new_item["url"]:
+            new_item["url"] += f"&tag={tag}"
+        else:
+            new_item["url"] += f"?tag={tag}"
+        processed.append(new_item)
+        
+    return processed
 
 def scrape_metadata(url: str):
     """
