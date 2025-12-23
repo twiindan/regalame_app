@@ -1,5 +1,6 @@
 import random
 import os
+import json
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 import requests
 from bs4 import BeautifulSoup
@@ -338,6 +339,62 @@ def get_all_recommendations():
         new_item["url"] += f"{separator}tag={tag}"
         processed.append(new_item)
     return processed
+
+def get_trending_products():
+    """
+    Lee productos del archivo 'amazon_tendencias.json'.
+    Devuelve una lista de diccionarios.
+    """
+    file_path = "amazon_tendencias.json"
+    if not os.path.exists(file_path):
+        return []
+        
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            products = json.load(f)
+            
+        # Inyectar tag de afiliado para monetizar
+        tag = os.getenv("AMAZON_TAG", "tu_tag_defecto-21")
+        processed = []
+        for item in products:
+            if "url" in item:
+                separator = "&" if "?" in item["url"] else "?"
+                if "tag=" not in item["url"]:
+                    item["url"] += f"{separator}tag={tag}"
+            processed.append(item)
+            
+        return processed
+    except Exception as e:
+        print(f"Error reading trending json: {e}")
+        return []
+
+def get_most_desired_products():
+    """
+    Lee productos del archivo 'amazon_mas_deseados.json'.
+    Devuelve una lista de diccionarios.
+    """
+    file_path = "amazon_mas_deseados.json"
+    if not os.path.exists(file_path):
+        return []
+        
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            products = json.load(f)
+            
+        # Inyectar tag de afiliado para monetizar
+        tag = os.getenv("AMAZON_TAG", "tu_tag_defecto-21")
+        processed = []
+        for item in products:
+            if "url" in item:
+                separator = "&" if "?" in item["url"] else "?"
+                if "tag=" not in item["url"]:
+                    item["url"] += f"{separator}tag={tag}"
+            processed.append(item)
+            
+        return processed
+    except Exception as e:
+        print(f"Error reading most desired json: {e}")
+        return []
 
 def scrape_metadata(url: str):
     """

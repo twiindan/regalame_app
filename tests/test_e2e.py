@@ -35,8 +35,8 @@ def test_wishlist_and_logistics(page: Page):
     
     # 3. Añadir Deseos
     # Texto
-    page.locator("input[name='content']").fill("Calcetines Molones")
-    page.locator("button", has_text="Añadir").click()
+    page.locator("input[name='content'][placeholder*='Pega un enlace']").fill("Calcetines Molones")
+    page.locator("button", has_text="Añadir").first.click()
     expect(page.locator("text=Calcetines Molones")).to_be_visible()
     
     # 4. Borrar Deseo
@@ -100,7 +100,7 @@ def test_multi_user_draw_flow(browser: Browser):
     
     # --- VUELTA A ADMIN ---
     page_admin.reload()
-    expect(page_admin.locator("text=Member User")).to_be_visible()
+    expect(page_admin.locator("li", has_text="Member User")).to_be_visible()
     
     # REALIZAR SORTEO
     page_admin.locator("button", has_text="Realizar Sorteo").click()

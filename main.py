@@ -14,7 +14,7 @@ from sqlmodel import Session, select, or_
 from database import create_db_and_tables, get_session
 from models import User, Group, GroupMember, Wish, GroupExclusion, Message
 from security import get_password_hash, verify_password
-from services import scrape_metadata, generate_amazon_link, perform_draw, get_recommended_gifts, get_all_recommendations
+from services import scrape_metadata, generate_amazon_link, perform_draw, get_recommended_gifts, get_all_recommendations, get_trending_products, get_most_desired_products
 from email_utils import send_invitation_email
 
 # --- Configuración Inicial ---
@@ -162,9 +162,13 @@ async def dashboard(
     session: Session = Depends(get_session)
 ):
     recommendations = get_recommended_gifts(3)
+    trending_items = get_trending_products()
+    desired_items = get_most_desired_products()
     return templates.TemplateResponse(request, "dashboard.html", {
         "user": user, 
-        "recommendations": recommendations
+        "recommendations": recommendations,
+        "trending_items": trending_items,
+        "desired_items": desired_items
     })
 
 @app.get("/ideas", response_class=HTMLResponse)
@@ -177,6 +181,30 @@ async def ideas_page(
     return templates.TemplateResponse(request, "inspiration.html", {
         "user": user,
         "recommendations": recommendations
+    })
+
+@app.get("/trends", response_class=HTMLResponse)
+async def trends_page(
+    request: Request,
+    user: Optional[User] = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    items = get_trending_products()
+    return templates.TemplateResponse(request, "trends.html", {
+        "user": user,
+        "items": items
+    })
+
+@app.get("/most-desired", response_class=HTMLResponse)
+async def most_desired_page(
+    request: Request,
+    user: Optional[User] = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    items = get_most_desired_products()
+    return templates.TemplateResponse(request, "most_desired.html", {
+        "user": user,
+        "items": items
     })
 
 # --- Rutas de Grupos ---
