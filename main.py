@@ -14,7 +14,7 @@ from sqlmodel import Session, select, or_
 from database import create_db_and_tables, get_session
 from models import User, Group, GroupMember, Wish, GroupExclusion, Message
 from security import get_password_hash, verify_password
-from services import scrape_metadata, generate_amazon_link, perform_draw, get_recommended_gifts
+from services import scrape_metadata, generate_amazon_link, perform_draw, get_recommended_gifts, get_all_recommendations
 from email_utils import send_invitation_email
 
 # --- Configuración Inicial ---
@@ -164,6 +164,18 @@ async def dashboard(
     recommendations = get_recommended_gifts(3)
     return templates.TemplateResponse(request, "dashboard.html", {
         "user": user, 
+        "recommendations": recommendations
+    })
+
+@app.get("/ideas", response_class=HTMLResponse)
+async def ideas_page(
+    request: Request,
+    user: Optional[User] = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    recommendations = get_all_recommendations()
+    return templates.TemplateResponse(request, "inspiration.html", {
+        "user": user,
         "recommendations": recommendations
     })
 

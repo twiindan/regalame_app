@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="text-center mb-12">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-300 mb-6 drop-shadow-lg">
+            Galería de Inspiración
+        </h1>
+        <p class="text-gray-300 text-lg mb-8 max-w-2xl mx-auto">
+            Explora nuestra selección curada de regalos y añádelos a tu lista con un solo clic.
+        </p>
+
+        <!-- Search Bar -->
+        <div class="relative max-w-xl mx-auto group">
+            <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                <i class="ph-bold ph-magnifying-glass text-gray-500 group-focus-within:text-pink-500 transition-colors text-xl"></i>
+            </div>
+            <input type="text" id="search-input" 
+                   placeholder="Busca por nombre, categoría o precio..." 
+                   class="w-full bg-black/40 border border-white/20 rounded-full pl-12 pr-6 py-4 text-lg focus:border-pink-500 focus:ring-1 focus:ring-pink-500 outline-none text-white transition-all placeholder-gray-500 shadow-xl backdrop-blur-sm">
+        </div>
+    </div>
+
+    <!-- Gallery Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" id="gifts-grid">
+        {% for item in recommendations %}
+        <div class="gift-card glass-panel rounded-2xl overflow-hidden hover:bg-white/10 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-purple-900/20 group flex flex-col"
+             data-search="{{ item.title|lower }} {{ item.category|lower }} {{ item.price }}">
+            
+            <!-- Image Area -->
+            <div class="relative h-48 overflow-hidden bg-white/5">
+                <img src="{{ item.image }}" alt="{{ item.title }}" loading="lazy" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                <div class="absolute top-3 left-3">
+                    <span class="bg-black/60 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg border border-white/10">
+                        {{ item.category }}
+                    </span>
+                </div>
+                <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-3 pt-8">
+                    <span class="text-lg font-bold text-green-400 drop-shadow-md">{{ item.price }}</span>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="p-4 flex flex-col flex-grow">
+                <h3 class="font-bold text-gray-100 mb-2 leading-tight line-clamp-2 min-h-[2.5rem]" title="{{ item.title }}">
+                    {{ item.title }}
+                </h3>
+                
+                <div class="mt-auto pt-4 flex gap-3">
+                    <a href="{{ item.url }}" target="_blank" 
+                       class="flex-1 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 hover:from-yellow-500/30 hover:to-orange-500/30 text-yellow-500 border border-yellow-500/30 py-2 rounded-xl text-center text-sm font-bold transition-all flex items-center justify-center gap-2">
+                        <i class="ph-bold ph-amazon-logo text-lg"></i>
+                        <span class="hidden sm:inline">Ver</span>
+                    </a>
+                    
+                    {% if user %}
+                    <form hx-post="/wishes" hx-swap="none" class="flex-1">
+                        <input type="hidden" name="content" value="{{ item.title }}">
+                        <button type="submit" 
+                                onclick="showToast(this)"
+                                class="w-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 hover:from-indigo-500/30 hover:to-purple-500/30 text-indigo-300 border border-indigo-500/30 py-2 rounded-xl text-center text-sm font-bold transition-all flex items-center justify-center gap-2">
+                            <i class="ph-bold ph-plus-circle text-lg"></i>
+                            <span class="hidden sm:inline">Añadir</span>
+                        </button>
+                    </form>
+                    {% else %}
+                    <a href="/" class="flex-1 bg-white/10 hover:bg-white/20 text-gray-300 py-2 rounded-xl text-center text-sm font-bold transition-all flex items-center justify-center">
+                        <i class="ph-bold ph-sign-in"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Empty State (Hidden by default) -->
+    <div id="no-results" class="hidden text-center py-20">
+        <div class="bg-white/5 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
+            <i class="ph-duotone ph-magnifying-glass text-4xl text-gray-500"></i>
+        </div>
+        <h3 class="text-xl font-bold text-gray-400">No encontramos regalos con ese nombre</h3>
+        <p class="text-gray-500 mt-2">Prueba con palabras más generales como "Tech" o "Hogar"</p>
+    </div>
+
+    <!-- Quick Toast Notification Script -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-full shadow-2xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-2 font-bold">
+        <i class="ph-bold ph-check-circle text-xl"></i>
+        ¡Añadido a tu lista!
+    </div>
+
+</div>
+
+<script>
+    // Search Filtering Logic
+    const searchInput = document.getElementById('search-input');
+    const cards = document.querySelectorAll('.gift-card');
+    const noResults = document.getElementById('no-results');
+
+    searchInput.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase().trim();
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+            const data = card.getAttribute('data-search');
+            if (data.includes(term)) {
+                card.style.display = 'flex';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        if (visibleCount === 0) {
+            noResults.classList.remove('hidden');
+        } else {
+            noResults.classList.add('hidden');
+        }
+    });
+
+    // Simple Toast Logic
+    function showToast(btn) {
+        // Change button state temporarily
+        const originalContent = btn.innerHTML;
+        btn.innerHTML = '<i class="ph-bold ph-check"></i>';
+        btn.classList.add('text-green-400', 'border-green-500/50', 'bg-green-500/10');
+        
+        // Show floating toast
+        const toast = document.getElementById('toast');
+        toast.classList.remove('translate-y-20', 'opacity-0');
+        
+        setTimeout(() => {
+            // Restore button
+            btn.innerHTML = originalContent;
+            btn.classList.remove('text-green-400', 'border-green-500/50', 'bg-green-500/10');
+            
+            // Hide toast
+            toast.classList.add('translate-y-20', 'opacity-0');
+        }, 2000);
+    }
+</script>
+{% endblock %}

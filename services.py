@@ -320,12 +320,23 @@ def get_recommended_gifts(limit=3):
     processed = []
     for item in selected:
         new_item = item.copy()
-        if "?" in new_item["url"]:
-            new_item["url"] += f"&tag={tag}"
-        else:
-            new_item["url"] += f"?tag={tag}"
+        separator = "&" if "?" in new_item["url"] else "?"
+        new_item["url"] += f"{separator}tag={tag}"
         processed.append(new_item)
         
+    return processed
+
+def get_all_recommendations():
+    """
+    Devuelve todas las recomendaciones con tag de afiliado inyectado.
+    """
+    tag = os.getenv("AMAZON_TAG", "tu_tag_defecto-21")
+    processed = []
+    for item in RECOMMENDED_GIFTS:
+        new_item = item.copy()
+        separator = "&" if "?" in new_item["url"] else "?"
+        new_item["url"] += f"{separator}tag={tag}"
+        processed.append(new_item)
     return processed
 
 def scrape_metadata(url: str):
