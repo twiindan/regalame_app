@@ -439,21 +439,34 @@ async def delete_exclusion(
 async def add_wish(
     request: Request,
     content: str = Form(...),
+    manual_title: Optional[str] = Form(None),
+    manual_image: Optional[str] = Form(None),
     user: User = Depends(require_user),
     session: Session = Depends(get_session)
 ):
     content = content.strip()
-    is_url = content.startswith("http://") or content.startswith("https://")
     
-    new_wish = Wish(user_id=user.id, title=content) 
-    
-    if is_url:
-        metadata = scrape_metadata(content)
-        new_wish.title = metadata["title"]
-        new_wish.image_url = metadata["image_url"]
-        new_wish.url = generate_amazon_link(content)
+    # CASE A: Direct Save (from Carousel/Lists)
+    if manual_title and manual_image:
+        # 'content' here acts as the URL
+        new_wish = Wish(
+            user_id=user.id,
+            title=manual_title,
+            image_url=manual_image,
+            url=generate_amazon_link(content) 
+        )
+    # CASE B: User Input (URL or Text)
     else:
-        new_wish.url = generate_amazon_link(content)
+        is_url = content.startswith("http://") or content.startswith("https://")
+        new_wish = Wish(user_id=user.id, title=content) 
+        
+        if is_url:
+            metadata = scrape_metadata(content)
+            new_wish.title = metadata["title"]
+            new_wish.image_url = metadata["image_url"]
+            new_wish.url = generate_amazon_link(content)
+        else:
+            new_wish.url = generate_amazon_link(content)
     
     session.add(new_wish)
     session.commit()

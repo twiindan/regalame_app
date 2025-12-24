@@ -51,7 +51,9 @@
                     
                     {% if user %}
                     <form hx-post="/wishes" hx-swap="none" class="flex-1">
-                        <input type="hidden" name="content" value="{{ item.title }}">
+                        <input type="hidden" name="content" value="{{ item.url }}">
+                        <input type="hidden" name="manual_title" value="{{ item.title }}">
+                        <input type="hidden" name="manual_image" value="{{ item.image }}">
                         <button type="submit" 
                                 onclick="showToast(this)"
                                 class="w-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 hover:from-indigo-500/30 hover:to-purple-500/30 text-indigo-300 border border-indigo-500/30 py-2 rounded-xl text-center text-sm font-bold transition-all flex items-center justify-center gap-2">

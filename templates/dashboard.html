@@ -139,7 +139,9 @@
                                     <i class="ph-bold ph-amazon-logo"></i>
                                 </a>
                                 <form hx-post="/wishes" hx-target="#wishlist-container" hx-swap="beforeend" class="flex-1">
-                                    <input type="hidden" name="content" value="{{ item.title }}">
+                                    <input type="hidden" name="content" value="{{ item.url }}">
+                                    <input type="hidden" name="manual_title" value="{{ item.title }}">
+                                    <input type="hidden" name="manual_image" value="{{ item.image }}">
                                     <button type="submit" class="w-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold py-1.5 px-2 rounded text-center transition-colors" title="Añadir a mi lista">
                                         <i class="ph-bold ph-plus"></i>
                                     </button>
@@ -180,7 +182,9 @@
                                     <i class="ph-bold ph-amazon-logo"></i>
                                 </a>
                                 <form hx-post="/wishes" hx-target="#wishlist-container" hx-swap="beforeend" class="flex-1">
-                                    <input type="hidden" name="content" value="{{ item.title }}">
+                                    <input type="hidden" name="content" value="{{ item.url }}">
+                                    <input type="hidden" name="manual_title" value="{{ item.title }}">
+                                    <input type="hidden" name="manual_image" value="{{ item.image }}">
                                     <button type="submit" class="w-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold py-2 px-2 rounded-lg text-center transition-colors" title="Añadir a mi lista">
                                         <i class="ph-bold ph-plus"></i>
                                     </button>
@@ -222,7 +226,9 @@
                                     <i class="ph-bold ph-amazon-logo"></i>
                                 </a>
                                 <form hx-post="/wishes" hx-target="#wishlist-container" hx-swap="beforeend" class="flex-1">
-                                    <input type="hidden" name="content" value="{{ item.title }}">
+                                    <input type="hidden" name="content" value="{{ item.url }}">
+                                    <input type="hidden" name="manual_title" value="{{ item.title }}">
+                                    <input type="hidden" name="manual_image" value="{{ item.image }}">
                                     <button type="submit" class="w-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold py-2 px-2 rounded-lg text-center transition-colors" title="Añadir a mi lista">
                                         <i class="ph-bold ph-plus"></i>
                                     </button>

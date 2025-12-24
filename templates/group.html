@@ -271,44 +271,42 @@
 <!-- Scripts de Compartición -->
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // Construimos la URL de INVITACIÓN (no la del dashboard actual) 
-        // Usamos window.location.origin para obtener http://dominio.com
+        // IMPORTANTE: Compartimos el link de INVITACIÓN, no la página actual del grupo
         const inviteUrl = `${window.location.origin}/join/{{ group.code }}`;
-        const groupName = "{{ group.name }}";
-        const shareText = `¡Únete al grupo de Amigo Invisible "${groupName}" 🎁\nCódigo: {{ group.code }}\nEntra aquí: ${inviteUrl}`;
+        
+        // COPY PERSUASIVO: Apela a la utilidad y evita el regalo "malo".
+        const shareTitle = "🎁 ¡Ya tenemos Amigo Invisible!";
+        const shareText = `He creado el grupo "{{ group.name }}" en Regálame. Entrad para ver quién os toca (el sorteo es automático).\n\n⚠️ IMPORTANTE: Rellenad vuestra lista de deseos dentro de la app para que no os regalen calcetines otra vez.\n\n👇 Entra aquí:\n${inviteUrl}`;
 
-        // 1. WhatsApp
-        const waBtn = document.getElementById('btn-whatsapp');
-        if (waBtn) {
-            waBtn.href = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+        // 1. Configurar WhatsApp
+        const whatsappBtn = document.getElementById('btn-whatsapp');
+        if (whatsappBtn) {
+            whatsappBtn.href = `https://wa.me/?text=${encodeURIComponent(shareTitle + "\n\n" + shareText)}`;
         }
 
-        // 2. Nativo (Móvil)
+        // 2. Configurar Share Nativo (Móvil)
         const nativeBtn = document.getElementById('btn-native');
-        if (nativeBtn && navigator.share) {
+        if (navigator.share && nativeBtn) {
             nativeBtn.classList.remove('hidden');
-            nativeBtn.classList.add('inline-flex'); // Asegurar display correcto
             nativeBtn.addEventListener('click', () => {
                 navigator.share({
-                    title: `Amigo Invisible: ${groupName}`,
-                    text: `Únete al grupo "${groupName}"`, 
+                    title: shareTitle,
+                    text: shareText,
                     url: inviteUrl
                 }).catch(console.error);
             });
         }
 
-        // 3. Copiar
+        // 3. Configurar Copiar Enlace
         const copyBtn = document.getElementById('btn-copy');
         if (copyBtn) {
             copyBtn.addEventListener('click', () => {
-                navigator.clipboard.writeText(inviteUrl).then(() => {
-                    const originalHTML = copyBtn.innerHTML;
-                    copyBtn.innerHTML = '<i class="ph-bold ph-check text-lg"></i> ¡Link Copiado!';
-                    copyBtn.classList.add('text-green-400', 'bg-green-400/10', 'border-green-400/20');
-                    
+                const clipText = `¡Únete al Amigo Invisible! 🎁 ${inviteUrl}`;
+                navigator.clipboard.writeText(clipText).then(() => {
+                    const originalText = copyBtn.innerHTML;
+                    copyBtn.innerHTML = '<i class="ph ph-check text-lg"></i> ¡Copiado!';
                     setTimeout(() => {
-                        copyBtn.innerHTML = originalHTML;
-                        copyBtn.classList.remove('text-green-400', 'bg-green-400/10', 'border-green-400/20');
+                        copyBtn.innerHTML = originalText;
                     }, 2000);
                 });
             });
