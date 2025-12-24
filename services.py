@@ -7,26 +7,34 @@ from bs4 import BeautifulSoup
 from sqlmodel import Session, select
 from models import GroupMember, GroupExclusion
 
-def get_recommended_gifts(limit=3):
+# --- CONFIGURACIÓN DE ARCHIVOS ---
+DATA_FILES = {
+    "bestsellers": "amazon_bestsellers_total.json",
+    "desired": "amazon_mas_deseados_total.json",
+    "trends": "amazon_tendencias_total.json"
+}
+
+def _load_json(filename):
     """
-    Devuelve una lista aleatoria de regalos recomendados, inyectando el tag de afiliado.
-    Carga los datos desde 'mis_productos_amazon.json'.
+    Función genérica para leer JSON de forma segura e inyectar el tag de afiliado.
     """
-    file_path = "mis_productos_amazon.json"
-    if not os.path.exists(file_path):
+    if not os.path.exists(filename):
         return []
 
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            gifts = json.load(f)
+        with open(filename, 'r', encoding='utf-8') as f:
+            items = json.load(f)
             
-        selected = random.sample(gifts, min(limit, len(gifts)))
         tag = os.getenv("AMAZON_TAG", "tu_tag_defecto-21")
-        
-        # Procesar para añadir tag
         processed = []
-        for item in selected:
+        
+        for item in items:
             new_item = item.copy()
+            # Asegurar que existe la categoría, si no, "Varios"
+            if "category" not in new_item or not new_item["category"]:
+                new_item["category"] = "Varios"
+
+            # Inyección de tag
             if "url" in new_item:
                 separator = "&" if "?" in new_item["url"] else "?"
                 if "tag=" not in new_item["url"]:
@@ -35,91 +43,40 @@ def get_recommended_gifts(limit=3):
             
         return processed
     except Exception as e:
-        print(f"Error reading recommended gifts: {e}")
+        print(f"Error loading {filename}: {e}")
         return []
 
-def get_all_recommendations():
+def get_random_products(file_key: str, limit: int = 10):
     """
-    Devuelve todas las recomendaciones con tag de afiliado inyectado.
-    Carga los datos desde 'mis_productos_amazon.json'.
+    Obtiene 'limit' productos aleatorios de un archivo específico.
+    Útil para el Dashboard.
     """
-    file_path = "mis_productos_amazon.json"
-    if not os.path.exists(file_path):
+    filename = DATA_FILES.get(file_key)
+    if not filename:
         return []
-
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            gifts = json.load(f)
-            
-        tag = os.getenv("AMAZON_TAG", "tu_tag_defecto-21")
-        processed = []
-        for item in gifts:
-            new_item = item.copy()
-            if "url" in new_item:
-                separator = "&" if "?" in new_item["url"] else "?"
-                if "tag=" not in new_item["url"]:
-                    new_item["url"] += f"{separator}tag={tag}"
-            processed.append(new_item)
-        return processed
-    except Exception as e:
-        print(f"Error reading all recommendations: {e}")
-        return []
-
-def get_trending_products():
-    """
-    Lee productos del archivo 'amazon_tendencias.json'.
-    Devuelve una lista de diccionarios.
-    """
-    file_path = "amazon_tendencias.json"
-    if not os.path.exists(file_path):
+    
+    all_items = _load_json(filename)
+    if not all_items:
         return []
         
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            products = json.load(f)
-            
-        # Inyectar tag de afiliado para monetizar
-        tag = os.getenv("AMAZON_TAG", "tu_tag_defecto-21")
-        processed = []
-        for item in products:
-            if "url" in item:
-                separator = "&" if "?" in item["url"] else "?"
-                if "tag=" not in item["url"]:
-                    item["url"] += f"{separator}tag={tag}"
-            processed.append(item)
-            
-        return processed
-    except Exception as e:
-        print(f"Error reading trending json: {e}")
-        return []
+    return random.sample(all_items, min(limit, len(all_items)))
 
-def get_most_desired_products():
+def get_all_products(file_key: str):
     """
-    Lee productos del archivo 'amazon_mas_deseados.json'.
-    Devuelve una lista de diccionarios.
+    Obtiene TODOS los productos y un conjunto de CATEGORÍAS únicas.
+    Útil para las páginas 'Ver Más' con filtros.
+    Retorna: (items, categories_set)
     """
-    file_path = "amazon_mas_deseados.json"
-    if not os.path.exists(file_path):
-        return []
-        
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            products = json.load(f)
-            
-        # Inyectar tag de afiliado para monetizar
-        tag = os.getenv("AMAZON_TAG", "tu_tag_defecto-21")
-        processed = []
-        for item in products:
-            if "url" in item:
-                separator = "&" if "?" in item["url"] else "?"
-                if "tag=" not in item["url"]:
-                    item["url"] += f"{separator}tag={tag}"
-            processed.append(item)
-            
-        return processed
-    except Exception as e:
-        print(f"Error reading most desired json: {e}")
-        return []
+    filename = DATA_FILES.get(file_key)
+    if not filename:
+        return [], []
+    
+    items = _load_json(filename)
+    categories = sorted(list(set(item["category"] for item in items)))
+    
+    return items, categories
+
+# --- SCRAPING & UTILS (EXISTENTE) ---
 
 def scrape_metadata(url: str):
     """

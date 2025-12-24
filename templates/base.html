@@ -117,6 +117,10 @@
                     </a>
                 </div>
                 <div class="flex items-center space-x-4">
+                    <div class="hidden md:flex space-x-4 mr-4 border-r border-white/10 pr-4">
+                        <a href="/trends" class="text-sm text-gray-400 hover:text-white transition-colors">Tendencias</a>
+                        <a href="/bestsellers" class="text-sm text-gray-400 hover:text-white transition-colors">Top Ventas</a>
+                    </div>
                     {% if user %}
                         <span class="text-sm text-gray-300 hidden sm:block">Hola, {{ user.name }}</span>
                         <a href="/dashboard" class="glass-btn px-4 py-2 rounded-lg text-sm font-medium hover:text-white">Dashboard</a>

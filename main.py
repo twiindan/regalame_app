@@ -14,7 +14,10 @@ from sqlmodel import Session, select, or_
 from database import create_db_and_tables, get_session
 from models import User, Group, GroupMember, Wish, GroupExclusion, Message
 from security import get_password_hash, verify_password
-from services import scrape_metadata, generate_amazon_link, perform_draw, get_recommended_gifts, get_all_recommendations, get_trending_products, get_most_desired_products
+from services import (
+    scrape_metadata, generate_amazon_link, perform_draw, 
+    get_random_products, get_all_products
+)
 from email_utils import send_invitation_email
 
 # --- Configuración Inicial ---
@@ -161,9 +164,11 @@ async def dashboard(
     user: User = Depends(require_user),
     session: Session = Depends(get_session)
 ):
-    recommendations = get_recommended_gifts(3)
-    trending_items = get_trending_products()
-    desired_items = get_most_desired_products()
+    # Uso de funciones aleatorias para el dashboard
+    recommendations = get_random_products("bestsellers", 3)
+    trending_items = get_random_products("trends", 10)
+    desired_items = get_random_products("desired", 10)
+    
     return templates.TemplateResponse(request, "dashboard.html", {
         "user": user, 
         "recommendations": recommendations,
@@ -171,17 +176,7 @@ async def dashboard(
         "desired_items": desired_items
     })
 
-@app.get("/ideas", response_class=HTMLResponse)
-async def ideas_page(
-    request: Request,
-    user: Optional[User] = Depends(get_current_user),
-    session: Session = Depends(get_session)
-):
-    recommendations = get_all_recommendations()
-    return templates.TemplateResponse(request, "inspiration.html", {
-        "user": user,
-        "recommendations": recommendations
-    })
+# --- Rutas de Catálogo (Ver Más) ---
 
 @app.get("/trends", response_class=HTMLResponse)
 async def trends_page(
@@ -189,10 +184,12 @@ async def trends_page(
     user: Optional[User] = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
-    items = get_trending_products()
+    items, categories = get_all_products("trends")
     return templates.TemplateResponse(request, "trends.html", {
         "user": user,
-        "items": items
+        "items": items,
+        "categories": categories,
+        "title": "Tendencias del Momento"
     })
 
 @app.get("/most-desired", response_class=HTMLResponse)
@@ -201,11 +198,35 @@ async def most_desired_page(
     user: Optional[User] = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
-    items = get_most_desired_products()
+    items, categories = get_all_products("desired")
     return templates.TemplateResponse(request, "most_desired.html", {
         "user": user,
-        "items": items
+        "items": items,
+        "categories": categories,
+        "title": "Los Más Deseados"
     })
+
+@app.get("/bestsellers", response_class=HTMLResponse)
+async def bestsellers_page(
+    request: Request,
+    user: Optional[User] = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    items, categories = get_all_products("bestsellers")
+    return templates.TemplateResponse(request, "bestsellers.html", {
+        "user": user,
+        "items": items,
+        "categories": categories,
+        "title": "Top Ventas & Ideas"
+    })
+    
+# Mantenemos /ideas redirigiendo a /bestsellers o usando la misma lógica
+@app.get("/ideas", response_class=HTMLResponse)
+async def ideas_page(
+    request: Request,
+    user: Optional[User] = Depends(get_current_user)
+):
+    return RedirectResponse(url="/bestsellers", status_code=303)
 
 # --- Rutas de Grupos ---
 
