@@ -1,6 +1,8 @@
 import random
 import os
 import json
+import unicodedata
+import re
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 import requests
 from bs4 import BeautifulSoup
@@ -13,6 +15,15 @@ DATA_FILES = {
     "desired": "amazon_mas_deseados_total.json",
     "trends": "amazon_tendencias_total.json"
 }
+
+def slugify(value):
+    """
+    Normaliza texto para URL (ej: "Hogar y cocina" -> "hogar-y-cocina")
+    """
+    value = str(value)
+    value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
+    value = re.sub(r'[^\w\s-]', '', value.lower())
+    return re.sub(r'[-\s]+', '-', value).strip('-')
 
 def _load_json(filename):
     """
@@ -75,6 +86,63 @@ def get_all_products(file_key: str):
     categories = sorted(list(set(item["category"] for item in items)))
     
     return items, categories
+
+# --- UNIFIED SEO LOGIC ---
+
+def get_all_products_unified():
+    """
+    Carga y unifica productos de TODOS los archivos JSON.
+    Elimina duplicados basados en URL.
+    """
+    all_items = []
+    seen_urls = set()
+    
+    for key in DATA_FILES:
+        items = _load_json(DATA_FILES[key])
+        for item in items:
+            # Usamos URL como identificador único
+            if item.get('url') and item['url'] not in seen_urls:
+                all_items.append(item)
+                seen_urls.add(item['url'])
+                
+    return all_items
+
+def get_products_by_category_slug(slug):
+    """
+    Filtra productos unificados por slug de categoría.
+    Retorna: (lista_productos, nombre_real_categoria)
+    """
+    all_items = get_all_products_unified()
+    matching_items = []
+    real_category_name = ""
+    
+    for item in all_items:
+        cat_name = item.get("category", "Varios")
+        if slugify(cat_name) == slug:
+            matching_items.append(item)
+            # Capturamos el nombre real (formato display) de la primera coincidencia
+            if not real_category_name:
+                real_category_name = cat_name
+                
+    return matching_items, real_category_name
+
+def get_all_categories_info():
+    """
+    Retorna una lista de tuplas (nombre_real, slug) de todas las categorías disponibles.
+    Útil para sitemap y enlazado interno.
+    """
+    all_items = get_all_products_unified()
+    categories_map = {} # slug -> real_name
+    
+    for item in all_items:
+        cat_name = item.get("category", "Varios")
+        cat_slug = slugify(cat_name)
+        if cat_slug not in categories_map:
+            categories_map[cat_slug] = cat_name
+            
+    # Retornar lista ordenada alfabéticamente
+    return sorted([(name, slug) for slug, name in categories_map.items()], key=lambda x: x[0])
+
 
 # --- SCRAPING & UTILS (EXISTENTE) ---
 

@@ -16,7 +16,8 @@ from models import User, Group, GroupMember, Wish, GroupExclusion, Message
 from security import get_password_hash, verify_password
 from services import (
     scrape_metadata, generate_amazon_link, perform_draw, 
-    get_random_products, get_all_products
+    get_random_products, get_all_products,
+    get_products_by_category_slug, get_all_categories_info
 )
 from email_utils import send_invitation_email
 
@@ -88,6 +89,17 @@ async def sitemap_xml(session: Session = Depends(get_session)):
             <loc>{domain}/p/{user.id}</loc>
             <changefreq>weekly</changefreq>
             <priority>0.8</priority>
+        </url>
+        """)
+        
+    # Categorías SEO (Programmatic SEO)
+    categories = get_all_categories_info()
+    for _, slug in categories:
+        urls.append(f"""
+        <url>
+            <loc>{domain}/ideas/{slug}</loc>
+            <changefreq>daily</changefreq>
+            <priority>0.9</priority>
         </url>
         """)
         
@@ -227,6 +239,30 @@ async def ideas_page(
     user: Optional[User] = Depends(get_current_user)
 ):
     return RedirectResponse(url="/bestsellers", status_code=303)
+
+@app.get("/ideas/{category_slug}", response_class=HTMLResponse)
+async def category_seo_page(
+    request: Request,
+    category_slug: str,
+    user: Optional[User] = Depends(get_current_user)
+):
+    items, category_name = get_products_by_category_slug(category_slug)
+    
+    if not items:
+        # Si no hay productos, redirigir a una página general o dar 404
+        return RedirectResponse(url="/ideas", status_code=303)
+        
+    # Obtener otras categorías para el interlinking
+    all_cats = get_all_categories_info()
+    # Filtrar la actual
+    other_categories = [c for c in all_cats if c[1] != category_slug]
+    
+    return templates.TemplateResponse(request, "category_seo.html", {
+        "user": user,
+        "items": items,
+        "category_name": category_name,
+        "other_categories": other_categories
+    })
 
 # --- Rutas de Grupos ---
 
