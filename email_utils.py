@@ -1,51 +1,39 @@
 import os
-import ssl
-import certifi
-import aiosmtplib
-from email.message import EmailMessage
+import resend
 from dotenv import load_dotenv
 
 load_dotenv()
 
+# Configuración de Resend
+resend.api_key = os.getenv("RESEND_API_KEY")
+
 async def send_email(subject: str, email_to: str, body_html: str):
     """
-    Función robusta de envío de emails.
-    Soluciona problemas de SSL en macOS y Timeouts en Railway.
+    Envía un email utilizando la API de Resend (HTTP).
+    Ideal para entornos donde los puertos SMTP están bloqueados (como Railway).
     """
-    message = EmailMessage()
-    message["From"] = os.getenv("MAIL_FROM", os.getenv("EMAIL_FROM", "noreply@regalame.app"))
-    message["To"] = email_to
-    message["Subject"] = subject
-    
-    # Añadimos el contenido HTML
-    message.add_alternative(body_html, subtype="html")
-
-    # --- CORRECCIÓN SSL ---
-    # Creamos un contexto SSL explícito usando los certificados de Certifi
-    # Esto evita el error "unable to get local issuer certificate" en macOS
-    context = ssl.create_default_context(cafile=certifi.where())
+    # El remitente debe estar verificado en Resend o usar el dominio de onboarding
+    sender = os.getenv("MAIL_FROM", "onboarding@resend.dev")
     
     try:
-        await aiosmtplib.send(
-            message,
-            hostname=os.getenv("MAIL_SERVER", "smtp.gmail.com"),
-            port=int(os.getenv("MAIL_PORT", 587)),
-            start_tls=True,
-            use_tls=False,
-            username=os.getenv("MAIL_USERNAME", os.getenv("EMAIL_USER")),
-            password=os.getenv("MAIL_PASSWORD", os.getenv("EMAIL_PASSWORD")),
-            timeout=30,
-            tls_context=context  # <--- INYECTAMOS EL CONTEXTO SEGURO
-        )
-        print(f"✅ Email enviado correctamente a {email_to}")
+        # Nota: resend-python es síncrono, pero la llamada HTTP es muy rápida.
+        params = {
+            "from": sender,
+            "to": [email_to],
+            "subject": subject,
+            "html": body_html,
+        }
+        
+        email = resend.Emails.send(params)
+        print(f"✅ Email enviado con Resend a {email_to}. ID: {email.get('id')}")
         return True
     except Exception as e:
-        print(f"❌ Error crítico enviando email a {email_to}: {e}")
+        print(f"❌ Error enviando email con Resend a {email_to}: {e}")
         return False
 
 async def send_invitation_email(email: str, group_name: str, group_code: str):
     """
-    Wrapper para enviar la invitación al grupo usando la nueva función robusta.
+    Wrapper para enviar la invitación al grupo.
     """
     html = f"""
     <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
