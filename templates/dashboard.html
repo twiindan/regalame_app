@@ -123,26 +123,29 @@
                     </a>
                 </div>
                 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <!-- Carousel Container -->
+                <div class="flex overflow-x-auto gap-4 pb-6 snap-x snap-mandatory scrollbar-hide">
                     {% for item in recommendations %}
-                    <div class="bg-white/5 rounded-xl overflow-hidden hover:bg-white/10 transition-colors flex flex-col">
-                        <div class="h-32 overflow-hidden relative">
-                             <img src="{{ item.image }}" alt="{{ item.title }}" class="w-full h-full object-cover">
+                    <div class="min-w-[220px] max-w-[220px] snap-center bg-white/5 rounded-xl overflow-hidden hover:bg-white/10 transition-colors flex flex-col border border-white/5 shadow-lg">
+                        <!-- Image -->
+                        <div class="h-40 overflow-hidden relative bg-white">
+                             <img src="{{ item.image }}" alt="{{ item.title }}" loading="lazy" class="w-full h-full object-contain p-2">
                              <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                                 <span class="text-xs font-bold text-white bg-green-600 px-2 py-0.5 rounded-full">{{ item.price }}</span>
+                                 <span class="text-xs font-bold text-white bg-green-600 px-2 py-0.5 rounded-full shadow-sm">{{ item.price }}</span>
                              </div>
                         </div>
+                        <!-- Body -->
                         <div class="p-3 flex flex-col flex-grow">
-                            <h4 class="font-bold text-sm text-gray-200 mb-2 line-clamp-2 leading-tight flex-grow">{{ item.title }}</h4>
+                            <h4 class="font-bold text-sm text-gray-200 mb-2 line-clamp-2 leading-tight flex-grow" title="{{ item.title }}">{{ item.title }}</h4>
                             <div class="flex gap-2 mt-2">
-                                <a href="{{ item.url }}" target="_blank" class="flex-1 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-500 text-xs font-bold py-1.5 px-2 rounded text-center transition-colors">
+                                <a href="{{ item.url }}" target="_blank" class="flex-1 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-500 text-xs font-bold py-2 px-2 rounded-lg text-center transition-colors">
                                     <i class="ph-bold ph-amazon-logo"></i>
                                 </a>
                                 <form hx-post="/wishes" hx-target="#wishlist-container" hx-swap="beforeend" class="flex-1">
                                     <input type="hidden" name="content" value="{{ item.url }}">
                                     <input type="hidden" name="manual_title" value="{{ item.title }}">
                                     <input type="hidden" name="manual_image" value="{{ item.image }}">
-                                    <button type="submit" class="w-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold py-1.5 px-2 rounded text-center transition-colors" title="Añadir a mi lista">
+                                    <button type="submit" class="w-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold py-2 px-2 rounded-lg text-center transition-colors" title="Añadir a mi lista">
                                         <i class="ph-bold ph-plus"></i>
                                     </button>
                                 </form>
