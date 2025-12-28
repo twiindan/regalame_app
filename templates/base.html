@@ -124,6 +124,9 @@
                     <div class="hidden md:flex space-x-4 mr-4 border-r border-white/10 pr-4">
                         <a href="/trends" class="text-sm text-gray-400 hover:text-white transition-colors">Tendencias</a>
                         <a href="/bestsellers" class="text-sm text-gray-400 hover:text-white transition-colors">Top Ventas</a>
+                        <a href="/blog" class="text-sm text-pink-300 hover:text-white transition-colors font-medium flex items-center gap-1">
+                            <i class="ph-bold ph-lightbulb"></i> Ideas y Guías
+                        </a>
                     </div>
                     {% if user %}
                         <span class="text-sm text-gray-300 hidden sm:block">Hola, {{ user.name }}</span>
@@ -152,6 +155,8 @@
                 <a href="#" class="hover:text-pink-600">Privacidad</a>
                 <span class="text-slate-300">|</span>
                 <a href="#" class="hover:text-pink-600">Términos</a>
+                <span class="text-slate-300">|</span>
+                <a href="/blog" class="hover:text-pink-600">Blog</a>
             </div>
         </div>
     </footer>

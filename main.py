@@ -120,6 +120,17 @@ async def sitemap_xml(session: Session = Depends(get_session)):
             <priority>0.9</priority>
         </url>
         """)
+
+    # Blog Posts (Listas Curadas)
+    posts = get_blog_posts_list()
+    for post in posts:
+        urls.append(f"""
+        <url>
+            <loc>{domain}/blog/{post['slug']}</loc>
+            <changefreq>weekly</changefreq>
+            <priority>0.8</priority>
+        </url>
+        """)
         
     sitemap_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -195,7 +206,7 @@ async def dashboard(
     session: Session = Depends(get_session)
 ):
     # Uso de funciones aleatorias para el dashboard
-    recommendations = get_random_products("bestsellers", 3)
+    recommendations = get_random_products("bestsellers", 10)
     trending_items = get_random_products("trends", 10)
     desired_items = get_random_products("desired", 10)
     
