@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from typing import Optional, List
 import os
 import uuid
+import base64
 from datetime import datetime, date
 
 from fastapi import FastAPI, Depends, Request, Form, HTTPException, status, BackgroundTasks
@@ -40,8 +41,21 @@ app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 app.mount("/static", StaticFiles(directory="static", html=True), name="static")
 templates = Jinja2Templates(directory="templates")
 
+# --- ANALYTICS SETUP (Base64 Decode) ---
+analytics_b64 = os.getenv("ANALYTICS_SCRIPT", "")
+analytics_html = ""
+
+if analytics_b64:
+    try:
+        # Decodificamos el Base64 que viene de Railway
+        analytics_html = base64.b64decode(analytics_b64).decode("utf-8")
+        print("✅ Analytics script loaded successfully.")
+    except Exception as e:
+        print(f"⚠️ Error decoding ANALYTICS_SCRIPT: {e}")
+        analytics_html = "" # Fallback seguro
+
 # Inyectar analítica de forma global
-templates.env.globals['analytics_script'] = os.getenv("ANALYTICS_SCRIPT", "")
+templates.env.globals['analytics_script'] = analytics_html
 
 # --- Dependencias ---
 
