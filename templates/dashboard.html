@@ -33,7 +33,7 @@
                 </div>
 
                 <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-indigo-900/30 transition-all hover:scale-[1.02]">
-                    Crear Grupo
+                    Crear Nuevo Grupo
                 </button>
             </form>
             
@@ -48,7 +48,7 @@
 
         <!-- My Groups List -->
         <div>
-            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 px-1">Mis Grupos</h3>
+            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 px-1">Mis Eventos y Listas</h3>
             <div class="space-y-3">
                 {% if user.groups %}
                     {% for group in user.groups %}

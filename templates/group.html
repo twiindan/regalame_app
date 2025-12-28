@@ -70,14 +70,14 @@
         {% if is_admin %}
             <div class="glass-panel rounded-2xl p-8 text-center bg-gradient-to-b from-indigo-900/40 to-transparent border-indigo-500/30">
                 <i class="ph-duotone ph-ticket text-6xl text-indigo-400 mb-4"></i>
-                <h2 class="text-2xl font-bold mb-2">¡Hora del Sorteo!</h2>
+                <h2 class="text-2xl font-bold mb-2">¡Hora del Intercambio!</h2>
                 <p class="text-gray-300 mb-6">Cuando todos estén dentro, pulsa el botón para repartir la suerte.</p>
                 {% if group.members|length < 2 %}
                     <p class="text-red-400 text-sm bg-red-900/20 py-2 px-4 rounded-lg inline-block">Necesitas al menos 2 miembros</p>
                 {% else %}
                     <form action="/group/{{ group.id }}/draw" method="POST">
                         <button type="submit" class="bg-indigo-500 hover:bg-indigo-400 text-white px-8 py-3 rounded-xl font-bold text-lg shadow-lg shadow-indigo-900/50 transition-all hover:scale-105">
-                            Realizar Sorteo
+                            Asignar Amigo Invisible (Opcional)
                         </button>
                     </form>
                 {% endif %}
