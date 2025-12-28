@@ -101,6 +101,10 @@
         ::-webkit-scrollbar-track { background: #0f172a; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
     </style>
+
+    {% if analytics_script %}
+        {{ analytics_script | safe }}
+    {% endif %}
 </head>
 <body class="min-h-screen flex flex-col font-sans">
 

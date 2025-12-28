@@ -17,7 +17,8 @@ from security import get_password_hash, verify_password
 from services import (
     scrape_metadata, generate_amazon_link, perform_draw, 
     get_random_products, get_all_products,
-    get_products_by_category_slug, get_all_categories_info
+    get_products_by_category_slug, get_all_categories_info,
+    get_blog_posts_list, get_blog_post_detail
 )
 from email_utils import send_invitation_email
 
@@ -38,6 +39,9 @@ app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 # Montar estáticos y plantillas
 app.mount("/static", StaticFiles(directory="static", html=True), name="static")
 templates = Jinja2Templates(directory="templates")
+
+# Inyectar analítica de forma global
+templates.env.globals['analytics_script'] = os.getenv("ANALYTICS_SCRIPT", "")
 
 # --- Dependencias ---
 
@@ -262,6 +266,38 @@ async def category_seo_page(
         "items": items,
         "category_name": category_name,
         "other_categories": other_categories
+    })
+
+# --- Blog & Curated Lists ---
+
+@app.get("/blog", response_class=HTMLResponse)
+async def blog_index(
+    request: Request,
+    user: Optional[User] = Depends(get_current_user)
+):
+    posts = get_blog_posts_list()
+    return templates.TemplateResponse(request, "blog_index.html", {
+        "user": user,
+        "posts": posts,
+        "title": "Blog de Ideas y Regalos"
+    })
+
+@app.get("/blog/{slug}", response_class=HTMLResponse)
+async def blog_post_detail(
+    request: Request,
+    slug: str,
+    user: Optional[User] = Depends(get_current_user)
+):
+    post, products = get_blog_post_detail(slug)
+    
+    if not post:
+        raise HTTPException(status_code=404, detail="Artículo no encontrado")
+        
+    return templates.TemplateResponse(request, "blog_post.html", {
+        "user": user,
+        "post": post,
+        "items": products,
+        "title": post["title"]
     })
 
 # --- Rutas de Grupos ---

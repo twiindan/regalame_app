@@ -8,6 +8,7 @@ import requests
 from bs4 import BeautifulSoup
 from sqlmodel import Session, select
 from models import GroupMember, GroupExclusion
+from blog_config import BLOG_POSTS
 
 # --- CONFIGURACIÓN DE ARCHIVOS ---
 DATA_FILES = {
@@ -309,3 +310,81 @@ def perform_draw(group_id: int, session: Session):
     
     session.commit()
     return True
+
+# --- BLOG & CURATED LISTS LOGIC ---
+
+def _parse_price(price_str):
+    """
+    Parsea precios como "19,99 €", "EUR 20.50", etc. a float.
+    Retorna 0.0 si falla.
+    """
+    if not price_str:
+        return 0.0
+    
+    # 1. Limpieza básica: quitar símbolos de moneda y espacios extra
+    clean = price_str.lower().replace('€', '').replace('eur', '').strip()
+    
+    # 2. Manejo de separadores decimales
+    # Si hay coma y punto, asumimos formato europeo "1.234,56" -> quitar punto, cambiar coma por punto
+    if ',' in clean and '.' in clean:
+        clean = clean.replace('.', '').replace(',', '.')
+    # Si solo hay coma, es decimal: "19,99" -> "19.99"
+    elif ',' in clean:
+        clean = clean.replace(',', '.')
+    
+    try:
+        return float(clean)
+    except ValueError:
+        return 0.0
+
+def get_blog_posts_list():
+    """
+    Retorna la lista de posts configurados (metadata).
+    """
+    return BLOG_POSTS
+
+def get_blog_post_detail(slug: str):
+    """
+    Busca un post por slug, carga todos los productos y los filtra
+    según los criterios del post.
+    Retorna: (post_metadata, filtered_products)
+    """
+    # 1. Buscar el post config
+    post = next((p for p in BLOG_POSTS if p["slug"] == slug), None)
+    if not post:
+        return None, []
+    
+    # 2. Cargar todos los productos unificados
+    all_products = get_all_products_unified()
+    
+    # 3. Filtrar
+    criteria = post.get("criteria", {})
+    filtered_products = []
+    
+    for item in all_products:
+        match = True
+        
+        # Filtro de Precio
+        if "max_price" in criteria:
+            price = _parse_price(item.get("price"))
+            # Filtramos si el precio es 0 (no disponible) o mayor que el max
+            if price == 0.0 or price > criteria["max_price"]:
+                match = False
+        
+        # Filtro de Categoría (String Containment / Fuzzy simple)
+        if match and "category" in criteria:
+            target_cat = slugify(criteria["category"])
+            item_cat = slugify(item.get("category", ""))
+            
+            # Comprobamos si el slug de la categoría del item contiene el target
+            if target_cat not in item_cat:
+                match = False
+                
+        if match:
+            filtered_products.append(item)
+            
+    # 4. Asignar imagen hero si no tiene (usamos la del primer producto)
+    if not post.get("hero_image") and filtered_products:
+        post["hero_image"] = filtered_products[0].get("image")
+        
+    return post, filtered_products

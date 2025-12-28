@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}{{ post.title }} | Regálame{% endblock %}
+{% block description %}{{ post.description }}{% endblock %}
+
+{% block content %}
+<style>
+    .mask-linear-fade {
+        mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+    }
+</style>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+    <!-- Back Link -->
+    <a href="/blog" class="inline-flex items-center text-gray-400 hover:text-white mb-8 transition-colors">
+        <i class="ph-bold ph-arrow-left mr-2"></i> Volver al Blog
+    </a>
+
+    <!-- Header -->
+    <div class="text-center mb-12">
+        <h1 class="text-3xl md:text-5xl font-extrabold text-white mb-6 leading-tight">
+            {{ post.title }}
+        </h1>
+        <p class="text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
+            {{ post.description }}
+        </p>
+    </div>
+
+    <!-- Products Grid -->
+    {% if items %}
+    <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-fade-in-up">
+        {% for item in items %}
+        <div class="product-card glass-panel rounded-2xl overflow-hidden hover:bg-white/10 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-indigo-900/20 group flex flex-col {% if loop.index > 12 %}hidden{% endif %}">
+            
+            <!-- Image Area -->
+            <div class="relative h-48 overflow-hidden bg-white p-4">
+                <img src="{{ item.image }}" alt="{{ item.title }}" loading="lazy" class="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110">
+                
+                {% if item.category %}
+                <div class="absolute top-2 right-2">
+                    <span class="text-xs font-bold text-indigo-900 bg-indigo-100/90 px-2 py-1 rounded-md shadow-sm backdrop-blur-sm">
+                        {{ item.category }}
+                    </span>
+                </div>
+                {% endif %}
+                
+                <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 pt-8">
+                    <span class="text-lg font-bold text-white drop-shadow-md">{{ item.price }}</span>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="p-4 flex flex-col flex-grow">
+                <h3 class="font-bold text-gray-100 mb-2 leading-tight line-clamp-2 min-h-[2.5rem]" title="{{ item.title }}">
+                    {{ item.title }}
+                </h3>
+                
+                <div class="mt-auto pt-4 flex gap-3">
+                    <a href="{{ item.url }}" target="_blank" 
+                       class="flex-1 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 py-2 rounded-xl text-center text-sm font-bold transition-all flex items-center justify-center gap-2">
+                        <i class="ph-bold ph-amazon-logo text-lg"></i>
+                        <span class="hidden sm:inline">Ver</span>
+                    </a>
+                    
+                    {% if user %}
+                    <form hx-post="/wishes" hx-swap="none" class="flex-1">
+                        <input type="hidden" name="content" value="{{ item.url }}">
+                        <input type="hidden" name="manual_title" value="{{ item.title }}">
+                        <input type="hidden" name="manual_image" value="{{ item.image }}">
+                        <button type="submit" 
+                                onclick="showToast(this)"
+                                class="w-full bg-indigo-500 hover:bg-indigo-400 text-white shadow-lg shadow-indigo-900/30 py-2 rounded-xl text-center text-sm font-bold transition-all flex items-center justify-center gap-2 transform active:scale-95">
+                            <i class="ph-bold ph-plus-circle text-lg"></i>
+                            <span class="hidden sm:inline">Añadir</span>
+                        </button>
+                    </form>
+                    {% else %}
+                    <a href="/" class="flex-1 bg-white/10 hover:bg-white/20 text-gray-300 py-2 rounded-xl text-center text-sm font-bold transition-all flex items-center justify-center">
+                        <i class="ph-bold ph-sign-in"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Load More Button -->
+    {% if items|length > 12 %}
+    <div class="text-center mt-12">
+        <button id="load-more-btn" onclick="loadMore()" 
+                class="bg-white/5 hover:bg-white/10 border border-white/10 text-white px-8 py-3 rounded-full font-bold transition-all hover:scale-105 flex items-center gap-2 mx-auto">
+            <span>Ver más productos</span>
+            <i class="ph-bold ph-arrow-down"></i>
+        </button>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="text-center py-20 bg-white/5 rounded-3xl">
+        <i class="ph-duotone ph-ghost text-6xl text-gray-500 mb-4"></i>
+        <h3 class="text-xl font-bold text-gray-300">No encontramos productos para esta lista :(</h3>
+        <p class="text-gray-500 mt-2">Intenta revisar la configuración o vuelve más tarde.</p>
+    </div>
+    {% endif %}
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-full shadow-2xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-2 font-bold pointer-events-none">
+        <i class="ph-bold ph-check-circle text-xl"></i>
+        ¡Añadido a tu lista!
+    </div>
+</div>
+
+<script>
+    const BATCH_SIZE = 12;
+
+    function loadMore() {
+        const cards = document.querySelectorAll('.product-card.hidden');
+        let shownInThisBatch = 0;
+
+        for (let card of cards) {
+            if (shownInThisBatch < BATCH_SIZE) {
+                card.classList.remove('hidden');
+                shownInThisBatch++;
+            } else {
+                break;
+            }
+        }
+
+        // Hide button if no more items to show
+        if (document.querySelectorAll('.product-card.hidden').length === 0) {
+            document.getElementById('load-more-btn').classList.add('hidden');
+        }
+    }
+
+    function showToast(btn) {
+        const icon = btn.querySelector('i');
+        const originalClass = icon.className;
+        
+        icon.className = "ph-bold ph-check";
+        btn.classList.add('bg-green-500', 'border-green-600');
+        btn.classList.remove('bg-indigo-500');
+        
+        const toast = document.getElementById('toast');
+        toast.classList.remove('translate-y-20', 'opacity-0');
+        
+        setTimeout(() => {
+            icon.className = originalClass;
+            btn.classList.remove('bg-green-500', 'border-green-600');
+            btn.classList.add('bg-indigo-500');
+            toast.classList.add('translate-y-20', 'opacity-0');
+        }, 2000);
+    }
+</script>
+{% endblock %}
