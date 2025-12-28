@@ -18,6 +18,9 @@
             <a id="btn-whatsapp" target="_blank" class="glass-btn px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 hover:text-green-400 cursor-pointer transition-colors">
                 <i class="ph-fill ph-whatsapp-logo text-lg"></i> WhatsApp
             </a>
+            <button id="btn-email" class="glass-btn px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 hover:text-pink-400 transition-colors">
+                <i class="ph-fill ph-envelope-simple text-lg"></i> Email
+            </button>
             <button id="btn-native" class="hidden glass-btn px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 hover:text-blue-400 transition-colors">
                 <i class="ph-fill ph-share-network text-lg"></i> Compartir
             </button>
@@ -50,6 +53,34 @@
 
 </div>
 
+<!-- Email Share Modal -->
+<dialog id="modal-email" class="backdrop:bg-black/80 bg-gray-900 text-white rounded-2xl shadow-2xl w-full max-w-sm border border-white/10 p-6 m-auto">
+    <div class="text-center">
+        <div class="w-12 h-12 bg-pink-500/20 rounded-full flex items-center justify-center mx-auto mb-4 text-pink-400">
+            <i class="ph-fill ph-paper-plane-tilt text-2xl"></i>
+        </div>
+        <h3 class="text-lg font-bold mb-2">Compartir por Email</h3>
+        <p class="text-sm text-gray-400 mb-6">Envía esta lista directamente a quien tú quieras.</p>
+        
+        <form hx-post="/public/share-email" hx-swap="innerHTML" class="space-y-4">
+            <input type="hidden" name="owner_name" value="{{ profile_user.name }}">
+            <input type="hidden" name="current_url" id="share-url-input">
+            
+            <input type="email" name="email" required placeholder="ejemplo@correo.com" 
+                   class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-pink-500 outline-none text-white placeholder-gray-500 transition-colors">
+            
+            <div class="flex gap-2">
+                <button type="button" onclick="document.getElementById('modal-email').close()" class="flex-1 glass-btn py-2.5 rounded-xl text-sm font-medium hover:bg-white/10">
+                    Cancelar
+                </button>
+                <button type="submit" class="flex-1 bg-pink-600 hover:bg-pink-500 text-white py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-pink-900/30 transition-all">
+                    Enviar
+                </button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
 <!-- Schema.org JSON-LD -->
 <script type="application/ld+json">
 {
@@ -75,6 +106,20 @@
         const currentUrl = window.location.href;
         const userName = "{{ profile_user.name }}";
         const shareText = `¡Echa un vistazo a la lista de regalos de ${userName}! 🎁\n${currentUrl}`;
+
+        // 0. Email Modal
+        const emailBtn = document.getElementById('btn-email');
+        const emailModal = document.getElementById('modal-email');
+        if (emailBtn && emailModal) {
+            emailBtn.addEventListener('click', () => {
+                document.getElementById('share-url-input').value = currentUrl;
+                emailModal.showModal();
+            });
+            // Close when clicking backdrop
+            emailModal.addEventListener('click', (e) => {
+                if (e.target === emailModal) emailModal.close();
+            });
+        }
 
         // 1. WhatsApp
         const waBtn = document.getElementById('btn-whatsapp');

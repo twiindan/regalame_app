@@ -21,7 +21,7 @@ from services import (
     get_products_by_category_slug, get_all_categories_info,
     get_blog_posts_list, get_blog_post_detail
 )
-from email_utils import send_invitation_email
+from email_utils import send_invitation_email, send_wishlist_share_email
 
 # --- Configuración Inicial ---
 @asynccontextmanager
@@ -653,6 +653,27 @@ async def public_profile(
         "profile_user": profile_user,
         "current_user": current_user
     })
+
+@app.post("/public/share-email", response_class=HTMLResponse)
+async def share_public_profile_email(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    email: str = Form(...),
+    owner_name: str = Form(...),
+    current_url: str = Form(...)
+):
+    # Basic validation
+    if not email or "@" not in email:
+        return HTMLResponse("<div class='text-red-400 p-2 text-sm'>Email inválido</div>")
+        
+    background_tasks.add_task(send_wishlist_share_email, email, owner_name, current_url)
+    
+    # Return success message (HTMX swap)
+    return HTMLResponse("""
+        <div class="text-green-400 p-2 text-sm font-bold flex items-center justify-center animate-fade-in-up">
+            <i class="ph-bold ph-check mr-2"></i> ¡Enviado correctamente!
+        </div>
+    """)
 
 # --- Chat Anónimo ---
 
