@@ -1,8 +1,8 @@
-"""Add Message model for chat
+"""Add Message model again
 
-Revision ID: 07d8964000e3
-Revises: 91ff259327c4
-Create Date: 2025-12-19 23:37:12.863893
+Revision ID: 2b292b3ec677
+Revises: aee351f8de0a
+Create Date: 2025-12-29 01:46:38.379704
 
 """
 from typing import Sequence, Union
@@ -13,8 +13,8 @@ import sqlmodel # Add this line
 
 
 # revision identifiers, used by Alembic.
-revision: str = '07d8964000e3'
-down_revision: Union[str, Sequence[str], None] = '91ff259327c4'
+revision: str = '2b292b3ec677'
+down_revision: Union[str, Sequence[str], None] = 'aee351f8de0a'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
