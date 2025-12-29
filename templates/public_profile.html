@@ -7,8 +7,24 @@
 <div class="max-w-3xl mx-auto">
     
     <div class="text-center mb-12 animate-fade-in-up">
-        <div class="w-24 h-24 mx-auto rounded-full bg-gradient-to-tr from-pink-500 to-violet-500 flex items-center justify-center text-4xl font-bold mb-4 shadow-2xl">
+        <div class="w-24 h-24 mx-auto rounded-full bg-gradient-to-tr from-pink-500 to-violet-500 flex items-center justify-center text-4xl font-bold mb-4 shadow-2xl relative">
             {{ profile_user.name[0]|upper }}
+            {% if current_user and current_user.id != profile_user.id %}
+                <div class="absolute -bottom-2 -right-2">
+                    {% if is_friend %}
+                        <span class="bg-green-500 text-white p-2 rounded-full shadow-lg flex items-center justify-center w-8 h-8" title="Es tu amigo">
+                            <i class="ph-bold ph-check text-sm"></i>
+                        </span>
+                    {% else %}
+                        <button hx-post="/friends/add/{{ profile_user.id }}" 
+                                hx-swap="outerHTML"
+                                class="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-full shadow-lg flex items-center justify-center w-8 h-8 transition-colors"
+                                title="Añadir a amigos">
+                            <i class="ph-bold ph-user-plus text-sm"></i>
+                        </button>
+                    {% endif %}
+                </div>
+            {% endif %}
         </div>
         <h1 class="text-3xl font-bold">Lista de Deseos de {{ profile_user.name }}</h1>
         <p class="text-gray-400 mt-2">¿Quieres regalarle algo? Aquí tienes sus favoritos.</p>

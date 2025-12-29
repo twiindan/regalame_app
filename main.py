@@ -454,6 +454,9 @@ async def group_dashboard(
         GroupMember.giftee_id == user.id
     )).first()
     my_santa_id = my_santa_member.user_id if my_santa_member else None
+    
+    # Obtener IDs de amigos para la UI
+    friend_ids = {f.friend_id for f in session.exec(select(Friendship).where(Friendship.user_id == user.id)).all()}
         
     return templates.TemplateResponse(request, "group.html", {
         "user": user,
@@ -461,7 +464,8 @@ async def group_dashboard(
         "giftee": giftee,
         "giftee_wishes": giftee_wishes,
         "my_santa_id": my_santa_id,
-        "is_admin": group.admin_id == user.id
+        "is_admin": group.admin_id == user.id,
+        "friend_ids": friend_ids
     })
 
 @app.post("/group/{group_id}/invite", response_class=HTMLResponse)
@@ -583,6 +587,37 @@ async def add_friend(
     
     return templates.TemplateResponse(request, "partials/friend_item.html", {"friend": friend})
 
+@app.post("/friends/add/{friend_id}", response_class=HTMLResponse)
+async def add_friend_by_id(
+    friend_id: int,
+    request: Request,
+    user: User = Depends(require_user),
+    session: Session = Depends(get_session)
+):
+    if friend_id == user.id:
+         return HTMLResponse("<span class='text-red-400 text-xs'>No puedes añadirte a ti mismo</span>")
+
+    friend = session.get(User, friend_id)
+    if not friend:
+        return HTMLResponse("<span class='text-red-400 text-xs'>Usuario no encontrado</span>")
+
+    # Check existence
+    existing = session.exec(select(Friendship).where(
+        Friendship.user_id == user.id,
+        Friendship.friend_id == friend_id
+    )).first()
+
+    if not existing:
+        new_friendship = Friendship(user_id=user.id, friend_id=friend.id)
+        session.add(new_friendship)
+        session.commit()
+
+    return HTMLResponse("""
+        <span class="text-green-400 text-xs font-bold flex items-center gap-1 bg-green-400/10 px-2 py-1 rounded-lg border border-green-400/20">
+            <i class="ph-bold ph-check"></i> Amigo
+        </span>
+    """)
+
 @app.delete("/friends/{friend_id}", response_class=HTMLResponse)
 async def remove_friend(
     friend_id: int,
@@ -698,9 +733,19 @@ async def public_profile(
     if not profile_user:
         raise HTTPException(status_code=404)
         
+    is_friend = False
+    if current_user:
+        friendship = session.exec(select(Friendship).where(
+            Friendship.user_id == current_user.id, 
+            Friendship.friend_id == user_id
+        )).first()
+        if friendship:
+            is_friend = True
+        
     return templates.TemplateResponse(request, "public_profile.html", {
         "profile_user": profile_user,
-        "current_user": current_user
+        "current_user": current_user,
+        "is_friend": is_friend
     })
 
 @app.post("/public/share-email", response_class=HTMLResponse)
