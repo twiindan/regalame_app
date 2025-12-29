@@ -13,7 +13,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from sqlmodel import Session, select, or_
 
 from database import create_db_and_tables, get_session
-from models import User, Group, GroupMember, Wish, GroupExclusion, Message
+from models import User, Group, GroupMember, Wish, GroupExclusion, Message, Friendship
 from security import get_password_hash, verify_password
 from services import (
     scrape_metadata, generate_amazon_link, perform_draw, 
@@ -550,6 +550,55 @@ async def delete_exclusion(
         session.commit()
         
     return HTMLResponse("") 
+
+# --- Rutas de Amigos ---
+
+@app.post("/friends", response_class=HTMLResponse)
+async def add_friend(
+    request: Request,
+    email: str = Form(...),
+    user: User = Depends(require_user),
+    session: Session = Depends(get_session)
+):
+    email = email.strip()
+    if email == user.email:
+         return templates.TemplateResponse(request, "partials/join_error.html", {"error": "No puedes añadirte a ti mismo"})
+
+    friend = session.exec(select(User).where(User.email == email)).first()
+    if not friend:
+        return templates.TemplateResponse(request, "partials/join_error.html", {"error": "Usuario no encontrado"})
+
+    # Check existence
+    existing = session.exec(select(Friendship).where(
+        Friendship.user_id == user.id,
+        Friendship.friend_id == friend.id
+    )).first()
+
+    if existing:
+         return templates.TemplateResponse(request, "partials/join_error.html", {"error": "Ya está en tu lista"})
+
+    new_friendship = Friendship(user_id=user.id, friend_id=friend.id)
+    session.add(new_friendship)
+    session.commit()
+    
+    return templates.TemplateResponse(request, "partials/friend_item.html", {"friend": friend})
+
+@app.delete("/friends/{friend_id}", response_class=HTMLResponse)
+async def remove_friend(
+    friend_id: int,
+    user: User = Depends(require_user),
+    session: Session = Depends(get_session)
+):
+    friendship = session.exec(select(Friendship).where(
+        Friendship.user_id == user.id,
+        Friendship.friend_id == friend_id
+    )).first()
+    
+    if friendship:
+        session.delete(friendship)
+        session.commit()
+    
+    return HTMLResponse("")
 
 # --- Rutas de Deseos ---
 

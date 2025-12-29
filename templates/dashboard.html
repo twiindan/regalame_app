@@ -72,6 +72,32 @@
                 {% endif %}
             </div>
         </div>
+
+        <!-- My Friends List -->
+        <div>
+            <div class="flex items-center justify-between mb-4 px-1">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Mis Amigos</h3>
+            </div>
+            
+            <!-- Add Friend Form -->
+            <form hx-post="/friends" hx-target="#friends-list" hx-swap="beforeend" _="on htmx:afterRequest reset() me" class="mb-4">
+                <div class="relative">
+                    <input type="email" name="email" required placeholder="Añadir por email..." 
+                           class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2 text-sm focus:border-indigo-500 outline-none text-white placeholder-gray-600 transition-colors">
+                    <button type="submit" class="absolute right-2 top-1.5 text-indigo-400 hover:text-white p-1 rounded-lg transition-colors">
+                        <i class="ph-bold ph-plus"></i>
+                    </button>
+                </div>
+            </form>
+
+            <div id="friends-list" class="space-y-3">
+                {% if user.friends %}
+                    {% for friend in user.friends %}
+                        {% include "partials/friend_item.html" %}
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
     </div>
 
     <!-- Right Column: My Wishlist (9/12 cols) -->

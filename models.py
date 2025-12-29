@@ -16,6 +16,11 @@ class GroupExclusion(SQLModel, table=True):
 
     group: "Group" = Relationship(back_populates="exclusions")
 
+class Friendship(SQLModel, table=True):
+    user_id: int = Field(foreign_key="user.id", primary_key=True)
+    friend_id: int = Field(foreign_key="user.id", primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
 class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     email: str = Field(unique=True, index=True)
@@ -34,6 +39,13 @@ class User(SQLModel, table=True):
     wishes: List["Wish"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"primaryjoin": "User.id==Wish.user_id"},
+    )
+    friends: List["User"] = Relationship(
+        link_model=Friendship,
+        sa_relationship_kwargs={
+            "primaryjoin": "User.id==Friendship.user_id",
+            "secondaryjoin": "User.id==Friendship.friend_id",
+        },
     )
 
 class Group(SQLModel, table=True):
