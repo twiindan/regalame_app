@@ -6,7 +6,7 @@ import base64
 from datetime import datetime, date
 
 from fastapi import FastAPI, Depends, Request, Form, HTTPException, status, BackgroundTasks
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -72,16 +72,16 @@ def require_user(request: Request, user: Optional[User] = Depends(get_current_us
 
 # --- SEO & Tech ---
 
-@app.get("/robots.txt", response_class=HTMLResponse)
+@app.get("/robots.txt", response_class=PlainTextResponse)
 async def robots_txt():
     domain = os.getenv("DOMAIN_URL", "https://regalame.app")
-    content = f"""User-agent: *
-Disallow: /group/
-Allow: /p/
+    return f"""User-agent: *
 Allow: /
-Sitemap: {domain}/sitemap.xml
-"""
-    return HTMLResponse(content, media_type="text/plain")
+Disallow: /private/
+Disallow: /admin/
+Disallow: /group/
+
+Sitemap: {domain}/sitemap.xml"""
 
 @app.get("/sitemap.xml", response_class=HTMLResponse)
 async def sitemap_xml(session: Session = Depends(get_session)):

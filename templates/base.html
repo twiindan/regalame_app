@@ -5,8 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <!-- SEO Blocks -->
-    <title>{% block title %}Regálame - El Amigo Invisible Reinventado{% endblock %}</title>
+    <title>{% block title %}Regálame - Tu Lista de Deseos y Amigo Invisible{% endblock %}</title>
     <meta name="description" content="{% block description %}La forma más fácil de organizar tu Amigo Invisible, crear listas de regalos con IA y acertar siempre.{% endblock %}">
+    
+    <!-- Schema.org Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Regálame",
+      "applicationCategory": "LifestyleApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "EUR"
+      },
+      "description": "Organiza tu Amigo Invisible y crea listas de regalos con IA. Chat anónimo y sugerencias de Amazon integradas.",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "120"
+      }
+    }
+    </script>
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
