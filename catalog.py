@@ -1,7 +1,9 @@
 """Queryable product catalog: normalization, parsing and DB-backed search."""
 
 import hashlib
+import json
 import math
+import os
 import re
 import unicodedata
 from dataclasses import dataclass
@@ -9,7 +11,7 @@ from datetime import datetime
 from typing import Optional
 from urllib.parse import urlparse
 
-from sqlalchemy import case, func
+from sqlalchemy import case, delete, func
 from sqlmodel import Session, select
 
 from models import Product, ProductList
@@ -37,7 +39,7 @@ def normalize_text(value):
     return re.sub(r"\s+", " ", value.lower()).strip()
 
 
-ASIN_RE = re.compile(r"/(?:dp|gp/product)/([A-Z0-9]{10})")
+ASIN_RE = re.compile(r"/(?:dp|gp/product)/([A-Z0-9]{1,10})")
 
 
 def extract_asin(url):
@@ -185,3 +187,82 @@ def list_categories(session: Session) -> list[tuple[str, str]]:
     ).all()
     pairs = ((name, slug) for name, slug in rows)
     return sorted(pairs, key=lambda pair: (normalize_text(pair[0]), pair[1]))
+
+
+DATA_FILES = {
+    "bestsellers": "amazon_bestsellers_total.json",
+    "desired": "amazon_mas_deseados_total.json",
+    "trends": "amazon_tendencias_total.json",
+}
+
+
+def import_from_json(session: Session, data_files=None, dry_run: bool = False):
+    """Idempotent JSON -> DB import. Upserts by ASIN and rebuilds list ranks."""
+    data_files = data_files or DATA_FILES
+    stats = {"created": 0, "updated": 0, "lists": 0}
+
+    for list_key, path in data_files.items():
+        if not os.path.exists(path):
+            continue
+        with open(path, "r", encoding="utf-8") as handle:
+            items = json.load(handle)
+
+        scraped_at = datetime.utcfromtimestamp(os.path.getmtime(path))
+        ranked = []
+
+        for rank, item in enumerate(items, start=1):
+            url = item.get("url")
+            if not url:
+                continue
+
+            asin = extract_asin(url)
+            title = item.get("title", "")
+            category = item.get("category") or "Varios"
+            price_raw = item.get("price")
+            parsed = _parse_price(price_raw)
+            price_numeric = parsed if parsed > 0 else None
+
+            product = session.exec(select(Product).where(Product.asin == asin)).first()
+            if product is None:
+                product = Product(
+                    asin=asin,
+                    title=title,
+                    title_normalized=normalize_text(title),
+                    image_url=item.get("image"),
+                    url=url,
+                    category=category,
+                    category_slug=slugify(category),
+                    price_numeric=price_numeric,
+                    price_raw=price_raw,
+                    scraped_at=scraped_at,
+                )
+                session.add(product)
+                session.flush()
+                stats["created"] += 1
+            else:
+                product.title = title
+                product.title_normalized = normalize_text(title)
+                product.image_url = item.get("image")
+                product.url = url
+                product.category = category
+                product.category_slug = slugify(category)
+                product.price_numeric = price_numeric
+                product.price_raw = price_raw
+                product.scraped_at = scraped_at
+                product.updated_at = datetime.utcnow()
+                product.is_active = True
+                session.add(product)
+                stats["updated"] += 1
+
+            ranked.append((product.id, rank))
+
+        session.exec(delete(ProductList).where(ProductList.list_key == list_key))
+        for product_id, rank in ranked:
+            session.add(ProductList(product_id=product_id, list_key=list_key, rank=rank))
+            stats["lists"] += 1
+
+    if dry_run:
+        session.rollback()
+    else:
+        session.commit()
+    return stats

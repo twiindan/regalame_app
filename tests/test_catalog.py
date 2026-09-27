@@ -1,3 +1,5 @@
+import json
+import os
 from datetime import datetime
 
 import pytest
@@ -302,3 +304,84 @@ def test_list_categories_sorts_accented_names_insensitively(session):
     # Raw SQLite BINARY collation would put "Bicicletas" first (B < Á by byte), so this
     # pins the accent-insensitive Python sort.
     assert [slug for _, slug in list_categories(session)] == ["ambar", "bicicletas"]
+
+
+from catalog import import_from_json
+
+
+def _write_json(tmp_path, name, items):
+    path = tmp_path / name
+    path.write_text(json.dumps(items), encoding="utf-8")
+    return str(path)
+
+
+def _raw_item(asin, title, category, price):
+    return {
+        "title": title,
+        "category": category,
+        "price": price,
+        "image": f"img-{asin}.jpg",
+        "url": f"https://www.amazon.es/dp/{asin}/ref=x",
+    }
+
+
+def test_import_creates_products_and_list_ranks(session, tmp_path):
+    files = {"bestsellers": _write_json(tmp_path, "b.json", [
+        _raw_item("A1", "Café molido", "Alimentación y bebidas", "10,00 €"),
+        _raw_item("A2", "Cafetera", "Alimentación y bebidas", "100,50 €"),
+    ])}
+    stats = import_from_json(session, data_files=files)
+    assert stats["created"] == 2
+
+    from models import Product, ProductList
+    assert session.exec(select(Product)).all().__len__() == 2
+
+    rows = session.exec(select(ProductList).order_by(ProductList.rank)).all()
+    assert [r.rank for r in rows] == [1, 2]
+
+    a1 = session.exec(select(Product).where(Product.asin == "A1")).first()
+    assert a1.title_normalized == "cafe molido"
+    assert a1.category_slug == "alimentacion-y-bebidas"
+    assert a1.price_numeric == 10.0
+    assert a1.price_raw == "10,00 €"
+
+
+def test_import_marks_unparseable_price_as_none(session, tmp_path):
+    from models import Product
+    files = {"trends": _write_json(tmp_path, "t.json", [
+        _raw_item("N1", "Sin precio", "Varios", "N/A"),
+    ])}
+    import_from_json(session, data_files=files)
+    product = session.exec(select(Product).where(Product.asin == "N1")).first()
+    assert product.price_numeric is None
+    assert product.price_raw == "N/A"
+
+
+def test_import_is_idempotent(session, tmp_path):
+    from models import Product, ProductList
+    files = {"bestsellers": _write_json(tmp_path, "b.json", [
+        _raw_item("A1", "Café", "Alimentación y bebidas", "10,00 €"),
+        _raw_item("A2", "Cafetera", "Alimentación y bebidas", "100,50 €"),
+    ])}
+    import_from_json(session, data_files=files)
+    counts = (
+        len(session.exec(select(Product)).all()),
+        len(session.exec(select(ProductList)).all()),
+    )
+
+    import_from_json(session, data_files=files)
+    counts_again = (
+        len(session.exec(select(Product)).all()),
+        len(session.exec(select(ProductList)).all()),
+    )
+    assert counts == counts_again == (2, 2)
+
+
+def test_import_dry_run_does_not_write(session, tmp_path):
+    from models import Product
+    files = {"bestsellers": _write_json(tmp_path, "b.json", [
+        _raw_item("A1", "Café molido", "Alimentación y bebidas", "10,00 €"),
+    ])}
+    stats = import_from_json(session, data_files=files, dry_run=True)
+    assert stats["created"] == 1
+    assert session.exec(select(Product)).all() == []
