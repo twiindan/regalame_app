@@ -154,6 +154,8 @@ def search_products(session: Session, query: CatalogQuery) -> CatalogResult:
     else:
         order_by = [rank]
 
+    order_by = order_by + [Product.id.asc()]
+
     offset = (page - 1) * per_page
     items = session.exec(
         select(Product).where(*filters).order_by(*order_by).offset(offset).limit(per_page)

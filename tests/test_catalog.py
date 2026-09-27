@@ -213,3 +213,28 @@ def test_page_out_of_range_clamps_to_last(session, catalog_seed):
 def test_page_below_one_clamps_to_first(session, catalog_seed):
     result = search_products(session, CatalogQuery(page=0))
     assert result.page == 1
+
+
+def test_pagination_is_stable_across_pages_for_ties(session):
+    from datetime import datetime
+    from models import Product
+
+    session.add_all([
+        Product(asin=f"T{i}", title=f"Producto {i}", title_normalized=f"producto {i}",
+                url=f"https://www.amazon.es/dp/T{i}", category="Varios", category_slug="varios",
+                price_numeric=None, price_raw="N/A", scraped_at=datetime(2026, 1, 1))
+        for i in range(5)
+    ])
+    session.commit()
+
+    seen = []
+    page = 1
+    while True:
+        result = search_products(session, CatalogQuery(per_page=2, page=page))
+        seen.extend(p.asin for p in result.items)
+        if page >= result.total_pages:
+            break
+        page += 1
+
+    assert sorted(seen) == ["T0", "T1", "T2", "T3", "T4"]
+    assert len(seen) == len(set(seen))  # no duplicates across pages
