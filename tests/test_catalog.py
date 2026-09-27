@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
 from models import Product, ProductList
@@ -35,6 +36,7 @@ def test_product_and_productlist_roundtrip(session):
     assert stored.updated_at is not None
 
     stored_link = session.exec(select(ProductList).where(ProductList.list_key == "bestsellers")).first()
+    assert stored_link is not None
     assert stored_link.product_id == product.id
     assert stored_link.rank == 1
 
@@ -56,5 +58,5 @@ def test_productlist_unique_per_product_and_list(session):
     session.add(ProductList(product_id=product.id, list_key="trends", rank=1))
     session.commit()
     session.add(ProductList(product_id=product.id, list_key="trends", rank=2))
-    with pytest.raises(Exception):
+    with pytest.raises(IntegrityError):
         session.commit()
