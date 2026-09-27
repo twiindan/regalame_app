@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
-from catalog import _parse_price, extract_asin, normalize_text, slugify
+from catalog import _parse_price, extract_asin, list_categories, normalize_text, slugify
 from models import Product, ProductList
 
 
@@ -264,3 +264,11 @@ def test_relevance_with_query_prioritizes_prefix_over_better_rank(session):
 def test_search_treats_like_wildcards_literally(session, catalog_seed):
     assert search_products(session, CatalogQuery(q="__")).total == 0
     assert search_products(session, CatalogQuery(q="a_")).total == 0
+
+
+def test_list_categories_returns_name_slug_pairs_sorted(session, catalog_seed):
+    cats = list_categories(session)
+    assert cats == [
+        ("Alimentación y bebidas", "alimentacion-y-bebidas"),
+        ("Electrónica", "electronica"),
+    ]

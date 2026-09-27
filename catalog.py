@@ -174,3 +174,14 @@ def search_products(session: Session, query: CatalogQuery) -> CatalogResult:
         per_page=per_page,
         total_pages=total_pages,
     )
+
+
+def list_categories(session: Session):
+    """Return sorted (display_name, slug) pairs for active products."""
+    rows = session.exec(
+        select(Product.category, Product.category_slug)
+        .where(Product.is_active == True)  # noqa: E712
+        .group_by(Product.category, Product.category_slug)
+        .order_by(Product.category.asc())
+    ).all()
+    return [(name, slug) for name, slug in rows]
