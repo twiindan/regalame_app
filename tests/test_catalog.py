@@ -283,3 +283,22 @@ def test_list_categories_excludes_inactive_products(session):
                         scraped_at=datetime(2026, 1, 1), is_active=False))
     session.commit()
     assert list_categories(session) == []
+
+
+def test_list_categories_sorts_accented_names_insensitively(session):
+    from datetime import datetime
+    from models import Product
+
+    session.add_all([
+        Product(asin="Z1", title="Ámbar", title_normalized="ambar",
+                url="https://www.amazon.es/dp/Z1", category="Ámbar", category_slug="ambar",
+                scraped_at=datetime(2026, 1, 1)),
+        Product(asin="Z2", title="Bicicletas", title_normalized="bicicletas",
+                url="https://www.amazon.es/dp/Z2", category="Bicicletas", category_slug="bicicletas",
+                scraped_at=datetime(2026, 1, 1)),
+    ])
+    session.commit()
+
+    # Raw SQLite BINARY collation would put "Bicicletas" first (B < Á by byte), so this
+    # pins the accent-insensitive Python sort.
+    assert [slug for _, slug in list_categories(session)] == ["ambar", "bicicletas"]
