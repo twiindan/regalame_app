@@ -39,7 +39,7 @@ def normalize_text(value):
     return re.sub(r"\s+", " ", value.lower()).strip()
 
 
-ASIN_RE = re.compile(r"/(?:dp|gp/product)/([A-Z0-9]{1,10})")
+ASIN_RE = re.compile(r"/(?:dp|gp/product)/([A-Z0-9]{10})(?![A-Z0-9])")
 
 
 def extract_asin(url):

@@ -327,8 +327,8 @@ def _raw_item(asin, title, category, price):
 
 def test_import_creates_products_and_list_ranks(session, tmp_path):
     files = {"bestsellers": _write_json(tmp_path, "b.json", [
-        _raw_item("A1", "Café molido", "Alimentación y bebidas", "10,00 €"),
-        _raw_item("A2", "Cafetera", "Alimentación y bebidas", "100,50 €"),
+        _raw_item("A100000001", "Café molido", "Alimentación y bebidas", "10,00 €"),
+        _raw_item("A200000002", "Cafetera", "Alimentación y bebidas", "100,50 €"),
     ])}
     stats = import_from_json(session, data_files=files)
     assert stats["created"] == 2
@@ -339,7 +339,7 @@ def test_import_creates_products_and_list_ranks(session, tmp_path):
     rows = session.exec(select(ProductList).order_by(ProductList.rank)).all()
     assert [r.rank for r in rows] == [1, 2]
 
-    a1 = session.exec(select(Product).where(Product.asin == "A1")).first()
+    a1 = session.exec(select(Product).where(Product.asin == "A100000001")).first()
     assert a1.title_normalized == "cafe molido"
     assert a1.category_slug == "alimentacion-y-bebidas"
     assert a1.price_numeric == 10.0
@@ -349,10 +349,10 @@ def test_import_creates_products_and_list_ranks(session, tmp_path):
 def test_import_marks_unparseable_price_as_none(session, tmp_path):
     from models import Product
     files = {"trends": _write_json(tmp_path, "t.json", [
-        _raw_item("N1", "Sin precio", "Varios", "N/A"),
+        _raw_item("N100000003", "Sin precio", "Varios", "N/A"),
     ])}
     import_from_json(session, data_files=files)
-    product = session.exec(select(Product).where(Product.asin == "N1")).first()
+    product = session.exec(select(Product).where(Product.asin == "N100000003")).first()
     assert product.price_numeric is None
     assert product.price_raw == "N/A"
 
@@ -360,8 +360,8 @@ def test_import_marks_unparseable_price_as_none(session, tmp_path):
 def test_import_is_idempotent(session, tmp_path):
     from models import Product, ProductList
     files = {"bestsellers": _write_json(tmp_path, "b.json", [
-        _raw_item("A1", "Café", "Alimentación y bebidas", "10,00 €"),
-        _raw_item("A2", "Cafetera", "Alimentación y bebidas", "100,50 €"),
+        _raw_item("A100000001", "Café", "Alimentación y bebidas", "10,00 €"),
+        _raw_item("A200000002", "Cafetera", "Alimentación y bebidas", "100,50 €"),
     ])}
     import_from_json(session, data_files=files)
     counts = (
@@ -380,8 +380,15 @@ def test_import_is_idempotent(session, tmp_path):
 def test_import_dry_run_does_not_write(session, tmp_path):
     from models import Product
     files = {"bestsellers": _write_json(tmp_path, "b.json", [
-        _raw_item("A1", "Café molido", "Alimentación y bebidas", "10,00 €"),
+        _raw_item("A100000001", "Café molido", "Alimentación y bebidas", "10,00 €"),
     ])}
     stats = import_from_json(session, data_files=files, dry_run=True)
     assert stats["created"] == 1
     assert session.exec(select(Product)).all() == []
+
+
+def test_extract_asin_does_not_truncate_longer_token():
+    # A 11-char token after /dp/ is not a valid ASIN -> falls back to the path hash
+    result = extract_asin("https://www.amazon.es/dp/B0049U0DMCX/ref=x")
+    assert result != "B0049U0DMC"
+    assert result.startswith("h")
