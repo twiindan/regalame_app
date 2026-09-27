@@ -4,6 +4,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
+from catalog import _parse_price, extract_asin, normalize_text, slugify
 from models import Product, ProductList
 
 
@@ -62,9 +63,6 @@ def test_productlist_unique_per_product_and_list(session):
         session.commit()
 
 
-from catalog import _parse_price, extract_asin, normalize_text, slugify
-
-
 def test_normalize_text_lowercases_and_strips_accents():
     assert normalize_text("Café") == "cafe"
     assert normalize_text("  Alimentación y Bebidas ") == "alimentacion y bebidas"
@@ -108,3 +106,9 @@ def test_parse_price_european_thousands():
 def test_parse_price_non_numeric_returns_zero():
     assert _parse_price("N/A") == 0.0
     assert _parse_price(None) == 0.0
+
+
+def test_parse_price_range_returns_zero():
+    """Range prices are intentionally non-convertible -> mapped to None by the import."""
+    assert _parse_price("13,99 € - 17,99 €") == 0.0
+    assert _parse_price("7,91 €\xa0-\xa019,99 €") == 0.0
