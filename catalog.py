@@ -70,6 +70,11 @@ def _parse_price(price_str):
         return 0.0
 
 
+def _like_escape(text):
+    """Escape LIKE metacharacters so user input is matched literally."""
+    return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 @dataclass
 class CatalogQuery:
     q: Optional[str] = None
@@ -108,6 +113,7 @@ def search_products(session: Session, query: CatalogQuery) -> CatalogResult:
     term = normalize_text(query.q) if query.q else ""
     if len(term) < 2:
         term = ""
+    escaped = _like_escape(term)
 
     min_price, max_price = query.min_price, query.max_price
     if min_price is not None and max_price is not None and min_price > max_price:
@@ -118,7 +124,7 @@ def search_products(session: Session, query: CatalogQuery) -> CatalogResult:
 
     filters = [Product.is_active == True]  # noqa: E712
     if term:
-        filters.append(Product.title_normalized.like(f"%{term}%"))
+        filters.append(Product.title_normalized.like(f"%{escaped}%", escape="\\"))
     if query.category_slug:
         filters.append(Product.category_slug == query.category_slug)
     if query.source:
@@ -127,11 +133,11 @@ def search_products(session: Session, query: CatalogQuery) -> CatalogResult:
             .where(ProductList.product_id == Product.id, ProductList.list_key == query.source)
             .exists()
         )
-    if min_price is not None:
+    if min_price is not None or max_price is not None:
         filters.append(Product.price_numeric.is_not(None))
+    if min_price is not None:
         filters.append(Product.price_numeric >= min_price)
     if max_price is not None:
-        filters.append(Product.price_numeric.is_not(None))
         filters.append(Product.price_numeric <= max_price)
 
     total = session.exec(select(func.count()).select_from(Product).where(*filters)).one()
@@ -150,7 +156,7 @@ def search_products(session: Session, query: CatalogQuery) -> CatalogResult:
     elif query.sort == "random":
         order_by = [func.random()]
     elif term:
-        order_by = [case((Product.title_normalized.like(f"{term}%"), 0), else_=1), rank]
+        order_by = [case((Product.title_normalized.like(f"{escaped}%", escape="\\"), 0), else_=1), rank]
     else:
         order_by = [rank]
 

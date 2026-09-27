@@ -238,3 +238,29 @@ def test_pagination_is_stable_across_pages_for_ties(session):
 
     assert sorted(seen) == ["T0", "T1", "T2", "T3", "T4"]
     assert len(seen) == len(set(seen))  # no duplicates across pages
+
+
+def test_relevance_with_query_prioritizes_prefix_over_better_rank(session):
+    from datetime import datetime
+    from models import Product, ProductList
+
+    mid = Product(asin="M1", title="Gran Café molido", title_normalized="gran cafe molido",
+                  url="https://www.amazon.es/dp/M1", category="Varios", category_slug="varios",
+                  price_numeric=None, price_raw="N/A", scraped_at=datetime(2026, 1, 1))
+    pre = Product(asin="P1", title="Café molido", title_normalized="cafe molido",
+                  url="https://www.amazon.es/dp/P1", category="Varios", category_slug="varios",
+                  price_numeric=None, price_raw="N/A", scraped_at=datetime(2026, 1, 1))
+    session.add_all([mid, pre]); session.commit()
+    session.refresh(mid); session.refresh(pre)
+    session.add_all([
+        ProductList(product_id=mid.id, list_key="bestsellers", rank=1),
+        ProductList(product_id=pre.id, list_key="bestsellers", rank=2),
+    ]); session.commit()
+
+    result = search_products(session, CatalogQuery(q="cafe", source="bestsellers"))
+    assert [p.asin for p in result.items] == ["P1", "M1"]
+
+
+def test_search_treats_like_wildcards_literally(session, catalog_seed):
+    assert search_products(session, CatalogQuery(q="__")).total == 0
+    assert search_products(session, CatalogQuery(q="a_")).total == 0
