@@ -112,3 +112,104 @@ def test_parse_price_range_returns_zero():
     """Range prices are intentionally non-convertible -> mapped to None by the import."""
     assert _parse_price("13,99 € - 17,99 €") == 0.0
     assert _parse_price("7,91 €\xa0-\xa019,99 €") == 0.0
+
+
+from catalog import CatalogResult, CatalogQuery, search_products
+
+
+def test_search_by_text_is_accent_and_case_insensitive(session, catalog_seed):
+    result = search_products(session, CatalogQuery(q="CAFE"))
+    assert result.total == 2
+
+
+def test_search_ignores_terms_shorter_than_two_chars(session, catalog_seed):
+    result = search_products(session, CatalogQuery(q="a"))
+    assert result.total == 3
+
+
+def test_filter_by_category_slug(session, catalog_seed):
+    result = search_products(session, CatalogQuery(category_slug="electronica"))
+    assert result.total == 1
+    assert result.items[0].asin == "B1"
+
+
+def test_filter_by_source_uses_product_list(session, catalog_seed):
+    result = search_products(session, CatalogQuery(source="trends"))
+    assert result.total == 2
+    assert {p.asin for p in result.items} == {"A2", "B1"}
+
+
+def test_price_range_excludes_null_prices(session, catalog_seed):
+    result = search_products(session, CatalogQuery(min_price=1.0, max_price=200.0))
+    assert result.total == 2
+    assert all(p.price_numeric is not None for p in result.items)
+
+
+def test_min_price_greater_than_max_is_swapped(session, catalog_seed):
+    result = search_products(session, CatalogQuery(min_price=200.0, max_price=1.0))
+    assert result.total == 2
+
+
+def test_filters_combine(session, catalog_seed):
+    result = search_products(session, CatalogQuery(source="bestsellers", category_slug="alimentacion-y-bebidas"))
+    assert result.total == 2
+    result = search_products(session, CatalogQuery(source="trends", category_slug="alimentacion-y-bebidas"))
+    assert result.total == 1
+    assert result.items[0].asin == "A2"
+
+
+def test_sort_price_asc_puts_nulls_last(session, catalog_seed):
+    result = search_products(session, CatalogQuery(sort="price_asc"))
+    assert [p.asin for p in result.items] == ["A1", "A2", "B1"]
+
+
+def test_sort_price_desc_puts_nulls_last(session, catalog_seed):
+    result = search_products(session, CatalogQuery(sort="price_desc"))
+    assert [p.asin for p in result.items] == ["A2", "A1", "B1"]
+
+
+def test_sort_newest_orders_by_scraped_at_desc(session, catalog_seed):
+    result = search_products(session, CatalogQuery(sort="newest"))
+    assert [p.asin for p in result.items] == ["A2", "B1", "A1"]
+
+
+def test_sort_random_returns_all_items(session, catalog_seed):
+    result = search_products(session, CatalogQuery(sort="random"))
+    assert result.total == 3
+    assert len(result.items) == 3
+
+
+def test_relevance_with_query_prioritizes_prefix_matches(session, catalog_seed):
+    result = search_products(session, CatalogQuery(q="cafe"))
+    assert result.items[0].asin == "A1"
+
+
+def test_relevance_without_query_uses_rank(session, catalog_seed):
+    result = search_products(session, CatalogQuery(source="bestsellers"))
+    assert [p.asin for p in result.items] == ["A1", "A2"]
+
+
+def test_pagination_reports_total_and_total_pages(session, catalog_seed):
+    result = search_products(session, CatalogQuery(per_page=2, page=1))
+    assert isinstance(result, CatalogResult)
+    assert result.total == 3
+    assert result.total_pages == 2
+    assert len(result.items) == 2
+
+    page2 = search_products(session, CatalogQuery(per_page=2, page=2))
+    assert len(page2.items) == 1
+
+
+def test_per_page_is_capped_at_60(session, catalog_seed):
+    result = search_products(session, CatalogQuery(per_page=500))
+    assert result.per_page == 60
+
+
+def test_page_out_of_range_clamps_to_last(session, catalog_seed):
+    result = search_products(session, CatalogQuery(per_page=2, page=99))
+    assert result.page == 2
+
+
+def test_page_below_one_clamps_to_first(session, catalog_seed):
+    result = search_products(session, CatalogQuery(page=0))
+    assert result.page == 1

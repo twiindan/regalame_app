@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
+from catalog import normalize_text
 from main import app, get_session
 from models import User
 from security import get_password_hash
@@ -53,3 +54,45 @@ def auth_client_fixture(client: TestClient, test_user: User):
     # Dado que usamos SessionMiddleware, lo más fácil en tests de integración es hacer login.
     client.post("/login", data={"email": "test@example.com", "password": "password123"})
     return client
+
+@pytest.fixture(name="catalog_seed")
+def catalog_seed_fixture(session: Session):
+    """Insert a small, known catalog: 3 products across 2 categories and 2 lists."""
+    from datetime import datetime
+    from models import Product, ProductList
+
+    def make(asin, title, category, slug, price, image, url, when):
+        return Product(
+            asin=asin,
+            title=title,
+            title_normalized=normalize_text(title),
+            image_url=image,
+            url=url,
+            category=category,
+            category_slug=slug,
+            price_numeric=price,
+            price_raw=f"{price} €" if price is not None else "N/A",
+            scraped_at=when,
+        )
+
+    products = [
+        make("A1", "Café molido", "Alimentación y bebidas", "alimentacion-y-bebidas", 10.0,
+             "img-a1.jpg", "https://www.amazon.es/dp/A1", datetime(2026, 1, 1)),
+        make("A2", "Cafetera express", "Alimentación y bebidas", "alimentacion-y-bebidas", 100.0,
+             "img-a2.jpg", "https://www.amazon.es/dp/A2", datetime(2026, 3, 1)),
+        make("B1", "Auriculares bluetooth", "Electrónica", "electronica", None,
+             "img-b1.jpg", "https://www.amazon.es/dp/B1", datetime(2026, 2, 1)),
+    ]
+    session.add_all(products)
+    session.commit()
+    for p in products:
+        session.refresh(p)
+
+    session.add_all([
+        ProductList(product_id=products[0].id, list_key="bestsellers", rank=1),
+        ProductList(product_id=products[1].id, list_key="bestsellers", rank=2),
+        ProductList(product_id=products[1].id, list_key="trends", rank=1),
+        ProductList(product_id=products[2].id, list_key="trends", rank=2),
+    ])
+    session.commit()
+    return products
