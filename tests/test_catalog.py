@@ -272,3 +272,14 @@ def test_list_categories_returns_name_slug_pairs_sorted(session, catalog_seed):
         ("Alimentación y bebidas", "alimentacion-y-bebidas"),
         ("Electrónica", "electronica"),
     ]
+
+
+def test_list_categories_excludes_inactive_products(session):
+    from datetime import datetime
+    from models import Product
+
+    session.add(Product(asin="off", title="Off", title_normalized="off",
+                        url="https://www.amazon.es/dp/off", category="Oculta", category_slug="oculta",
+                        scraped_at=datetime(2026, 1, 1), is_active=False))
+    session.commit()
+    assert list_categories(session) == []

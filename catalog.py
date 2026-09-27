@@ -176,12 +176,12 @@ def search_products(session: Session, query: CatalogQuery) -> CatalogResult:
     )
 
 
-def list_categories(session: Session):
-    """Return sorted (display_name, slug) pairs for active products."""
+def list_categories(session: Session) -> list[tuple[str, str]]:
+    """Return (display_name, slug) pairs for active products, accent-insensitively sorted."""
     rows = session.exec(
         select(Product.category, Product.category_slug)
         .where(Product.is_active == True)  # noqa: E712
         .group_by(Product.category, Product.category_slug)
-        .order_by(Product.category.asc())
     ).all()
-    return [(name, slug) for name, slug in rows]
+    pairs = ((name, slug) for name, slug in rows)
+    return sorted(pairs, key=lambda pair: (normalize_text(pair[0]), pair[1]))
