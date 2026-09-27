@@ -1,5 +1,4 @@
 import json
-import os
 from datetime import datetime
 
 import pytest
@@ -392,3 +391,41 @@ def test_extract_asin_does_not_truncate_longer_token():
     result = extract_asin("https://www.amazon.es/dp/B0049U0DMCX/ref=x")
     assert result != "B0049U0DMC"
     assert result.startswith("h")
+
+
+def test_import_dedupes_repeated_asin_within_a_list(session, tmp_path):
+    from models import Product, ProductList
+    files = {"bestsellers": _write_json(tmp_path, "b.json", [
+        _raw_item("A100000001", "Café", "Alimentación y bebidas", "10,00 €"),
+        _raw_item("A100000001", "Café", "Belleza", "10,00 €"),
+    ])}
+    stats = import_from_json(session, data_files=files)
+    assert stats["created"] == 1
+    assert len(session.exec(select(Product)).all()) == 1
+    links = session.exec(select(ProductList).where(ProductList.list_key == "bestsellers")).all()
+    assert len(links) == 1
+    assert links[0].rank == 1
+
+
+def test_import_product_shared_across_lists_creates_two_links(session, tmp_path):
+    from models import Product, ProductList
+    files = {
+        "bestsellers": _write_json(tmp_path, "b.json", [_raw_item("A100000001", "Café", "Varios", "10,00 €")]),
+        "trends": _write_json(tmp_path, "t.json", [_raw_item("A100000001", "Café", "Varios", "10,00 €")]),
+    }
+    import_from_json(session, data_files=files)
+    assert len(session.exec(select(Product)).all()) == 1
+    links = session.exec(select(ProductList)).all()
+    assert {link.list_key for link in links} == {"bestsellers", "trends"}
+    assert len(links) == 2
+
+
+def test_import_untouched_list_is_not_wiped_by_empty_file(session, tmp_path):
+    from models import Product, ProductList
+    files = {"bestsellers": _write_json(tmp_path, "b.json", [_raw_item("A100000001", "Café", "Varios", "10,00 €")])}
+    import_from_json(session, data_files=files)
+    assert len(session.exec(select(ProductList)).all()) == 1
+
+    import_from_json(session, data_files={"bestsellers": _write_json(tmp_path, "empty.json", [])})
+    from models import Product as P
+    assert len(session.exec(select(Product)).all()) == 1

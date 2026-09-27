@@ -196,33 +196,48 @@ DATA_FILES = {
 }
 
 
-def import_from_json(session: Session, data_files=None, dry_run: bool = False):
-    """Idempotent JSON -> DB import. Upserts by ASIN and rebuilds list ranks."""
+def import_from_json(session: Session, data_files=None, dry_run: bool = False) -> dict:
+    """Idempotent JSON -> DB import. Upserts by ASIN and rebuilds list ranks.
+
+    Manages the transaction: commits the supplied session on success, or rolls it
+    back when ``dry_run`` is True. Repeated ASINs within one list are collapsed to
+    their first (best) rank, and an empty source file leaves existing ranks intact.
+    """
     data_files = data_files or DATA_FILES
     stats = {"created": 0, "updated": 0, "lists": 0}
+    existing = {product.asin: product for product in session.exec(select(Product)).all()}
 
     for list_key, path in data_files.items():
         if not os.path.exists(path):
             continue
         with open(path, "r", encoding="utf-8") as handle:
             items = json.load(handle)
+        if not items:
+            continue
 
         scraped_at = datetime.utcfromtimestamp(os.path.getmtime(path))
-        ranked = []
+        ranks: dict[str, int] = {}
+        next_rank = 0
 
-        for rank, item in enumerate(items, start=1):
+        for item in items:
             url = item.get("url")
             if not url:
                 continue
 
             asin = extract_asin(url)
+            if asin in ranks:
+                continue
+            next_rank += 1
+            ranks[asin] = next_rank
+
             title = item.get("title", "")
             category = item.get("category") or "Varios"
             price_raw = item.get("price")
             parsed = _parse_price(price_raw)
+            # _parse_price returns 0.0 for unparseable/range prices -> store None
             price_numeric = parsed if parsed > 0 else None
 
-            product = session.exec(select(Product).where(Product.asin == asin)).first()
+            product = existing.get(asin)
             if product is None:
                 product = Product(
                     asin=asin,
@@ -237,7 +252,7 @@ def import_from_json(session: Session, data_files=None, dry_run: bool = False):
                     scraped_at=scraped_at,
                 )
                 session.add(product)
-                session.flush()
+                existing[asin] = product
                 stats["created"] += 1
             else:
                 product.title = title
@@ -254,12 +269,12 @@ def import_from_json(session: Session, data_files=None, dry_run: bool = False):
                 session.add(product)
                 stats["updated"] += 1
 
-            ranked.append((product.id, rank))
-
+        session.flush()
         session.exec(delete(ProductList).where(ProductList.list_key == list_key))
-        for product_id, rank in ranked:
-            session.add(ProductList(product_id=product_id, list_key=list_key, rank=rank))
+        for asin, rank in ranks.items():
+            session.add(ProductList(product_id=existing[asin].id, list_key=list_key, rank=rank))
             stats["lists"] += 1
+        session.flush()
 
     if dry_run:
         session.rollback()
