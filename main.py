@@ -441,17 +441,18 @@ async def blog_index(
 async def blog_post_detail(
     request: Request,
     slug: str,
-    user: Optional[User] = Depends(get_current_user)
+    user: Optional[User] = Depends(get_current_user),
+    session: Session = Depends(get_session)
 ):
-    post, products = get_blog_post_detail(slug)
-    
+    post, products = get_blog_post_detail(session, slug)
     if not post:
         raise HTTPException(status_code=404, detail="Artículo no encontrado")
-        
+
     return templates.TemplateResponse(request, "blog_post.html", {
         "user": user,
         "post": post,
         "items": products,
+        "amazon_link": generate_amazon_link,
         "title": post["title"]
     })
 

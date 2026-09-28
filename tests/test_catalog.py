@@ -432,3 +432,41 @@ def test_import_untouched_list_is_not_wiped_by_empty_file(session, tmp_path):
     links = session.exec(select(ProductList)).all()
     assert len(links) == 1
     assert links[0].list_key == "bestsellers"
+
+
+def test_get_blog_post_detail_filters_from_db(session, catalog_seed):
+    from services import get_blog_post_detail
+
+    post, products = get_blog_post_detail(session, "regalos-amigo-invisible-10-euros")
+    assert post is not None
+    assert {p.asin for p in products} == {"A1"}  # only price <= 10 and parseable
+
+
+def test_get_blog_post_detail_unknown_slug(session):
+    from services import get_blog_post_detail
+
+    post, products = get_blog_post_detail(session, "no-existe")
+    assert post is None
+    assert products == []
+
+
+def test_get_blog_post_detail_category_criteria(session, catalog_seed):
+    from services import get_blog_post_detail
+
+    # blog_config post "top-tendencias-tecnologia-2025" has criteria {"category": "Electrónica"}
+    post, products = get_blog_post_detail(session, "top-tendencias-tecnologia-2025")
+    assert post is not None
+    assert {p.asin for p in products} == {"B1"}
+
+
+def test_get_blog_post_detail_does_not_mutate_shared_post(session, catalog_seed):
+    from blog_config import BLOG_POSTS
+    from services import get_blog_post_detail
+
+    shared = next(p for p in BLOG_POSTS if p["slug"] == "regalos-amigo-invisible-10-euros")
+    assert shared.get("hero_image") is None
+
+    post, products = get_blog_post_detail(session, "regalos-amigo-invisible-10-euros")
+
+    assert post["hero_image"] == "img-a1.jpg"
+    assert shared.get("hero_image") is None  # module-level dict untouched
