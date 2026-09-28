@@ -448,3 +448,25 @@ def test_get_blog_post_detail_unknown_slug(session):
     post, products = get_blog_post_detail(session, "no-existe")
     assert post is None
     assert products == []
+
+
+def test_get_blog_post_detail_category_criteria(session, catalog_seed):
+    from services import get_blog_post_detail
+
+    # blog_config post "top-tendencias-tecnologia-2025" has criteria {"category": "Electrónica"}
+    post, products = get_blog_post_detail(session, "top-tendencias-tecnologia-2025")
+    assert post is not None
+    assert {p.asin for p in products} == {"B1"}
+
+
+def test_get_blog_post_detail_does_not_mutate_shared_post(session, catalog_seed):
+    from blog_config import BLOG_POSTS
+    from services import get_blog_post_detail
+
+    shared = next(p for p in BLOG_POSTS if p["slug"] == "regalos-amigo-invisible-10-euros")
+    assert shared.get("hero_image") is None
+
+    post, products = get_blog_post_detail(session, "regalos-amigo-invisible-10-euros")
+
+    assert post["hero_image"] == "img-a1.jpg"
+    assert shared.get("hero_image") is None  # module-level dict untouched

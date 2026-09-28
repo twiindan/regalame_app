@@ -1,8 +1,6 @@
 import random
 import os
 import json
-import unicodedata
-import re
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 import requests
 from bs4 import BeautifulSoup
@@ -363,6 +361,6 @@ def get_blog_post_detail(session: Session, slug: str):
         page += 1
 
     if not post.get("hero_image") and products:
-        post["hero_image"] = products[0].image_url
+        post = {**post, "hero_image": products[0].image_url}
 
     return post, products
