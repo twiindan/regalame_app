@@ -21,7 +21,9 @@ from services import (
     get_products_by_category_slug, get_all_categories_info,
     get_blog_posts_list, get_blog_post_detail
 )
+from catalog import CatalogQuery, search_products, list_categories, VALID_SORTS
 from email_utils import send_invitation_email, send_wishlist_share_email
+from urllib.parse import urlencode
 
 # --- Configuración Inicial ---
 @asynccontextmanager
@@ -216,6 +218,111 @@ async def dashboard(
         "trending_items": trending_items,
         "desired_items": desired_items
     })
+
+def _to_float(value):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _to_int(value, default=1):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _catalog_context(
+    request: Request,
+    session: Session,
+    user,
+    *,
+    base_path: str,
+    title: str,
+    source: Optional[str] = None,
+    q: Optional[str] = None,
+    category: Optional[str] = None,
+    min_value: Optional[str] = None,
+    max_value: Optional[str] = None,
+    sort: str = "relevance",
+    page: str = "1",
+    always_indexable: bool = False,
+):
+    requested_page = _to_int(page, 1)
+    query = CatalogQuery(
+        q=q or None,
+        category_slug=category or None,
+        source=source,
+        min_price=_to_float(min_value),
+        max_price=_to_float(max_value),
+        sort=sort if sort in VALID_SORTS else "relevance",
+        page=requested_page,
+    )
+    result = search_products(session, query)
+
+    params = {}
+    if query.q:
+        params["q"] = query.q
+    if query.category_slug:
+        params["category"] = query.category_slug
+    if source:
+        params["source"] = source
+    if query.min_price is not None:
+        params["min"] = query.min_price
+    if query.max_price is not None:
+        params["max"] = query.max_price
+    if query.sort != "relevance":
+        params["sort"] = query.sort
+    filter_qs = urlencode(params)
+
+    has_filters = bool(query.q or query.category_slug or query.source
+                       or query.min_price is not None or query.max_price is not None)
+    # Any page carrying q, sort or page params is noindex. Use the *requested*
+    # page, not the clamped one. `/ideas/{slug}` opts out via always_indexable.
+    noindex = not always_indexable and (
+        bool(q) or (sort != "relevance") or requested_page > 1
+    )
+
+    return {
+        "user": user,
+        "request": request,
+        "result": result,
+        "categories": list_categories(session),
+        "query": query,
+        "source": source,
+        "base_path": base_path,
+        "title": title,
+        "filter_qs": filter_qs,
+        "has_filters": has_filters,
+        "noindex": noindex,
+        "amazon_link": generate_amazon_link,
+    }
+
+
+@app.get("/catalog", response_class=HTMLResponse)
+async def catalog_page(
+    request: Request,
+    q: Optional[str] = None,
+    category: Optional[str] = None,
+    source: Optional[str] = None,
+    min: Optional[str] = None,
+    max: Optional[str] = None,
+    sort: str = "relevance",
+    page: str = "1",
+    user: Optional[User] = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    context = _catalog_context(
+        request, session, user,
+        base_path="/catalog", title="Catálogo",
+        source=source, q=q, category=category, min_value=min, max_value=max,
+        sort=sort, page=page,
+    )
+    if request.headers.get("HX-Request"):
+        return templates.TemplateResponse(request, "partials/catalog_results.html", context)
+    return templates.TemplateResponse(request, "catalog.html", context)
+
 
 # --- Rutas de Catálogo (Ver Más) ---
 

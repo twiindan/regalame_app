@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} | Regálame{% endblock %}
+{% block description %}Explora el catálogo de regalos: busca, filtra por categoría, fuente y precio, y ordena los resultados.{% endblock %}
+{% block extra_head %}{% if noindex %}<meta name="robots" content="noindex, follow">{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+    <div class="text-center mb-8 mt-4">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 mb-3">{{ title }}</h1>
+    </div>
+
+    <form method="GET" action="{{ base_path }}"
+          hx-get="{{ base_path }}" hx-target="#catalog-results" hx-push-url="true"
+          class="glass-panel rounded-2xl p-5 mb-8 space-y-4">
+        {% if source %}<input type="hidden" name="source" value="{{ source }}">{% endif %}
+
+        <div class="flex flex-col md:flex-row gap-3">
+            <input type="search" name="q" value="{{ query.q or '' }}" placeholder="Buscar productos..."
+                   class="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-gray-200 placeholder-gray-500 focus:outline-none focus:border-indigo-400">
+            <select name="sort" class="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-gray-200">
+                <option value="relevance" {% if query.sort == "relevance" %}selected{% endif %}>Relevancia</option>
+                <option value="price_asc" {% if query.sort == "price_asc" %}selected{% endif %}>Precio: menor a mayor</option>
+                <option value="price_desc" {% if query.sort == "price_desc" %}selected{% endif %}>Precio: mayor a menor</option>
+                <option value="newest" {% if query.sort == "newest" %}selected{% endif %}>Más recientes</option>
+            </select>
+            <input type="number" step="0.01" name="min" value="{{ query.min_price if query.min_price is not none else '' }}" placeholder="Precio mín."
+                   class="w-full md:w-32 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-gray-200 placeholder-gray-500">
+            <input type="number" step="0.01" name="max" value="{{ query.max_price if query.max_price is not none else '' }}" placeholder="Precio máx."
+                   class="w-full md:w-32 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-gray-200 placeholder-gray-500">
+            <button type="submit" class="bg-indigo-500 hover:bg-indigo-400 text-white px-6 py-2.5 rounded-xl font-bold transition-all">Filtrar</button>
+        </div>
+
+        {% if not source %}
+        <div class="flex flex-wrap gap-2">
+            <a href="{{ base_path }}{% if query.q or query.min_price is not none or query.max_price is not none or query.sort != 'relevance' %}?{% endif %}{% if query.q %}q={{ query.q }}&{% endif %}{% if query.min_price is not none %}min={{ query.min_price }}&{% endif %}{% if query.max_price is not none %}max={{ query.max_price }}&{% endif %}{% if query.sort != 'relevance' %}sort={{ query.sort }}{% endif %}"
+               hx-get="{{ base_path }}" hx-target="#catalog-results" hx-push-url="true"
+               class="px-4 py-2 rounded-full text-sm font-bold {% if not query.category_slug %}bg-white text-indigo-900{% else %}bg-white/10 text-gray-300 hover:bg-white/20{% endif %}">Todas</a>
+            {% for name, slug in categories %}
+            <a href="{{ base_path }}?category={{ slug }}{% if query.q %}&q={{ query.q }}{% endif %}{% if query.min_price is not none %}&min={{ query.min_price }}{% endif %}{% if query.max_price is not none %}&max={{ query.max_price }}{% endif %}{% if query.sort != 'relevance' %}&sort={{ query.sort }}{% endif %}"
+               hx-get="{{ base_path }}?category={{ slug }}{% if query.q %}&q={{ query.q }}{% endif %}{% if query.min_price is not none %}&min={{ query.min_price }}{% endif %}{% if query.max_price is not none %}&max={{ query.max_price }}{% endif %}{% if query.sort != 'relevance' %}&sort={{ query.sort }}{% endif %}"
+               hx-target="#catalog-results" hx-push-url="true"
+               class="px-4 py-2 rounded-full text-sm font-bold {% if query.category_slug == slug %}bg-white text-indigo-900{% else %}bg-white/10 text-gray-300 hover:bg-white/20{% endif %}">{{ name }}</a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </form>
+
+    {% include "partials/catalog_results.html" %}
+</div>
+{% endblock %}

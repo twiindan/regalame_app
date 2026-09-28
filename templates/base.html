@@ -127,6 +127,7 @@
     {% if analytics_script %}
         {{ analytics_script | safe }}
     {% endif %}
+    {% block extra_head %}{% endblock %}
 </head>
 <body class="min-h-screen flex flex-col font-sans">
 
@@ -142,10 +143,15 @@
                         <i class="ph-fill ph-gift mr-2 text-pink-500"></i>Regálame
                     </a>
                 </div>
+                <form action="/catalog" method="GET" class="hidden md:block flex-1 max-w-xs mx-6">
+                    <input type="search" name="q" placeholder="Buscar productos..."
+                           class="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-indigo-400">
+                </form>
                 <div class="flex items-center space-x-4">
                     <div class="hidden md:flex space-x-4 mr-4 border-r border-white/10 pr-4">
                         <a href="/trends" class="text-sm text-gray-400 hover:text-white transition-colors">Tendencias</a>
                         <a href="/bestsellers" class="text-sm text-gray-400 hover:text-white transition-colors">Top Ventas</a>
+                        <a href="/catalog" class="text-sm text-gray-400 hover:text-white transition-colors">Catálogo</a>
                         <a href="/blog" class="text-sm text-pink-300 hover:text-white transition-colors font-medium flex items-center gap-1">
                             <i class="ph-bold ph-lightbulb"></i> Ideas y Guías
                         </a>
