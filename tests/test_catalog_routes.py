@@ -126,3 +126,21 @@ def test_dashboard_renders_catalog_products(auth_client, catalog_seed):
     assert response.status_code == 200
     assert "Café molido" in response.text
     assert "tag=" in response.text
+
+
+def test_ideas_htmx_returns_partial_only(client, catalog_seed):
+    response = client.get("/ideas/alimentacion-y-bebidas", headers={"HX-Request": "true"})
+    assert response.status_code == 200
+    assert "catalog-results" in response.text
+    assert "<html" not in response.text
+
+
+def test_legacy_routes_noindex_with_price_filters(client, catalog_seed):
+    assert "noindex" in client.get("/bestsellers?min=1").text
+    assert "noindex" in client.get("/bestsellers?max=50").text
+
+
+def test_catalog_rejects_random_sort_for_users(client, catalog_seed):
+    response = client.get("/catalog?sort=random")
+    assert response.status_code == 200
+    assert '<option value="relevance" selected>' in response.text

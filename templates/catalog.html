@@ -5,7 +5,7 @@
 {% block extra_head %}{% if noindex %}<meta name="robots" content="noindex, follow">{% endif %}{% endblock %}
 
 {% macro pill(url, active, label) %}
-<a href="{{ url }}" hx-get="{{ url }}" hx-target="#catalog-results" hx-push-url="true"
+<a href="{{ url }}" hx-get="{{ url }}" hx-target="#catalog-results" hx-swap="outerHTML" hx-push-url="true"
    class="px-4 py-2 rounded-full text-sm font-bold {% if active %}bg-white text-indigo-900{% else %}bg-white/10 text-gray-300 hover:bg-white/20{% endif %}">{{ label }}</a>
 {% endmacro %}
 
@@ -16,7 +16,7 @@
     </div>
 
     <form method="GET" action="{{ base_path }}"
-          hx-get="{{ base_path }}" hx-target="#catalog-results" hx-push-url="true"
+          hx-get="{{ base_path }}" hx-target="#catalog-results" hx-swap="outerHTML" hx-push-url="true"
           class="glass-panel rounded-2xl p-5 mb-8 space-y-4">
         {% if source %}<input type="hidden" name="source" value="{{ source }}">{% endif %}
 

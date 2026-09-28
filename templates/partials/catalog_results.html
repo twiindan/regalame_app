@@ -1,3 +1,4 @@
+{% set page_qs = ('?' ~ filter_qs ~ '&') if filter_qs else '?' %}
 <div id="catalog-results">
     <p class="text-sm text-gray-400 mb-4">
         {% if result.total %}
@@ -69,22 +70,22 @@
     {% if result.total_pages > 1 %}
     <nav aria-label="Paginación" class="flex flex-wrap justify-center gap-2 mt-10">
         {% if result.page > 1 %}
-        <a href="{{ base_path }}?{{ filter_qs }}&page={{ result.page - 1 }}"
-           hx-get="{{ base_path }}?{{ filter_qs }}&page={{ result.page - 1 }}"
-           hx-target="#catalog-results" hx-push-url="true"
+        <a href="{{ base_path }}{{ page_qs }}page={{ result.page - 1 }}"
+           hx-get="{{ base_path }}{{ page_qs }}page={{ result.page - 1 }}"
+           hx-target="#catalog-results" hx-swap="outerHTML" hx-push-url="true"
            class="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10">Anterior</a>
         {% endif %}
         {% for p in range(1, result.total_pages + 1) %}
-        <a href="{{ base_path }}?{{ filter_qs }}&page={{ p }}"
-           hx-get="{{ base_path }}?{{ filter_qs }}&page={{ p }}"
-           hx-target="#catalog-results" hx-push-url="true"
+        <a href="{{ base_path }}{{ page_qs }}page={{ p }}"
+           hx-get="{{ base_path }}{{ page_qs }}page={{ p }}"
+           hx-target="#catalog-results" hx-swap="outerHTML" hx-push-url="true"
            {% if p == result.page %}aria-current="page"{% endif %}
            class="px-4 py-2 rounded-lg border {% if p == result.page %}bg-indigo-500 border-indigo-400 text-white{% else %}bg-white/5 border-white/10 text-gray-300 hover:bg-white/10{% endif %}">{{ p }}</a>
         {% endfor %}
         {% if result.page < result.total_pages %}
-        <a href="{{ base_path }}?{{ filter_qs }}&page={{ result.page + 1 }}"
-           hx-get="{{ base_path }}?{{ filter_qs }}&page={{ result.page + 1 }}"
-           hx-target="#catalog-results" hx-push-url="true"
+        <a href="{{ base_path }}{{ page_qs }}page={{ result.page + 1 }}"
+           hx-get="{{ base_path }}{{ page_qs }}page={{ result.page + 1 }}"
+           hx-target="#catalog-results" hx-swap="outerHTML" hx-push-url="true"
            class="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10">Siguiente</a>
         {% endif %}
     </nav>
