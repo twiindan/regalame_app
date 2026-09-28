@@ -234,7 +234,6 @@ def _to_int(value, default=1):
 
 
 def _catalog_context(
-    request: Request,
     session: Session,
     user,
     *,
@@ -338,7 +337,7 @@ async def catalog_page(
     session: Session = Depends(get_session),
 ):
     context = _catalog_context(
-        request, session, user,
+        session, user,
         base_path="/catalog", title="Catálogo",
         source=source, q=q, category=category, min_value=min, max_value=max,
         sort=sort, page=page, force_noindex=True,

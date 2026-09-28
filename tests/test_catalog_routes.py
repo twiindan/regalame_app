@@ -38,5 +38,4 @@ def test_catalog_empty_state_with_filters(client, catalog_seed):
 
 def test_catalog_preserves_filters_in_category_links(client, catalog_seed):
     response = client.get("/catalog?q=cafe&sort=price_asc")
-    assert "q=cafe" in response.text
-    assert "sort=price_asc" in response.text
+    assert "/catalog?q=cafe&amp;sort=price_asc&amp;category=alimentacion-y-bebidas" in response.text
