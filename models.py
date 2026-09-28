@@ -1,5 +1,6 @@
 from typing import Optional, List
 from datetime import date, datetime
+from sqlalchemy import UniqueConstraint
 from sqlmodel import SQLModel, Field, Relationship
 
 # Tabla intermedia con datos extra (quién regala a quién)
@@ -90,3 +91,25 @@ class Message(SQLModel, table=True):
     receiver_id: int = Field(foreign_key="user.id")
     content: str
     timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+class Product(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    asin: str = Field(unique=True, index=True)
+    title: str
+    title_normalized: str = Field(index=True)
+    image_url: Optional[str] = None
+    url: str
+    category: str = Field(index=True)
+    category_slug: str = Field(index=True)
+    price_numeric: Optional[float] = Field(default=None, index=True)
+    price_raw: Optional[str] = None
+    scraped_at: datetime
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    is_active: bool = Field(default=True, index=True)
+
+class ProductList(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("product_id", "list_key", name="uq_productlist_product_list"),)
+    id: Optional[int] = Field(default=None, primary_key=True)
+    product_id: int = Field(foreign_key="product.id", index=True)
+    list_key: str = Field(index=True)
+    rank: int
