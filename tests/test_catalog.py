@@ -470,3 +470,49 @@ def test_get_blog_post_detail_does_not_mutate_shared_post(session, catalog_seed)
 
     assert post["hero_image"] == "img-a1.jpg"
     assert shared.get("hero_image") is None  # module-level dict untouched
+
+
+def test_search_treats_percent_as_literal(session, catalog_seed):
+    # "a%" survives the 2-char guard; unescaped it would match every title containing "a"
+    assert search_products(session, CatalogQuery(q="a%")).total == 0
+
+
+def test_search_treats_backslash_as_literal(session):
+    from datetime import datetime
+    from models import Product
+
+    session.add(Product(asin="BS1", title="Back\\slash item", title_normalized="back\\slash item",
+                        url="https://www.amazon.es/dp/BS1", category="Varios", category_slug="varios",
+                        scraped_at=datetime(2026, 1, 1)))
+    session.commit()
+
+    # "ack\" must match the literal backslash; if the trailing backslash were left unescaped it
+    # would escape the trailing "%" instead, turning the pattern into a match for "ack%" -> 0.
+    assert search_products(session, CatalogQuery(q="ack\\")).total == 1
+
+
+def test_import_skips_missing_file(session, tmp_path):
+    missing = str(tmp_path / "does-not-exist.json")
+    stats = import_from_json(session, data_files={"bestsellers": missing})
+    assert stats == {"created": 0, "updated": 0, "lists": 0}
+
+
+def test_per_page_zero_falls_back_to_default(session, catalog_seed):
+    assert search_products(session, CatalogQuery(per_page=0)).per_page == 24
+
+
+def test_negative_per_page_clamps_to_one(session, catalog_seed):
+    assert search_products(session, CatalogQuery(per_page=-5)).per_page == 1
+
+
+def test_import_stores_timezone_naive_timestamps(session, tmp_path):
+    files = {"bestsellers": _write_json(tmp_path, "b.json", [
+        _raw_item("A100000001", "Café", "Varios", "10,00 €"),
+    ])}
+    import_from_json(session, data_files=files)
+    product = session.exec(select(Product).where(Product.asin == "A100000001")).first()
+
+    # The columns are naive DateTime: an aware datetime round-trips back naive and then
+    # compares unequal to the value originally written.
+    assert product.scraped_at.tzinfo is None
+    assert product.updated_at.tzinfo is None
