@@ -16,9 +16,7 @@ from database import create_db_and_tables, get_session
 from models import User, Group, GroupMember, Wish, GroupExclusion, Message, Friendship
 from security import get_password_hash, verify_password
 from services import (
-    scrape_metadata, generate_amazon_link, perform_draw, 
-    get_random_products, get_all_products,
-    get_products_by_category_slug, get_all_categories_info,
+    scrape_metadata, generate_amazon_link, perform_draw,
     get_blog_posts_list, get_blog_post_detail
 )
 from catalog import CatalogQuery, search_products, list_categories, VALID_SORTS
