@@ -7,14 +7,14 @@ import os
 import re
 import unicodedata
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from urllib.parse import urlparse
 
 from sqlalchemy import case, delete, func
 from sqlmodel import Session, select
 
-from models import Product, ProductList
+from models import Product, ProductList, utcnow_naive
 
 DEFAULT_PER_PAGE = 24
 MAX_PER_PAGE = 60
@@ -189,6 +189,11 @@ def list_categories(session: Session) -> list[tuple[str, str]]:
     return sorted(pairs, key=lambda pair: (normalize_text(pair[0]), pair[1]))
 
 
+def _utcnaive_from_timestamp(timestamp: float) -> datetime:
+    """Naive UTC from a POSIX timestamp, matching the model's naive columns."""
+    return datetime.fromtimestamp(timestamp, tz=timezone.utc).replace(tzinfo=None)
+
+
 DATA_FILES = {
     "bestsellers": "amazon_bestsellers_total.json",
     "desired": "amazon_mas_deseados_total.json",
@@ -215,7 +220,7 @@ def import_from_json(session: Session, data_files=None, dry_run: bool = False) -
         if not items:
             continue
 
-        scraped_at = datetime.utcfromtimestamp(os.path.getmtime(path))
+        scraped_at = _utcnaive_from_timestamp(os.path.getmtime(path))
         ranks: dict[str, int] = {}
         next_rank = 0
 
@@ -264,7 +269,7 @@ def import_from_json(session: Session, data_files=None, dry_run: bool = False) -
                 product.price_numeric = price_numeric
                 product.price_raw = price_raw
                 product.scraped_at = scraped_at
-                product.updated_at = datetime.utcnow()
+                product.updated_at = utcnow_naive()
                 product.is_active = True
                 session.add(product)
                 stats["updated"] += 1
