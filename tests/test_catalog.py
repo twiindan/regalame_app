@@ -427,5 +427,8 @@ def test_import_untouched_list_is_not_wiped_by_empty_file(session, tmp_path):
     assert len(session.exec(select(ProductList)).all()) == 1
 
     import_from_json(session, data_files={"bestsellers": _write_json(tmp_path, "empty.json", [])})
-    from models import Product as P
+
     assert len(session.exec(select(Product)).all()) == 1
+    links = session.exec(select(ProductList)).all()
+    assert len(links) == 1
+    assert links[0].list_key == "bestsellers"

@@ -270,11 +270,12 @@ def import_from_json(session: Session, data_files=None, dry_run: bool = False) -
                 stats["updated"] += 1
 
         session.flush()
-        session.exec(delete(ProductList).where(ProductList.list_key == list_key))
-        for asin, rank in ranks.items():
-            session.add(ProductList(product_id=existing[asin].id, list_key=list_key, rank=rank))
-            stats["lists"] += 1
-        session.flush()
+        if ranks:
+            session.exec(delete(ProductList).where(ProductList.list_key == list_key))
+            for asin, rank in ranks.items():
+                session.add(ProductList(product_id=existing[asin].id, list_key=list_key, rank=rank))
+                stats["lists"] += 1
+            session.flush()
 
     if dry_run:
         session.rollback()
