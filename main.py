@@ -277,6 +277,27 @@ def _catalog_context(
         params["sort"] = query.sort
     filter_qs = urlencode(params)
 
+    categories = list_categories(session)
+
+    def _catalog_url(**overrides):
+        merged = {k: v for k, v in params.items() if k not in overrides}
+        for key, value in overrides.items():
+            if value is not None:
+                merged[key] = value
+        query_string = urlencode(merged)
+        return f"{base_path}?{query_string}" if query_string else base_path
+
+    category_all_url = _catalog_url(category=None)
+    category_links = [
+        {
+            "name": name,
+            "slug": slug,
+            "url": _catalog_url(category=slug),
+            "active": query.category_slug == slug,
+        }
+        for name, slug in categories
+    ]
+
     has_filters = bool(query.q or query.category_slug or query.source
                        or query.min_price is not None or query.max_price is not None)
     # Any page carrying q, sort or page params is noindex. Use the *requested*
@@ -288,9 +309,10 @@ def _catalog_context(
 
     return {
         "user": user,
-        "request": request,
         "result": result,
-        "categories": list_categories(session),
+        "categories": categories,
+        "category_all_url": category_all_url,
+        "category_links": category_links,
         "query": query,
         "source": source,
         "base_path": base_path,
