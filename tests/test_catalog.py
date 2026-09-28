@@ -432,3 +432,19 @@ def test_import_untouched_list_is_not_wiped_by_empty_file(session, tmp_path):
     links = session.exec(select(ProductList)).all()
     assert len(links) == 1
     assert links[0].list_key == "bestsellers"
+
+
+def test_get_blog_post_detail_filters_from_db(session, catalog_seed):
+    from services import get_blog_post_detail
+
+    post, products = get_blog_post_detail(session, "regalos-amigo-invisible-10-euros")
+    assert post is not None
+    assert {p.asin for p in products} == {"A1"}  # only price <= 10 and parseable
+
+
+def test_get_blog_post_detail_unknown_slug(session):
+    from services import get_blog_post_detail
+
+    post, products = get_blog_post_detail(session, "no-existe")
+    assert post is None
+    assert products == []

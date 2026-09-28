@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 from sqlmodel import Session, select
 from models import GroupMember, GroupExclusion
 from blog_config import BLOG_POSTS
+from catalog import CatalogQuery, MAX_PER_PAGE, search_products, slugify
 
 # --- CONFIGURACIÓN DE ARCHIVOS ---
 DATA_FILES = {
@@ -16,15 +17,6 @@ DATA_FILES = {
     "desired": "amazon_mas_deseados_total.json",
     "trends": "amazon_tendencias_total.json"
 }
-
-def slugify(value):
-    """
-    Normaliza texto para URL (ej: "Hogar y cocina" -> "hogar-y-cocina")
-    """
-    value = str(value)
-    value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
-    value = re.sub(r'[^\w\s-]', '', value.lower())
-    return re.sub(r'[-\s]+', '-', value).strip('-')
 
 def _load_json(filename):
     """
@@ -343,48 +335,34 @@ def get_blog_posts_list():
     """
     return BLOG_POSTS
 
-def get_blog_post_detail(slug: str):
+def get_blog_post_detail(session: Session, slug: str):
     """
-    Busca un post por slug, carga todos los productos y los filtra
-    según los criterios del post.
+    Busca un post por slug y resuelve sus productos desde el catálogo.
+
     Retorna: (post_metadata, filtered_products)
     """
-    # 1. Buscar el post config
     post = next((p for p in BLOG_POSTS if p["slug"] == slug), None)
     if not post:
         return None, []
-    
-    # 2. Cargar todos los productos unificados
-    all_products = get_all_products_unified()
-    
-    # 3. Filtrar
+
     criteria = post.get("criteria", {})
-    filtered_products = []
-    
-    for item in all_products:
-        match = True
-        
-        # Filtro de Precio
-        if "max_price" in criteria:
-            price = _parse_price(item.get("price"))
-            # Filtramos si el precio es 0 (no disponible) o mayor que el max
-            if price == 0.0 or price > criteria["max_price"]:
-                match = False
-        
-        # Filtro de Categoría (String Containment / Fuzzy simple)
-        if match and "category" in criteria:
-            target_cat = slugify(criteria["category"])
-            item_cat = slugify(item.get("category", ""))
-            
-            # Comprobamos si el slug de la categoría del item contiene el target
-            if target_cat not in item_cat:
-                match = False
-                
-        if match:
-            filtered_products.append(item)
-            
-    # 4. Asignar imagen hero si no tiene (usamos la del primer producto)
-    if not post.get("hero_image") and filtered_products:
-        post["hero_image"] = filtered_products[0].get("image")
-        
-    return post, filtered_products
+    category_slug = slugify(criteria["category"]) if "category" in criteria else None
+
+    products = []
+    page = 1
+    while True:
+        result = search_products(session, CatalogQuery(
+            category_slug=category_slug,
+            max_price=criteria.get("max_price"),
+            page=page,
+            per_page=MAX_PER_PAGE,
+        ))
+        products.extend(result.items)
+        if page >= result.total_pages or not result.items:
+            break
+        page += 1
+
+    if not post.get("hero_image") and products:
+        post["hero_image"] = products[0].image_url
+
+    return post, products

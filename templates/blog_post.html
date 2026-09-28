@@ -34,7 +34,7 @@
             
             <!-- Image Area -->
             <div class="relative h-48 overflow-hidden bg-white p-4">
-                <img src="{{ item.image }}" alt="{{ item.title }}" loading="lazy" class="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110">
+                <img src="{{ item.image_url }}" alt="{{ item.title }}" loading="lazy" class="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110">
                 
                 {% if item.category %}
                 <div class="absolute top-2 right-2">
@@ -45,7 +45,7 @@
                 {% endif %}
                 
                 <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 pt-8">
-                    <span class="text-lg font-bold text-white drop-shadow-md">{{ item.price }}</span>
+                    <span class="text-lg font-bold text-white drop-shadow-md">{{ item.price_raw }}</span>
                 </div>
             </div>
 
@@ -56,7 +56,7 @@
                 </h3>
                 
                 <div class="mt-auto pt-4 flex gap-3">
-                    <a href="{{ item.url }}" target="_blank" 
+                    <a href="{{ amazon_link(item.url) }}" target="_blank" 
                        class="flex-1 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 py-2 rounded-xl text-center text-sm font-bold transition-all flex items-center justify-center gap-2">
                         <i class="ph-bold ph-amazon-logo text-lg"></i>
                         <span class="hidden sm:inline">Ver</span>
@@ -66,7 +66,7 @@
                     <form hx-post="/wishes" hx-swap="none" class="flex-1">
                         <input type="hidden" name="content" value="{{ item.url }}">
                         <input type="hidden" name="manual_title" value="{{ item.title }}">
-                        <input type="hidden" name="manual_image" value="{{ item.image }}">
+                        <input type="hidden" name="manual_image" value="{{ item.image_url }}">
                         <button type="submit" 
                                 onclick="showToast(this)"
                                 class="w-full bg-indigo-500 hover:bg-indigo-400 text-white shadow-lg shadow-indigo-900/30 py-2 rounded-xl text-center text-sm font-bold transition-all flex items-center justify-center gap-2 transform active:scale-95">
