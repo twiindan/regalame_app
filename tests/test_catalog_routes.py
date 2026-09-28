@@ -39,3 +39,43 @@ def test_catalog_empty_state_with_filters(client, catalog_seed):
 def test_catalog_preserves_filters_in_category_links(client, catalog_seed):
     response = client.get("/catalog?q=cafe&sort=price_asc")
     assert "/catalog?q=cafe&amp;sort=price_asc&amp;category=alimentacion-y-bebidas" in response.text
+
+
+def test_legacy_catalog_routes_return_200(client, catalog_seed):
+    assert client.get("/bestsellers").status_code == 200
+    assert client.get("/trends").status_code == 200
+    assert client.get("/most-desired").status_code == 200
+
+
+def test_bestsellers_only_shows_its_source(client, catalog_seed):
+    response = client.get("/bestsellers")
+    assert "Café molido" in response.text
+    assert "Auriculares bluetooth" not in response.text
+
+
+def test_ideas_slug_returns_200_and_shows_products(client, catalog_seed):
+    response = client.get("/ideas/alimentacion-y-bebidas")
+    assert response.status_code == 200
+    assert "Café molido" in response.text
+
+
+def test_ideas_slug_has_canonical(client, catalog_seed):
+    response = client.get("/ideas/alimentacion-y-bebidas?page=1")
+    assert 'rel="canonical"' in response.text
+
+
+def test_ideas_unknown_slug_is_empty_not_redirect(client, catalog_seed):
+    response = client.get("/ideas/inexistente")
+    assert response.status_code == 200
+
+
+def test_sitemap_lists_categories(client, catalog_seed):
+    response = client.get("/sitemap.xml")
+    assert response.status_code == 200
+    assert "/ideas/alimentacion-y-bebidas" in response.text
+    assert "/catalog" not in response.text
+
+
+def test_dashboard_returns_200(auth_client):
+    response = auth_client.get("/dashboard")
+    assert response.status_code == 200
