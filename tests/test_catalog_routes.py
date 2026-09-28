@@ -10,9 +10,11 @@ def test_catalog_with_filters_returns_200(client, catalog_seed):
     assert "Café molido" in response.text
 
 
-def test_catalog_is_indexable_without_filters(client, catalog_seed):
-    response = client.get("/catalog")
-    assert "noindex" not in response.text
+def test_catalog_is_always_noindex(client, catalog_seed):
+    assert "noindex" in client.get("/catalog").text
+    assert "noindex" in client.get("/catalog?q=cafe").text
+    assert "noindex" in client.get("/catalog?sort=price_asc").text
+    assert "noindex" in client.get("/catalog?page=2").text
 
 
 def test_catalog_is_noindex_with_query(client, catalog_seed):

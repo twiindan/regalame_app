@@ -248,6 +248,7 @@ def _catalog_context(
     sort: str = "relevance",
     page: str = "1",
     always_indexable: bool = False,
+    force_noindex: bool = False,
 ):
     requested_page = _to_int(page, 1)
     query = CatalogQuery(
@@ -280,8 +281,9 @@ def _catalog_context(
                        or query.min_price is not None or query.max_price is not None)
     # Any page carrying q, sort or page params is noindex. Use the *requested*
     # page, not the clamped one. `/ideas/{slug}` opts out via always_indexable.
-    noindex = not always_indexable and (
-        bool(q) or (sort != "relevance") or requested_page > 1
+    # `/catalog` is always noindex per the approved design, via force_noindex.
+    noindex = force_noindex or (
+        not always_indexable and (bool(q) or (sort != "relevance") or requested_page > 1)
     )
 
     return {
@@ -317,7 +319,7 @@ async def catalog_page(
         request, session, user,
         base_path="/catalog", title="Catálogo",
         source=source, q=q, category=category, min_value=min, max_value=max,
-        sort=sort, page=page,
+        sort=sort, page=page, force_noindex=True,
     )
     if request.headers.get("HX-Request"):
         return templates.TemplateResponse(request, "partials/catalog_results.html", context)
