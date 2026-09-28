@@ -4,6 +4,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
+from catalog import _parse_price, extract_asin, normalize_text, slugify
 from models import Product, ProductList
 
 
@@ -60,3 +61,54 @@ def test_productlist_unique_per_product_and_list(session):
     session.add(ProductList(product_id=product.id, list_key="trends", rank=2))
     with pytest.raises(IntegrityError):
         session.commit()
+
+
+def test_normalize_text_lowercases_and_strips_accents():
+    assert normalize_text("Café") == "cafe"
+    assert normalize_text("  Alimentación y Bebidas ") == "alimentacion y bebidas"
+    assert normalize_text(None) == ""
+
+
+def test_slugify_matches_existing_behavior():
+    assert slugify("Hogar y cocina") == "hogar-y-cocina"
+    assert slugify("Alimentación y bebidas") == "alimentacion-y-bebidas"
+
+
+def test_extract_asin_from_dp_url():
+    assert extract_asin("https://www.amazon.es/Lavazza-1kg/dp/B0049U0DMC/ref=zg_bs?psc=1") == "B0049U0DMC"
+
+
+def test_extract_asin_from_gp_product_url():
+    assert extract_asin("https://www.amazon.es/gp/product/B085LCQNZV?ref=x") == "B085LCQNZV"
+
+
+def test_extract_asin_fallback_is_stable_and_distinct():
+    a = extract_asin("https://www.amazon.es/algo-sin-asin/ref=x")
+    b = extract_asin("https://www.amazon.es/algo-sin-asin/ref=x")
+    c = extract_asin("https://www.amazon.es/otra-cosa/ref=x")
+    assert a == b
+    assert a.startswith("h")
+    assert a != c
+
+
+def test_parse_price_european_comma():
+    assert _parse_price("19,99 €") == 19.99
+
+
+def test_parse_price_eur_prefix():
+    assert _parse_price("EUR 20.50") == 20.5
+
+
+def test_parse_price_european_thousands():
+    assert _parse_price("1.234,56") == 1234.56
+
+
+def test_parse_price_non_numeric_returns_zero():
+    assert _parse_price("N/A") == 0.0
+    assert _parse_price(None) == 0.0
+
+
+def test_parse_price_range_returns_zero():
+    """Range prices are intentionally non-convertible -> mapped to None by the import."""
+    assert _parse_price("13,99 € - 17,99 €") == 0.0
+    assert _parse_price("7,91 €\xa0-\xa019,99 €") == 0.0
