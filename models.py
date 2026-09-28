@@ -1,7 +1,17 @@
 from typing import Optional, List
-from datetime import date, datetime
-from sqlalchemy import UniqueConstraint
+from datetime import date, datetime, timezone
 from sqlmodel import SQLModel, Field, Relationship
+from sqlalchemy import UniqueConstraint
+
+
+def utcnow_naive() -> datetime:
+    """Current naive UTC, matching this module's naive DateTime columns.
+
+    Replaces the deprecated ``datetime.utcnow`` without switching to aware
+    datetimes: an aware value round-trips back naive from a naive column and
+    then compares unequal to what was written.
+    """
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 # Tabla intermedia con datos extra (quién regala a quién)
 class GroupMember(SQLModel, table=True):
@@ -20,7 +30,7 @@ class GroupExclusion(SQLModel, table=True):
 class Friendship(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id", primary_key=True)
     friend_id: int = Field(foreign_key="user.id", primary_key=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow_naive)
 
 class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -90,7 +100,7 @@ class Message(SQLModel, table=True):
     sender_id: int = Field(foreign_key="user.id")
     receiver_id: int = Field(foreign_key="user.id")
     content: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utcnow_naive)
 
 class Product(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -104,7 +114,7 @@ class Product(SQLModel, table=True):
     price_numeric: Optional[float] = Field(default=None, index=True)
     price_raw: Optional[str] = None
     scraped_at: datetime
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=utcnow_naive)
     is_active: bool = Field(default=True, index=True)
 
 class ProductList(SQLModel, table=True):
