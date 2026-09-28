@@ -113,7 +113,7 @@ async def sitemap_xml(session: Session = Depends(get_session)):
         """)
         
     # Categorías SEO (Programmatic SEO)
-    categories = get_all_categories_info()
+    categories = list_categories(session)
     for _, slug in categories:
         urls.append(f"""
         <url>
@@ -207,16 +207,16 @@ async def dashboard(
     user: User = Depends(require_user),
     session: Session = Depends(get_session)
 ):
-    # Uso de funciones aleatorias para el dashboard
-    recommendations = get_random_products("bestsellers", 10)
-    trending_items = get_random_products("trends", 10)
-    desired_items = get_random_products("desired", 10)
-    
+    recommendations = search_products(session, CatalogQuery(source="bestsellers", sort="random", per_page=10)).items
+    trending_items = search_products(session, CatalogQuery(source="trends", sort="random", per_page=10)).items
+    desired_items = search_products(session, CatalogQuery(source="desired", sort="random", per_page=10)).items
+
     return templates.TemplateResponse(request, "dashboard.html", {
         "user": user, 
         "recommendations": recommendations,
         "trending_items": trending_items,
-        "desired_items": desired_items
+        "desired_items": desired_items,
+        "amazon_link": generate_amazon_link,
     })
 
 def _to_float(value):
@@ -351,45 +351,50 @@ async def catalog_page(
 
 @app.get("/trends", response_class=HTMLResponse)
 async def trends_page(
-    request: Request,
+    request: Request, q: Optional[str] = None, category: Optional[str] = None,
+    min: Optional[str] = None, max: Optional[str] = None,
+    sort: str = "relevance", page: str = "1",
     user: Optional[User] = Depends(get_current_user),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
 ):
-    items, categories = get_all_products("trends")
-    return templates.TemplateResponse(request, "trends.html", {
-        "user": user,
-        "items": items,
-        "categories": categories,
-        "title": "Tendencias del Momento"
-    })
+    context = _catalog_context(session, user, base_path="/trends",
+                               title="Tendencias del Momento", source="trends",
+                               q=q, category=category, min_value=min, max_value=max, sort=sort, page=page)
+    if request.headers.get("HX-Request"):
+        return templates.TemplateResponse(request, "partials/catalog_results.html", context)
+    return templates.TemplateResponse(request, "catalog.html", context)
+
 
 @app.get("/most-desired", response_class=HTMLResponse)
 async def most_desired_page(
-    request: Request,
+    request: Request, q: Optional[str] = None, category: Optional[str] = None,
+    min: Optional[str] = None, max: Optional[str] = None,
+    sort: str = "relevance", page: str = "1",
     user: Optional[User] = Depends(get_current_user),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
 ):
-    items, categories = get_all_products("desired")
-    return templates.TemplateResponse(request, "most_desired.html", {
-        "user": user,
-        "items": items,
-        "categories": categories,
-        "title": "Los Más Deseados"
-    })
+    context = _catalog_context(session, user, base_path="/most-desired",
+                               title="Los Más Deseados", source="desired",
+                               q=q, category=category, min_value=min, max_value=max, sort=sort, page=page)
+    if request.headers.get("HX-Request"):
+        return templates.TemplateResponse(request, "partials/catalog_results.html", context)
+    return templates.TemplateResponse(request, "catalog.html", context)
+
 
 @app.get("/bestsellers", response_class=HTMLResponse)
 async def bestsellers_page(
-    request: Request,
+    request: Request, q: Optional[str] = None, category: Optional[str] = None,
+    min: Optional[str] = None, max: Optional[str] = None,
+    sort: str = "relevance", page: str = "1",
     user: Optional[User] = Depends(get_current_user),
-    session: Session = Depends(get_session)
+    session: Session = Depends(get_session),
 ):
-    items, categories = get_all_products("bestsellers")
-    return templates.TemplateResponse(request, "bestsellers.html", {
-        "user": user,
-        "items": items,
-        "categories": categories,
-        "title": "Top Ventas & Ideas"
-    })
+    context = _catalog_context(session, user, base_path="/bestsellers",
+                               title="Top Ventas & Ideas", source="bestsellers",
+                               q=q, category=category, min_value=min, max_value=max, sort=sort, page=page)
+    if request.headers.get("HX-Request"):
+        return templates.TemplateResponse(request, "partials/catalog_results.html", context)
+    return templates.TemplateResponse(request, "catalog.html", context)
     
 # Mantenemos /ideas redirigiendo a /bestsellers o usando la misma lógica
 @app.get("/ideas", response_class=HTMLResponse)
@@ -403,25 +408,25 @@ async def ideas_page(
 async def category_seo_page(
     request: Request,
     category_slug: str,
-    user: Optional[User] = Depends(get_current_user)
+    page: str = "1",
+    user: Optional[User] = Depends(get_current_user),
+    session: Session = Depends(get_session),
 ):
-    items, category_name = get_products_by_category_slug(category_slug)
-    
-    if not items:
-        # Si no hay productos, redirigir a una página general o dar 404
-        return RedirectResponse(url="/ideas", status_code=303)
-        
-    # Obtener otras categorías para el interlinking
-    all_cats = get_all_categories_info()
-    # Filtrar la actual
-    other_categories = [c for c in all_cats if c[1] != category_slug]
-    
-    return templates.TemplateResponse(request, "category_seo.html", {
-        "user": user,
-        "items": items,
-        "category_name": category_name,
-        "other_categories": other_categories
-    })
+    context = _catalog_context(
+        session, user,
+        base_path=f"/ideas/{category_slug}",
+        title=category_slug.replace("-", " ").title(),
+        category=category_slug, page=page, always_indexable=True,
+    )
+    context["category_name"] = next(
+        (name for name, slug in context["categories"] if slug == category_slug),
+        category_slug.replace("-", " ").title(),
+    )
+    context["other_categories"] = [c for c in context["categories"] if c[1] != category_slug]
+    context["canonical_url"] = f"/ideas/{category_slug}"
+    context["prev_page"] = context["result"].page - 1 if context["result"].page > 1 else None
+    context["next_page"] = context["result"].page + 1 if context["result"].page < context["result"].total_pages else None
+    return templates.TemplateResponse(request, "category_seo.html", context)
 
 # --- Blog & Curated Lists ---
 
