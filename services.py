@@ -1,6 +1,5 @@
 import random
 import os
-import json
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 import requests
 from bs4 import BeautifulSoup
@@ -8,132 +7,6 @@ from sqlmodel import Session, select
 from models import GroupMember, GroupExclusion
 from blog_config import BLOG_POSTS
 from catalog import CatalogQuery, MAX_PER_PAGE, search_products, slugify
-
-# --- CONFIGURACIÓN DE ARCHIVOS ---
-DATA_FILES = {
-    "bestsellers": "amazon_bestsellers_total.json",
-    "desired": "amazon_mas_deseados_total.json",
-    "trends": "amazon_tendencias_total.json"
-}
-
-def _load_json(filename):
-    """
-    Función genérica para leer JSON de forma segura e inyectar el tag de afiliado.
-    """
-    if not os.path.exists(filename):
-        return []
-
-    try:
-        with open(filename, 'r', encoding='utf-8') as f:
-            items = json.load(f)
-            
-        tag = os.getenv("AMAZON_TAG", "tu_tag_defecto-21")
-        processed = []
-        
-        for item in items:
-            new_item = item.copy()
-            # Asegurar que existe la categoría, si no, "Varios"
-            if "category" not in new_item or not new_item["category"]:
-                new_item["category"] = "Varios"
-
-            # Inyección de tag
-            if "url" in new_item:
-                separator = "&" if "?" in new_item["url"] else "?"
-                if "tag=" not in new_item["url"]:
-                    new_item["url"] += f"{separator}tag={tag}"
-            processed.append(new_item)
-            
-        return processed
-    except Exception as e:
-        print(f"Error loading {filename}: {e}")
-        return []
-
-def get_random_products(file_key: str, limit: int = 10):
-    """
-    Obtiene 'limit' productos aleatorios de un archivo específico.
-    Útil para el Dashboard.
-    """
-    filename = DATA_FILES.get(file_key)
-    if not filename:
-        return []
-    
-    all_items = _load_json(filename)
-    if not all_items:
-        return []
-        
-    return random.sample(all_items, min(limit, len(all_items)))
-
-def get_all_products(file_key: str):
-    """
-    Obtiene TODOS los productos y un conjunto de CATEGORÍAS únicas.
-    Útil para las páginas 'Ver Más' con filtros.
-    Retorna: (items, categories_set)
-    """
-    filename = DATA_FILES.get(file_key)
-    if not filename:
-        return [], []
-    
-    items = _load_json(filename)
-    categories = sorted(list(set(item["category"] for item in items)))
-    
-    return items, categories
-
-# --- UNIFIED SEO LOGIC ---
-
-def get_all_products_unified():
-    """
-    Carga y unifica productos de TODOS los archivos JSON.
-    Elimina duplicados basados en URL.
-    """
-    all_items = []
-    seen_urls = set()
-    
-    for key in DATA_FILES:
-        items = _load_json(DATA_FILES[key])
-        for item in items:
-            # Usamos URL como identificador único
-            if item.get('url') and item['url'] not in seen_urls:
-                all_items.append(item)
-                seen_urls.add(item['url'])
-                
-    return all_items
-
-def get_products_by_category_slug(slug):
-    """
-    Filtra productos unificados por slug de categoría.
-    Retorna: (lista_productos, nombre_real_categoria)
-    """
-    all_items = get_all_products_unified()
-    matching_items = []
-    real_category_name = ""
-    
-    for item in all_items:
-        cat_name = item.get("category", "Varios")
-        if slugify(cat_name) == slug:
-            matching_items.append(item)
-            # Capturamos el nombre real (formato display) de la primera coincidencia
-            if not real_category_name:
-                real_category_name = cat_name
-                
-    return matching_items, real_category_name
-
-def get_all_categories_info():
-    """
-    Retorna una lista de tuplas (nombre_real, slug) de todas las categorías disponibles.
-    Útil para sitemap y enlazado interno.
-    """
-    all_items = get_all_products_unified()
-    categories_map = {} # slug -> real_name
-    
-    for item in all_items:
-        cat_name = item.get("category", "Varios")
-        cat_slug = slugify(cat_name)
-        if cat_slug not in categories_map:
-            categories_map[cat_slug] = cat_name
-            
-    # Retornar lista ordenada alfabéticamente
-    return sorted([(name, slug) for slug, name in categories_map.items()], key=lambda x: x[0])
-
 
 # --- SCRAPING & UTILS (EXISTENTE) ---
 
@@ -302,30 +175,6 @@ def perform_draw(group_id: int, session: Session):
     return True
 
 # --- BLOG & CURATED LISTS LOGIC ---
-
-def _parse_price(price_str):
-    """
-    Parsea precios como "19,99 €", "EUR 20.50", etc. a float.
-    Retorna 0.0 si falla.
-    """
-    if not price_str:
-        return 0.0
-    
-    # 1. Limpieza básica: quitar símbolos de moneda y espacios extra
-    clean = price_str.lower().replace('€', '').replace('eur', '').strip()
-    
-    # 2. Manejo de separadores decimales
-    # Si hay coma y punto, asumimos formato europeo "1.234,56" -> quitar punto, cambiar coma por punto
-    if ',' in clean and '.' in clean:
-        clean = clean.replace('.', '').replace(',', '.')
-    # Si solo hay coma, es decimal: "19,99" -> "19.99"
-    elif ',' in clean:
-        clean = clean.replace(',', '.')
-    
-    try:
-        return float(clean)
-    except ValueError:
-        return 0.0
 
 def get_blog_posts_list():
     """

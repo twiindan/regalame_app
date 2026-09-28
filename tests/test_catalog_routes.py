@@ -79,3 +79,68 @@ def test_sitemap_lists_categories(client, catalog_seed):
 def test_dashboard_returns_200(auth_client):
     response = auth_client.get("/dashboard")
     assert response.status_code == 200
+
+
+def test_legacy_routes_are_indexable_when_unfiltered(client, catalog_seed):
+    assert "noindex" not in client.get("/bestsellers").text
+    assert "noindex" not in client.get("/trends").text
+    assert "noindex" not in client.get("/most-desired").text
+
+
+def test_legacy_routes_become_noindex_when_filtered(client, catalog_seed):
+    assert "noindex" in client.get("/bestsellers?q=cafe").text
+    assert "noindex" in client.get("/bestsellers?sort=price_asc").text
+
+
+def test_ideas_slug_canonical_and_pagination_links(client, session):
+    from datetime import datetime
+
+    from models import Product
+
+    session.add_all([
+        Product(asin=f"E{i:09d}", title=f"Gadget {i}", title_normalized=f"gadget {i}",
+                url=f"https://www.amazon.es/dp/E{i:09d}", category="Electrónica", category_slug="electronica",
+                price_numeric=float(i), price_raw=f"{i} €", scraped_at=datetime(2026, 1, 1))
+        for i in range(1, 26)
+    ])
+    session.commit()
+
+    page1 = client.get("/ideas/electronica")
+    assert '<link rel="canonical" href="/ideas/electronica">' in page1.text
+    assert 'rel="next"' in page1.text
+
+    page2 = client.get("/ideas/electronica?page=2")
+    assert '<link rel="canonical" href="/ideas/electronica">' in page2.text
+    assert 'rel="prev"' in page2.text
+
+
+def test_trends_htmx_returns_partial_only(client, catalog_seed):
+    response = client.get("/trends", headers={"HX-Request": "true"})
+    assert response.status_code == 200
+    assert "catalog-results" in response.text
+    assert "<html" not in response.text
+
+
+def test_dashboard_renders_catalog_products(auth_client, catalog_seed):
+    response = auth_client.get("/dashboard")
+    assert response.status_code == 200
+    assert "Café molido" in response.text
+    assert "tag=" in response.text
+
+
+def test_ideas_htmx_returns_partial_only(client, catalog_seed):
+    response = client.get("/ideas/alimentacion-y-bebidas", headers={"HX-Request": "true"})
+    assert response.status_code == 200
+    assert "catalog-results" in response.text
+    assert "<html" not in response.text
+
+
+def test_legacy_routes_noindex_with_price_filters(client, catalog_seed):
+    assert "noindex" in client.get("/bestsellers?min=1").text
+    assert "noindex" in client.get("/bestsellers?max=50").text
+
+
+def test_catalog_rejects_random_sort_for_users(client, catalog_seed):
+    response = client.get("/catalog?sort=random")
+    assert response.status_code == 200
+    assert '<option value="relevance" selected>' in response.text

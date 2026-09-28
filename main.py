@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from typing import Optional, List
+from typing import Optional
 import os
 import uuid
 import base64
@@ -16,14 +16,17 @@ from database import create_db_and_tables, get_session
 from models import User, Group, GroupMember, Wish, GroupExclusion, Message, Friendship
 from security import get_password_hash, verify_password
 from services import (
-    scrape_metadata, generate_amazon_link, perform_draw, 
-    get_random_products, get_all_products,
-    get_products_by_category_slug, get_all_categories_info,
+    scrape_metadata, generate_amazon_link, perform_draw,
     get_blog_posts_list, get_blog_post_detail
 )
-from catalog import CatalogQuery, search_products, list_categories, VALID_SORTS
+from catalog import CatalogQuery, search_products, list_categories
 from email_utils import send_invitation_email, send_wishlist_share_email
 from urllib.parse import urlencode
+
+# Sorts that a user may request through the catalog routes. `random` is
+# internal-only (the dashboard uses it directly via CatalogQuery); exposing it
+# would let each page request re-shuffle, producing duplicate or missing items.
+PUBLIC_SORTS = {"relevance", "price_asc", "price_desc", "newest"}
 
 # --- Configuración Inicial ---
 @asynccontextmanager
@@ -256,7 +259,7 @@ def _catalog_context(
         source=source,
         min_price=_to_float(min_value),
         max_price=_to_float(max_value),
-        sort=sort if sort in VALID_SORTS else "relevance",
+        sort=sort if sort in PUBLIC_SORTS else "relevance",
         page=requested_page,
     )
     result = search_products(session, query)
@@ -302,8 +305,11 @@ def _catalog_context(
     # Any page carrying q, sort or page params is noindex. Use the *requested*
     # page, not the clamped one. `/ideas/{slug}` opts out via always_indexable.
     # `/catalog` is always noindex per the approved design, via force_noindex.
+    has_price_filter = bool(min_value) or bool(max_value)
     noindex = force_noindex or (
-        not always_indexable and (bool(q) or (sort != "relevance") or requested_page > 1)
+        not always_indexable and (
+            bool(q) or (sort != "relevance") or requested_page > 1 or has_price_filter
+        )
     )
 
     return {
@@ -426,6 +432,8 @@ async def category_seo_page(
     context["canonical_url"] = f"/ideas/{category_slug}"
     context["prev_page"] = context["result"].page - 1 if context["result"].page > 1 else None
     context["next_page"] = context["result"].page + 1 if context["result"].page < context["result"].total_pages else None
+    if request.headers.get("HX-Request"):
+        return templates.TemplateResponse(request, "partials/catalog_results.html", context)
     return templates.TemplateResponse(request, "category_seo.html", context)
 
 # --- Blog & Curated Lists ---
