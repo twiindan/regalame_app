@@ -1,0 +1,39 @@
+name: CI
+
+# A clean install is the point: this job resolves the dependencies from
+# requirements.txt exactly like a fresh deploy does. Unpinned drift used to
+# reach production unnoticed (sqlmodel 0.0.47 changed `datetime` to
+# timezone-aware columns and broke the catalog import, chat and friendships),
+# so the suite run below is the guard against it.
+#
+# No pip cache on purpose: caching would hide a changed resolution.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  tests:
+    name: Clean install + test suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install from the pinned requirements
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: Show the resolved versions
+        run: python -m pip freeze
+
+      - name: Run the test suite
+        run: python -m pytest -q --ignore=tests/test_e2e.py
