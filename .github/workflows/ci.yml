@@ -1,17 +1,27 @@
 name: CI
 
-# A clean install is the point: this job resolves the dependencies from
-# requirements.txt exactly like a fresh deploy does. Unpinned drift used to
-# reach production unnoticed (sqlmodel 0.0.47 changed `datetime` to
-# timezone-aware columns and broke the catalog import, chat and friendships),
-# so the suite run below is the guard against it.
+# A clean install is the point: this job resolves the dependencies exactly like
+# a fresh deploy does, then runs the suite. Unpinned drift used to reach
+# production unnoticed (sqlmodel 0.0.47 changed `datetime` to timezone-aware
+# columns and broke the catalog import, chat and friendships), so the suite run
+# below is the guard against it.
 #
-# No pip cache on purpose: caching would hide a changed resolution.
+# It installs requirements-dev.txt: requirements.txt plus the pinned test-only
+# dependencies (pytest, httpx). Production installs only requirements.txt.
+#
+# There is no pip cache and no `pip install --upgrade pip`, on purpose: both
+# would add an unpinned input to a job whose whole point is a deterministic
+# resolution.
 
 on:
   pull_request:
   push:
     branches: [main]
+
+# This job only reads the repository and runs tests. Narrow the token instead of
+# inheriting the repository's default scope.
+permissions:
+  contents: read
 
 jobs:
   tests:
@@ -20,20 +30,21 @@ jobs:
 
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Set up Python 3.13
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.13"
 
       - name: Install from the pinned requirements
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements-dev.txt
+        run: python -m pip install -r requirements-dev.txt
 
       - name: Show the resolved versions
         run: python -m pip freeze
 
+      # tests/test_e2e.py drives a real browser against a running server: it
+      # needs Playwright and a live app, and playwright is deliberately not a
+      # dependency. Everything else runs here.
       - name: Run the test suite
         run: python -m pytest -q --ignore=tests/test_e2e.py
