@@ -1,16 +1,24 @@
-fastapi
-uvicorn
-sqlmodel
-jinja2
-python-multipart
-bcrypt
-python-dotenv
-beautifulsoup4
-requests
-fastapi-mail
-itsdangerous
-psycopg2-binary
-gunicorn
-alembic
-email-validator
-resend
+# Pinned dependency baseline.
+#
+# These are the versions this codebase was written and tested against.
+# Do NOT unpin without re-running the suite: sqlmodel 0.0.47+ maps `datetime`
+# to `TIMESTAMP WITH TIME ZONE` and rejects the naive datetimes stored here,
+# which breaks the catalog import, chat and friendships.
+fastapi==0.124.2
+uvicorn==0.24.0.post1
+sqlmodel==0.0.27
+SQLAlchemy==2.0.45
+pydantic==2.12.5
+starlette==0.50.0
+jinja2==3.1.6
+python-multipart==0.0.6
+bcrypt==3.2.0
+python-dotenv==1.2.1
+beautifulsoup4==4.14.3
+requests==2.32.5
+itsdangerous==2.2.0
+psycopg2-binary==2.9.11
+gunicorn==23.0.0
+alembic==1.17.2
+email-validator==2.3.0
+resend==2.19.0
