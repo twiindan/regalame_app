@@ -1,0 +1,7 @@
+# Test-only dependencies. Not installed in production.
+#
+# Pinned for the same reason as requirements.txt: an unpinned clean install
+# silently drifts and breaks the suite.
+-r requirements.txt
+pytest==8.2.2
+httpx==0.28.1
