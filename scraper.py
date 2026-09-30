@@ -129,6 +129,9 @@ async def scrape_all(out_dir, sections=SECTIONS, log=print):
     Returns a ``{list_key: path}`` map containing only the sections that produced
     products. A section that raises writes no file, which is what makes the
     import skip it and leave that list's ranks untouched.
+
+    ``log`` carries only these section-level status lines: the moved per-category
+    helpers still print their progress to stdout directly.
     """
     if async_playwright is None:
         raise RuntimeError(
