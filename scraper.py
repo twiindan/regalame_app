@@ -121,3 +121,40 @@ async def scrape_section(page, section):
             print(f"  ❌ Error en {category['name']}: {exc}")
             continue
     return products
+
+
+async def scrape_all(out_dir, sections=SECTIONS, log=print):
+    """Scrape every section into ``out_dir``; a broken section is skipped.
+
+    Returns a ``{list_key: path}`` map containing only the sections that produced
+    products. A section that raises writes no file, which is what makes the
+    import skip it and leave that list's ranks untouched.
+    """
+    if async_playwright is None:
+        raise RuntimeError(
+            "Playwright is not installed. Install requirements-scraper.txt to scrape."
+        )
+
+    produced = {}
+    async with async_playwright() as playwright:
+        browser = await playwright.chromium.launch(headless=True)
+        try:
+            context = await browser.new_context(user_agent=USER_AGENT)
+            page = await context.new_page()
+            for section in sections:
+                try:
+                    products = await scrape_section(page, section)
+                except Exception as exc:
+                    log(f"section={section.list_key} status=failed error={exc!r}")
+                    continue
+                if not products:
+                    log(f"section={section.list_key} status=empty")
+                    continue
+                path = os.path.join(out_dir, section.filename)
+                with open(path, "w", encoding="utf-8") as handle:
+                    json.dump(products, handle, indent=4, ensure_ascii=False)
+                produced[section.list_key] = path
+                log(f"section={section.list_key} status=ok products={len(products)}")
+        finally:
+            await browser.close()
+    return produced
