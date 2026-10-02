@@ -207,7 +207,7 @@ def test_data_dir_never_invokes_the_scraper(session, tmp_path):
     assert session.exec(select(func.count()).select_from(Product)).one() == 36
 
 
-def test_dry_run_writes_nothing(session, tmp_path):
+def test_dry_run_writes_nothing(session, catalog_seed, tmp_path):
     for list_key, count in FULL.items():
         (tmp_path / FILENAMES[list_key]).write_text(
             json.dumps([product_json(list_key, i) for i in range(count)]), encoding="utf-8")

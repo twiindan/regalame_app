@@ -137,3 +137,17 @@ def test_an_unwritable_section_does_not_abort_the_run(monkeypatch, tmp_path):
     assert (tmp_path / "amazon_bestsellers_total.json").exists()
     assert (tmp_path / "amazon_mas_deseados_total.json").exists()
     assert any("section=trends status=unwritable" in line for line in log_lines)
+
+
+def test_a_non_serializable_payload_fails_loudly(monkeypatch, tmp_path):
+    """A code defect must not be masked as an unwritable section."""
+    browser = _FakeBrowser()
+    monkeypatch.setattr(scraper, "async_playwright", lambda: _FakePlaywrightManager(browser))
+
+    async def section_scraper(page, section):
+        return [{"title": object()}]
+
+    monkeypatch.setattr(scraper, "scrape_section", section_scraper)
+
+    with pytest.raises(TypeError):
+        asyncio.run(scraper.scrape_all(str(tmp_path)))

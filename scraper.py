@@ -127,8 +127,9 @@ async def scrape_all(out_dir, sections=SECTIONS, log=print):
     """Scrape every section into ``out_dir``; a broken section is skipped.
 
     Returns a ``{list_key: path}`` map containing only the sections that produced
-    products. A section that raises writes no file, which is what makes the
-    import skip it and leave that list's ranks untouched.
+    products and persisted them. A section that fails to scrape, or that fails to
+    write its file, is omitted from the map — which is what makes the import skip
+    it and leave that list's ranks untouched.
 
     ``log`` carries only these section-level status lines: the moved per-category
     helpers still print their progress to stdout directly.
@@ -157,10 +158,11 @@ async def scrape_all(out_dir, sections=SECTIONS, log=print):
                     path = os.path.join(out_dir, section.filename)
                     with open(path, "w", encoding="utf-8") as handle:
                         json.dump(products, handle, indent=4, ensure_ascii=False)
-                except (OSError, ValueError) as exc:
-                    # A write failure is contained to its own section: the sections
-                    # already produced must survive, and a half-written file that is
-                    # never added to `produced` is never imported.
+                except (OSError, UnicodeEncodeError) as exc:
+                    # Only data problems are contained: I/O failures and text that cannot be
+                    # encoded. A ValueError (circular reference) or TypeError (non-serializable
+                    # object) is a defect in scrape_products and must propagate loudly instead of
+                    # being masked as an unwritable section.
                     log(f"section={section.list_key} status=unwritable error={exc!r}")
                     continue
                 produced[section.list_key] = path
