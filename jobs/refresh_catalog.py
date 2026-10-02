@@ -1,6 +1,7 @@
 """Daily catalog refresh: scrape the Amazon lists and import them into the DB."""
 
 import argparse
+import asyncio
 import json
 import os
 import sys
@@ -54,8 +55,22 @@ def classify(produced, baseline):
     return healthy, sorted(suspicious)
 
 
-def run(session, scrape_fn=scrape_all, dry_run=False, data_dir=None, log=print):
-    """Refresh the catalog. Returns the exit code (0 ok, 1 nothing imported)."""
+def _scrape_into(out_dir):
+    """Bridge the async scraper to the synchronous ``run`` seam.
+
+    ``scraper.scrape_all`` is a coroutine function (it awaits Playwright), while
+    ``run`` is synchronous and every injected fake is a plain callable. Without
+    this bridge the production path hands a coroutine object to ``classify``.
+    """
+    return asyncio.run(scrape_all(out_dir))
+
+
+def run(session, scrape_fn=_scrape_into, dry_run=False, data_dir=None, log=print):
+    """Refresh the catalog. Returns the exit code (0 ok, 1 nothing imported).
+
+    ``scrape_fn`` is a **synchronous** callable returning the ``{list_key: path}``
+    map; the production default ``_scrape_into`` wraps the async scraper.
+    """
     baseline = baseline_counts(session)
     if data_dir:
         produced = {

@@ -2,6 +2,7 @@
 
 import json
 import os
+from datetime import datetime
 
 from sqlmodel import func, select
 
@@ -104,9 +105,6 @@ def test_a_first_run_has_no_reference_to_fall_short_of(tmp_path):
 
     assert set(healthy) == {"bestsellers"}
     assert suspicious == []
-
-
-from datetime import datetime
 
 
 def test_a_healthy_run_imports_every_section(session):
@@ -215,3 +213,23 @@ def test_main_reports_the_run(session, tmp_path, capsys):
 
     assert code == 0
     assert "sections_ok=3" in capsys.readouterr().out
+
+
+def test_the_default_scrape_fn_awaits_the_real_async_scraper(session, monkeypatch):
+    """The injected fakes are synchronous; the production scraper is a coroutine.
+
+    No other test exercises the default ``scrape_fn``, so without this the whole
+    unattended path could ship handing a coroutine object to ``classify``.
+    """
+    async def fake_async_scrape(out_dir):
+        path = os.path.join(out_dir, FILENAMES["bestsellers"])
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump([product_json("bestsellers", i) for i in range(12)], handle)
+        return {"bestsellers": path}
+
+    monkeypatch.setattr(refresh_catalog, "scrape_all", fake_async_scrape)
+
+    code = refresh_catalog.run(session, log=silent)
+
+    assert code == 0
+    assert session.exec(select(func.count()).select_from(Product)).one() == 12
