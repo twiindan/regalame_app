@@ -78,6 +78,19 @@ def test_a_truncated_section_is_suspicious(tmp_path):
     assert suspicious == ["bestsellers"]
 
 
+def test_a_section_at_exactly_the_ratio_is_healthy(tmp_path):
+    """The guard rejects what is strictly shorter than the ratio, not equal to it."""
+    exact = tmp_path / "exact.json"
+    exact.write_text(json.dumps([product_json("bestsellers", i) for i in range(10)]),
+                     encoding="utf-8")
+
+    healthy, suspicious = refresh_catalog.classify(
+        {"bestsellers": str(exact)}, {"bestsellers": 20})
+
+    assert set(healthy) == {"bestsellers"}
+    assert suspicious == []
+
+
 def test_a_missing_file_is_suspicious():
     healthy, suspicious = refresh_catalog.classify(
         {"bestsellers": "/nonexistent/none.json"}, {})

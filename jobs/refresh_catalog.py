@@ -48,6 +48,10 @@ def classify(produced, baseline):
     for list_key, path in produced.items():
         count = _count_items(path)
         previous = baseline.get(list_key, 0)
+        # The guard measures raw JSON entries, not importable products: the baseline counts
+        # distinct ProductList rows, while import_from_json collapses duplicate ASINs and
+        # skips entries without a url. A file padded with duplicates can therefore pass the
+        # guard and still import fewer products; the guard targets truncation, not dedup.
         if count == 0 or (previous and count < previous * MIN_HEALTHY_RATIO):
             suspicious.append(list_key)
         else:
@@ -69,7 +73,9 @@ def run(session, scrape_fn=_scrape_into, dry_run=False, data_dir=None, log=print
     """Refresh the catalog. Returns the exit code (0 ok, 1 nothing imported).
 
     ``scrape_fn`` is a **synchronous** callable returning the ``{list_key: path}``
-    map; the production default ``_scrape_into`` wraps the async scraper.
+    map; the production default ``_scrape_into`` wraps the async scraper. It must
+    not be called from within a running event loop, since the default bridge uses
+    ``asyncio.run``.
     """
     baseline = baseline_counts(session)
     if data_dir:
@@ -87,8 +93,14 @@ def run(session, scrape_fn=_scrape_into, dry_run=False, data_dir=None, log=print
 def _finish(session, produced, baseline, dry_run, log):
     healthy, suspicious = classify(produced, baseline)
     for list_key in suspicious:
-        log(f"section={list_key} status=suspicious excluded")
+        log(f"section={list_key} status=suspicious excluded "
+            f"produced={_count_items(produced[list_key])} baseline={baseline.get(list_key, 0)}")
+    for section in SECTIONS:
+        if section.list_key not in produced:
+            log(f"section={section.list_key} status=absent not-produced")
 
+    # Keep this early return: handing an empty data_files to import_from_json would
+    # fall back to its DATA_FILES default and re-import the repository's root JSONs.
     if not healthy:
         log("refresh: no healthy sections, nothing imported")
         return 1
