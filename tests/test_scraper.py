@@ -115,3 +115,25 @@ def test_an_empty_section_writes_no_file(monkeypatch, tmp_path):
     assert not (tmp_path / "amazon_mas_deseados_total.json").exists()
     assert (tmp_path / "amazon_bestsellers_total.json").exists()
     assert "section=desired status=empty" in log_lines
+
+
+def test_an_unwritable_section_does_not_abort_the_run(monkeypatch, tmp_path):
+    """A write failure must not discard the sections already produced."""
+    browser = _FakeBrowser()
+    monkeypatch.setattr(scraper, "async_playwright", lambda: _FakePlaywrightManager(browser))
+
+    async def section_scraper(page, section):
+        return [_item(section.list_key, 0)]
+
+    monkeypatch.setattr(scraper, "scrape_section", section_scraper)
+
+    # The target path is a directory, so writing to it raises IsADirectoryError.
+    (tmp_path / "amazon_tendencias_total.json").mkdir()
+
+    log_lines = []
+    produced = asyncio.run(scraper.scrape_all(str(tmp_path), log=log_lines.append))
+
+    assert set(produced) == {"bestsellers", "desired"}
+    assert (tmp_path / "amazon_bestsellers_total.json").exists()
+    assert (tmp_path / "amazon_mas_deseados_total.json").exists()
+    assert any("section=trends status=unwritable" in line for line in log_lines)

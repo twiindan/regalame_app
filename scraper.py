@@ -153,9 +153,16 @@ async def scrape_all(out_dir, sections=SECTIONS, log=print):
                 if not products:
                     log(f"section={section.list_key} status=empty")
                     continue
-                path = os.path.join(out_dir, section.filename)
-                with open(path, "w", encoding="utf-8") as handle:
-                    json.dump(products, handle, indent=4, ensure_ascii=False)
+                try:
+                    path = os.path.join(out_dir, section.filename)
+                    with open(path, "w", encoding="utf-8") as handle:
+                        json.dump(products, handle, indent=4, ensure_ascii=False)
+                except (OSError, ValueError) as exc:
+                    # A write failure is contained to its own section: the sections
+                    # already produced must survive, and a half-written file that is
+                    # never added to `produced` is never imported.
+                    log(f"section={section.list_key} status=unwritable error={exc!r}")
+                    continue
                 produced[section.list_key] = path
                 log(f"section={section.list_key} status=ok products={len(products)}")
         finally:
