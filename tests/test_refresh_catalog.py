@@ -320,3 +320,19 @@ def test_dry_run_never_deactivates(session):
 
     session.refresh(ghost)
     assert ghost.is_active is True
+
+
+def test_a_duplicate_padded_section_is_suspicious(tmp_path):
+    """The guard must count what the import imports, not raw JSON entries."""
+    padded = tmp_path / "padded.json"
+    items = []
+    for index in (0, 1):
+        for _ in range(10):
+            items.append(product_json("bestsellers", index))
+    padded.write_text(json.dumps(items), encoding="utf-8")
+
+    healthy, suspicious = refresh_catalog.classify(
+        {"bestsellers": str(padded)}, {"bestsellers": 20})
+
+    assert healthy == {}
+    assert suspicious == ["bestsellers"]

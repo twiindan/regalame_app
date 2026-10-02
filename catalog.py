@@ -197,6 +197,9 @@ def deactivate_absent_products(session: Session, list_keys: list[str]) -> int:
     never touched. Rows are flagged, never deleted, so existing URLs keep
     resolving. Returns the number of products deactivated.
     """
+    if not list_keys:
+        # An empty universe means nothing was considered, so nothing can be retired.
+        return 0
     present = select(ProductList.product_id).where(ProductList.list_key.in_(list_keys))
     absent = session.exec(
         select(Product.id).where(

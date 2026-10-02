@@ -61,3 +61,17 @@ def test_deactivation_refreshes_updated_at(session):
 
     session.refresh(ghost)
     assert ghost.updated_at > stamp
+
+
+def test_an_empty_universe_deactivates_nothing(session):
+    ghost = make_product(session, "GHOSTGHOST")
+    counted = make_product(session, "COUNTEDAAA")
+    session.add(ProductList(product_id=counted.id, list_key="bestsellers", rank=1))
+    session.commit()
+
+    assert deactivate_absent_products(session, list_keys=[]) == 0
+
+    session.refresh(ghost)
+    session.refresh(counted)
+    assert ghost.is_active is True
+    assert counted.is_active is True
