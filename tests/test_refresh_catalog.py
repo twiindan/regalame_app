@@ -162,3 +162,22 @@ def test_a_truncated_section_is_excluded_from_the_import(session):
 
     rows = session.exec(select(ProductList).where(ProductList.list_key == "bestsellers")).all()
     assert len(rows) == 20  # untouched: the 4-item section was rejected
+
+
+def test_a_run_with_no_healthy_section_writes_nothing(session):
+    refresh_catalog.run(session, scrape_fn=fake_scrape(FULL), log=silent)
+    before = snapshot_catalog(session)
+
+    code = refresh_catalog.run(
+        session,
+        scrape_fn=fake_scrape({"bestsellers": None, "trends": None, "desired": None}),
+        log=silent)
+
+    assert code == 1
+    assert snapshot_catalog(session) == before
+
+
+def test_the_exit_code_is_zero_when_only_some_sections_survive(session):
+    code = refresh_catalog.run(
+        session, scrape_fn=fake_scrape(dict(FULL, desired=None)), log=silent)
+    assert code == 0
