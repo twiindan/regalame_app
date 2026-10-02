@@ -104,3 +104,61 @@ def test_a_first_run_has_no_reference_to_fall_short_of(tmp_path):
 
     assert set(healthy) == {"bestsellers"}
     assert suspicious == []
+
+
+from datetime import datetime
+
+
+def test_a_healthy_run_imports_every_section(session):
+    code = refresh_catalog.run(session, scrape_fn=fake_scrape(FULL), log=silent)
+
+    assert code == 0
+    assert session.exec(select(func.count()).select_from(Product)).one() == 36
+    assert set(session.exec(select(ProductList.list_key)).all()) == set(FULL)
+
+
+def test_a_failed_section_keeps_its_ranks(session):
+    ghost = Product(asin="GHOSTGHOST", title="Sólo en trends", title_normalized="solo en trends",
+                    image_url=None, url="https://www.amazon.es/dp/GHOSTGHOST",
+                    category="Varios", category_slug="varios",
+                    price_numeric=None, price_raw="N/A", scraped_at=datetime(2026, 1, 1))
+    session.add(ghost)
+    session.commit()
+    session.refresh(ghost)
+    session.add(ProductList(product_id=ghost.id, list_key="trends", rank=7))
+    session.commit()
+
+    code = refresh_catalog.run(
+        session, scrape_fn=fake_scrape(dict(FULL, trends=None)), log=silent)
+
+    assert code == 0
+    rows = session.exec(select(ProductList).where(ProductList.list_key == "trends")).all()
+    assert [(row.product_id, row.rank) for row in rows] == [(ghost.id, 7)]
+
+
+def test_a_failed_section_is_not_handed_to_the_import(session, monkeypatch):
+    captured = {}
+    real_import = refresh_catalog.import_from_json
+
+    def spy(session, data_files=None, dry_run=False):
+        captured["keys"] = sorted(data_files or {})
+        return real_import(session, data_files=data_files, dry_run=dry_run)
+
+    monkeypatch.setattr(refresh_catalog, "import_from_json", spy)
+
+    refresh_catalog.run(session, scrape_fn=fake_scrape(dict(FULL, trends=None)), log=silent)
+
+    assert captured["keys"] == ["bestsellers", "desired"]
+
+
+def test_a_truncated_section_is_excluded_from_the_import(session):
+    """The DB-level counterpart of the classify unit tests."""
+    refresh_catalog.run(
+        session, scrape_fn=fake_scrape({"bestsellers": 20, "trends": 20, "desired": 20}),
+        log=silent)
+    refresh_catalog.run(
+        session, scrape_fn=fake_scrape({"bestsellers": 4, "trends": 20, "desired": 20}),
+        log=silent)
+
+    rows = session.exec(select(ProductList).where(ProductList.list_key == "bestsellers")).all()
+    assert len(rows) == 20  # untouched: the 4-item section was rejected

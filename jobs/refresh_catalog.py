@@ -1,10 +1,14 @@
 """Daily catalog refresh: scrape the Amazon lists and import them into the DB."""
 
 import json
+import os
+import tempfile
 
 from sqlmodel import func, select
 
+from catalog import import_from_json
 from models import ProductList
+from scraper import SECTIONS, scrape_all
 
 # A section below this fraction of its previous count is treated as truncated.
 MIN_HEALTHY_RATIO = 0.5
@@ -45,3 +49,33 @@ def classify(produced, baseline):
         else:
             healthy[list_key] = path
     return healthy, sorted(suspicious)
+
+
+def run(session, scrape_fn=scrape_all, dry_run=False, data_dir=None, log=print):
+    """Refresh the catalog. Returns the exit code (0 ok, 1 nothing imported)."""
+    baseline = baseline_counts(session)
+    if data_dir:
+        produced = {
+            section.list_key: os.path.join(data_dir, section.filename)
+            for section in SECTIONS
+            if os.path.exists(os.path.join(data_dir, section.filename))
+        }
+        return _finish(session, produced, baseline, dry_run, log)
+    with tempfile.TemporaryDirectory(prefix="catalog_run_") as out_dir:
+        produced = scrape_fn(out_dir)
+        return _finish(session, produced, baseline, dry_run, log)
+
+
+def _finish(session, produced, baseline, dry_run, log):
+    healthy, suspicious = classify(produced, baseline)
+    for list_key in suspicious:
+        log(f"section={list_key} status=suspicious excluded")
+
+    if not healthy:
+        log("refresh: no healthy sections, nothing imported")
+        return 1
+
+    stats = import_from_json(session, data_files=healthy, dry_run=dry_run)
+    log(f"import: created={stats['created']} updated={stats['updated']} "
+        f"lists={stats['lists']} sections_ok={len(healthy)}")
+    return 0
