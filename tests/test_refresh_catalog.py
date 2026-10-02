@@ -212,9 +212,12 @@ def test_dry_run_writes_nothing(session, tmp_path):
         (tmp_path / FILENAMES[list_key]).write_text(
             json.dumps([product_json(list_key, i) for i in range(count)]), encoding="utf-8")
 
+    before = snapshot_catalog(session)
+
     code = refresh_catalog.run(session, data_dir=str(tmp_path), dry_run=True, log=silent)
+
     assert code == 0
-    assert session.exec(select(func.count()).select_from(Product)).one() == 0
+    assert snapshot_catalog(session) == before
 
 
 def test_main_reports_the_run(session, tmp_path, capsys):
