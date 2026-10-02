@@ -273,3 +273,50 @@ def test_an_undecodable_section_does_not_stop_the_healthy_ones(session, tmp_path
 
     assert code == 0
     assert session.exec(select(func.count()).select_from(Product)).one() == 24
+
+
+def _ghost_product():
+    return Product(asin="GHOSTGHOST", title="Fantasma", title_normalized="fantasma",
+                   image_url=None, url="https://www.amazon.es/dp/GHOSTGHOST",
+                   category="Varios", category_slug="varios",
+                   price_numeric=None, price_raw="N/A", scraped_at=datetime(2026, 1, 1))
+
+
+def test_a_healthy_run_deactivates_the_ghost(session):
+    ghost = _ghost_product()
+    session.add(ghost)
+    session.commit()
+    session.refresh(ghost)
+    session.add(ProductList(product_id=ghost.id, list_key="trends", rank=3))
+    session.commit()
+
+    refresh_catalog.run(session, scrape_fn=fake_scrape(FULL), log=silent)
+
+    session.refresh(ghost)
+    assert ghost.is_active is False
+
+
+def test_a_partial_run_deactivates_nothing(session):
+    ghost = _ghost_product()
+    session.add(ghost)
+    session.commit()
+    session.refresh(ghost)
+    session.add(ProductList(product_id=ghost.id, list_key="trends", rank=3))
+    session.commit()
+
+    refresh_catalog.run(session, scrape_fn=fake_scrape(dict(FULL, trends=None)), log=silent)
+
+    session.refresh(ghost)
+    assert ghost.is_active is True
+
+
+def test_dry_run_never_deactivates(session):
+    ghost = _ghost_product()
+    session.add(ghost)
+    session.commit()
+    session.refresh(ghost)
+
+    refresh_catalog.run(session, scrape_fn=fake_scrape(FULL), dry_run=True, log=silent)
+
+    session.refresh(ghost)
+    assert ghost.is_active is True

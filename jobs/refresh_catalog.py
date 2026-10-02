@@ -9,7 +9,7 @@ import tempfile
 
 from sqlmodel import Session, func, select
 
-from catalog import import_from_json
+from catalog import deactivate_absent_products, import_from_json
 from database import engine
 from models import ProductList
 from scraper import SECTIONS, scrape_all
@@ -110,6 +110,11 @@ def _finish(session, produced, baseline, dry_run, log):
     stats = import_from_json(session, data_files=healthy, dry_run=dry_run)
     log(f"import: created={stats['created']} updated={stats['updated']} "
         f"lists={stats['lists']} sections_ok={len(healthy)}")
+
+    # Deactivation runs only on a fully healthy run: on a partial run a product
+    # could be absent merely because its section failed.
+    if not dry_run and not suspicious and len(healthy) == len(SECTIONS):
+        log(f"deactivated={deactivate_absent_products(session, list_keys=sorted(healthy))}")
     return 0
 
 
