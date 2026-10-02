@@ -47,9 +47,11 @@ def _count_importable(path):
     if not isinstance(items, list):
         return 0
     return len({
-        extract_asin(item.get("url"))
+        extract_asin(item["url"])
         for item in items
-        if isinstance(item, dict) and item.get("url")
+        if isinstance(item, dict)
+        and isinstance(item.get("url"), str)
+        and item["url"]
     })
 
 
@@ -70,6 +72,22 @@ def classify(produced, baseline):
         else:
             healthy[list_key] = path
     return healthy, sorted(suspicious)
+
+
+def _every_section_complete(produced, baseline):
+    """Whether every scraped section reached at least its previous size.
+
+    The import tolerates a section shrinking to ``MIN_HEALTHY_RATIO`` of its baseline,
+    because importing fewer products is safe. Retiring products is not: the Amazon
+    lists are capped at 50 items per category, so a working scrape keeps a section's
+    size stable and a drop means a degraded scrape rather than genuine churn. Demanding
+    a complete run can only delay a retirement; tolerating a short one can make
+    products disappear.
+    """
+    return all(
+        _count_importable(path) >= baseline.get(list_key, 0)
+        for list_key, path in produced.items()
+    )
 
 
 def _scrape_into(out_dir):
@@ -122,12 +140,15 @@ def _finish(session, produced, baseline, dry_run, log):
     log(f"import: created={stats['created']} updated={stats['updated']} "
         f"lists={stats['lists']} sections_ok={len(healthy)}")
 
-    # Deactivation runs only on a fully healthy run: on a partial run a product
-    # could be absent merely because its own section failed.
+    # Deactivation runs only on a complete, fully healthy run: on a partial run a
+    # product could be absent merely because its own section failed or came back short.
     # len(healthy) == len(SECTIONS) already implies suspicious == []: healthy and
     # suspicious partition produced, and produced is always a subset of SECTIONS.
     if not dry_run and len(healthy) == len(SECTIONS):
-        log(f"deactivated={deactivate_absent_products(session, list_keys=sorted(healthy))}")
+        if _every_section_complete(produced, baseline):
+            log(f"deactivated={deactivate_absent_products(session, list_keys=sorted(healthy))}")
+        else:
+            log("deactivation skipped: at least one section came back shorter than its baseline")
     return 0
 
 

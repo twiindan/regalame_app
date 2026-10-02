@@ -336,3 +336,34 @@ def test_a_duplicate_padded_section_is_suspicious(tmp_path):
 
     assert healthy == {}
     assert suspicious == ["bestsellers"]
+
+
+def test_a_non_string_url_does_not_crash_the_guard(tmp_path):
+    weird = tmp_path / "weird.json"
+    weird.write_text(json.dumps([{"url": 12345}]), encoding="utf-8")
+
+    healthy, suspicious = refresh_catalog.classify({"bestsellers": str(weird)}, {})
+
+    assert healthy == {}
+    assert suspicious == ["bestsellers"]
+
+
+def test_a_short_but_healthy_run_deactivates_nothing(session):
+    """All three sections healthy, but one came back shorter: nothing may be retired."""
+    refresh_catalog.run(
+        session,
+        scrape_fn=fake_scrape({"bestsellers": 20, "trends": 20, "desired": 20}),
+        log=silent)
+    ghost = _ghost_product()
+    session.add(ghost)
+    session.commit()
+    session.refresh(ghost)
+
+    # 15 of 20: above MIN_HEALTHY_RATIO, so the section is healthy — and short.
+    refresh_catalog.run(
+        session,
+        scrape_fn=fake_scrape({"bestsellers": 15, "trends": 20, "desired": 20}),
+        log=silent)
+
+    session.refresh(ghost)
+    assert ghost.is_active is True

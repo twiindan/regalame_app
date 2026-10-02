@@ -211,7 +211,10 @@ def deactivate_absent_products(session: Session, list_keys: list[str]) -> int:
         return 0
     session.exec(
         update(Product)
-        .where(Product.id.in_(absent))
+        .where(
+            Product.is_active == True,  # noqa: E712
+            Product.id.not_in(present),
+        )
         .values(is_active=False, updated_at=utcnow_naive())
     )
     session.commit()
