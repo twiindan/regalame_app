@@ -246,3 +246,27 @@ def test_the_default_scrape_fn_awaits_the_real_async_scraper(session, monkeypatc
 
     assert code == 0
     assert session.exec(select(func.count()).select_from(Product)).one() == 12
+
+
+def test_a_file_with_invalid_encoding_is_suspicious(tmp_path):
+    """A decode error must not escape the guard and abort the whole run."""
+    bad = tmp_path / "latin.json"
+    bad.write_bytes(b'[{"title": "\xff\xfe not utf-8"}]')
+
+    healthy, suspicious = refresh_catalog.classify({"bestsellers": str(bad)}, {})
+
+    assert healthy == {}
+    assert suspicious == ["bestsellers"]
+
+
+def test_an_undecodable_section_does_not_stop_the_healthy_ones(session, tmp_path):
+    """The claimed impact: healthy sections must still import."""
+    for list_key in ("bestsellers", "desired"):
+        (tmp_path / FILENAMES[list_key]).write_text(
+            json.dumps([product_json(list_key, i) for i in range(12)]), encoding="utf-8")
+    (tmp_path / FILENAMES["trends"]).write_bytes(b'[{"title": "\xff\xfe"}]')
+
+    code = refresh_catalog.run(session, data_dir=str(tmp_path), log=silent)
+
+    assert code == 0
+    assert session.exec(select(func.count()).select_from(Product)).one() == 24
