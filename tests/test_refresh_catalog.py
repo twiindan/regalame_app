@@ -50,3 +50,57 @@ def snapshot_catalog(session):
 def test_baseline_counts_reads_each_list(session, catalog_seed):
     """The health reference comes from the DB, so no new state is needed."""
     assert refresh_catalog.baseline_counts(session) == {"bestsellers": 2, "trends": 2}
+
+
+def test_a_healthy_section_passes_the_guard(tmp_path):
+    good = tmp_path / "good.json"
+    good.write_text(json.dumps([product_json("bestsellers", i) for i in range(12)]),
+                    encoding="utf-8")
+
+    healthy, suspicious = refresh_catalog.classify(
+        {"bestsellers": str(good)}, {"bestsellers": 12})
+
+    assert set(healthy) == {"bestsellers"}
+    assert suspicious == []
+
+
+def test_a_truncated_section_is_suspicious(tmp_path):
+    """Amazon returning 200 with a partial grid must not be taken as truth."""
+    short = tmp_path / "short.json"
+    short.write_text(json.dumps([product_json("bestsellers", i) for i in range(4)]),
+                     encoding="utf-8")
+
+    healthy, suspicious = refresh_catalog.classify(
+        {"bestsellers": str(short)}, {"bestsellers": 20})
+
+    assert healthy == {}
+    assert suspicious == ["bestsellers"]
+
+
+def test_a_missing_file_is_suspicious():
+    healthy, suspicious = refresh_catalog.classify(
+        {"bestsellers": "/nonexistent/none.json"}, {})
+
+    assert healthy == {}
+    assert suspicious == ["bestsellers"]
+
+
+def test_an_unreadable_file_is_suspicious(tmp_path):
+    bad = tmp_path / "broken.json"
+    bad.write_text("{not json", encoding="utf-8")
+
+    healthy, suspicious = refresh_catalog.classify({"bestsellers": str(bad)}, {})
+
+    assert healthy == {}
+    assert suspicious == ["bestsellers"]
+
+
+def test_a_first_run_has_no_reference_to_fall_short_of(tmp_path):
+    """An empty DB must not make every section suspicious."""
+    first = tmp_path / "first.json"
+    first.write_text(json.dumps([product_json("bestsellers", 0)]), encoding="utf-8")
+
+    healthy, suspicious = refresh_catalog.classify({"bestsellers": str(first)}, {})
+
+    assert set(healthy) == {"bestsellers"}
+    assert suspicious == []
