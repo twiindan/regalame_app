@@ -40,6 +40,9 @@ def _count_importable(path):
         with open(path, encoding="utf-8") as handle:
             items = json.load(handle)
     except (OSError, ValueError):
+        # ValueError covers both json.JSONDecodeError and UnicodeDecodeError: a file
+        # that is not valid UTF-8 must be excluded as suspicious, not abort the run.
+        # (Contrast scraper.py's write path, which catches (OSError, UnicodeEncodeError).)
         return 0
     if not isinstance(items, list):
         return 0
@@ -119,6 +122,8 @@ def _finish(session, produced, baseline, dry_run, log):
     log(f"import: created={stats['created']} updated={stats['updated']} "
         f"lists={stats['lists']} sections_ok={len(healthy)}")
 
+    # Deactivation runs only on a fully healthy run: on a partial run a product
+    # could be absent merely because its own section failed.
     # len(healthy) == len(SECTIONS) already implies suspicious == []: healthy and
     # suspicious partition produced, and produced is always a subset of SECTIONS.
     if not dry_run and len(healthy) == len(SECTIONS):
