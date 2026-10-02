@@ -1,12 +1,15 @@
 """Daily catalog refresh: scrape the Amazon lists and import them into the DB."""
 
+import argparse
 import json
 import os
+import sys
 import tempfile
 
-from sqlmodel import func, select
+from sqlmodel import Session, func, select
 
 from catalog import import_from_json
+from database import engine
 from models import ProductList
 from scraper import SECTIONS, scrape_all
 
@@ -79,3 +82,25 @@ def _finish(session, produced, baseline, dry_run, log):
     log(f"import: created={stats['created']} updated={stats['updated']} "
         f"lists={stats['lists']} sections_ok={len(healthy)}")
     return 0
+
+
+def _parse_args(argv):
+    parser = argparse.ArgumentParser(description="Refresh the Amazon catalog")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Report the changes without writing them")
+    parser.add_argument("--data-dir", default=None,
+                        help="Import the JSON files already in DIR instead of scraping")
+    return parser.parse_args(argv)
+
+
+def main(argv=None, session=None):
+    """CLI entry point. Returns the exit code."""
+    args = _parse_args(argv)
+    if session is not None:
+        return run(session, dry_run=args.dry_run, data_dir=args.data_dir)
+    with Session(engine) as owned:
+        return run(owned, dry_run=args.dry_run, data_dir=args.data_dir)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

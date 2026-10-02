@@ -181,3 +181,37 @@ def test_the_exit_code_is_zero_when_only_some_sections_survive(session):
     code = refresh_catalog.run(
         session, scrape_fn=fake_scrape(dict(FULL, desired=None)), log=silent)
     assert code == 0
+
+
+def test_data_dir_never_invokes_the_scraper(session, tmp_path):
+    for list_key, count in FULL.items():
+        (tmp_path / FILENAMES[list_key]).write_text(
+            json.dumps([product_json(list_key, i) for i in range(count)]), encoding="utf-8")
+
+    def exploding(out_dir):
+        raise AssertionError("the scraper must not run with --data-dir")
+
+    code = refresh_catalog.run(session, scrape_fn=exploding, data_dir=str(tmp_path), log=silent)
+    assert code == 0
+    assert session.exec(select(func.count()).select_from(Product)).one() == 36
+
+
+def test_dry_run_writes_nothing(session, tmp_path):
+    for list_key, count in FULL.items():
+        (tmp_path / FILENAMES[list_key]).write_text(
+            json.dumps([product_json(list_key, i) for i in range(count)]), encoding="utf-8")
+
+    code = refresh_catalog.run(session, data_dir=str(tmp_path), dry_run=True, log=silent)
+    assert code == 0
+    assert session.exec(select(func.count()).select_from(Product)).one() == 0
+
+
+def test_main_reports_the_run(session, tmp_path, capsys):
+    for list_key, count in FULL.items():
+        (tmp_path / FILENAMES[list_key]).write_text(
+            json.dumps([product_json(list_key, i) for i in range(count)]), encoding="utf-8")
+
+    code = refresh_catalog.main(["--data-dir", str(tmp_path)], session=session)
+
+    assert code == 0
+    assert "sections_ok=3" in capsys.readouterr().out
