@@ -1,0 +1,17 @@
+# Build context hygiene: the scraper image must not carry the dev venv, the
+# local database, or the vcs metadata.
+venv/
+.venv/
+.git/
+.gitignore
+.atl/
+__pycache__/
+*.pyc
+.pytest_cache/
+.idea/
+.vscode/
+database.db
+*.db
+tests/
+docs/
+.env

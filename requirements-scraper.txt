@@ -1,0 +1,8 @@
+# Scraper-only dependencies. The web service never imports scraper.py and must
+# not install a browser: this file exists so playwright can be pinned and drift
+# cannot reach the cron unnoticed, the same way requirements.txt pins the web.
+#
+# The chromium build must match this playwright version, so the Dockerfile runs
+# `playwright install --with-deps chromium` from inside this environment.
+-r requirements.txt
+playwright==1.57.0

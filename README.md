@@ -74,6 +74,31 @@ Este proyecto está listo para Railway:
 3. Configura las Variables de Entorno en el panel de Railway (especialmente `DATABASE_URL` y `SECRET_KEY`).
 4. Railway usará automáticamente el `Procfile` para arrancar la aplicación.
 
+### Refresco periódico del catálogo (servicio cron)
+
+El catálogo se refresca solo, una vez por día, desde un segundo servicio del mismo proyecto
+de Railway. Ese servicio **no** es el web: la web sigue usando el `Procfile`.
+
+1. En Railway, crea un servicio nuevo en el mismo proyecto, apuntando al mismo repositorio.
+2. En la configuración del servicio:
+   - **Root directory:** la raíz del repositorio.
+   - **Dockerfile path:** `scraper/Dockerfile`.
+   - **Cron schedule:** `0 4 * * *`.
+   - **Start command:** `python -m jobs.refresh_catalog`.
+3. Variables de entorno: sólo `DATABASE_URL`, referenciando el Postgres del proyecto
+   (`${{Postgres.DATABASE_URL}}`). No hacen falta `SECRET_KEY` ni las de email.
+4. Verifica la primera corrida en los logs: una línea `section=... status=...` por sección y
+   un resumen `import: created=... updated=... lists=... sections_ok=...`.
+
+Un `sections_ok` menor a 3 significa que alguna sección falló o salió sospechosa. El catálogo
+existente queda intacto: la corrida siguiente lo reintenta.
+
+**Prueba local, sin browser y sin red:**
+
+```bash
+python -m jobs.refresh_catalog --data-dir . --dry-run
+```
+
 ## 📝 Licencia
 
 Este proyecto es un MVP para fines educativos y personales.
