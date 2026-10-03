@@ -80,18 +80,38 @@ El catálogo se refresca solo, una vez por día, desde un segundo servicio del m
 de Railway. Ese servicio **no** es el web: la web sigue usando el `Procfile`.
 
 1. En Railway, crea un servicio nuevo en el mismo proyecto, apuntando al mismo repositorio.
-2. En la configuración del servicio:
-   - **Root directory:** la raíz del repositorio.
-   - **Dockerfile path:** `scraper/Dockerfile`.
-   - **Cron schedule:** `0 4 * * *`.
+2. Configurá en **Settings** del servicio, **antes de que corra**:
+   - **Cron Schedule:** `0 4 * * *`. Es lo que lo convierte en un servicio programado.
+   - **Restart policy:** `Never`.
+   - **Build → Dockerfile path:** `scraper/Dockerfile`.
    - **Start command:** `python -m jobs.refresh_catalog`.
+   - **Root directory:** la raíz del repositorio. (El Dockerfile vive en `scraper/` a propósito:
+     un `Dockerfile` en la raíz haría que Railway buildee **la web** con él y rompería el deploy.)
 3. Variables de entorno: sólo `DATABASE_URL`, referenciando el Postgres del proyecto
    (`${{Postgres.DATABASE_URL}}`). No hacen falta `SECRET_KEY` ni las de email.
-4. Verifica la primera corrida en los logs: una línea `section=... status=...` por sección y
+4. Verificá la primera corrida en los logs: una línea `section=... status=...` por sección y
    un resumen `import: created=... updated=... lists=... sections_ok=...`.
 
+**Por qué el schedule y el `Restart policy: Never` van primero.** El job sale con **exit 1**
+cuando ninguna sección quedó sana, a propósito, para que el fallo sea visible en los logs. El
+default de Railway es `On Failure` con hasta **10 reintentos**, así que un servicio desplegado
+**sin** su cron schedule reiniciaría la corrida hasta diez veces, y cada reinicio vuelve a
+scrapear Amazon entero — justo el patrón de tráfico que puede marcar la IP como bot.
+
+**Tres cosas del cron de Railway que importan acá:**
+- El horario es **UTC**: `0 4 * * *` son las 4 de la mañana UTC.
+- Mínimo **5 minutos** entre corridas.
+- El proceso **debe terminar**. Si la corrida anterior sigue activa cuando toca la siguiente,
+  Railway **saltea** la nueva. Una corrida completa tarda varios minutos.
+
+**Esto se configura en el dashboard, no en el repo.** `railway.json` está deprecado (deja de
+leerse el 2026-12-01) y **los servicios nuevos ya no pueden usarlo**, así que no hay camino por
+código para estas dos settings: el Cron Schedule y el Dockerfile path son de Settings.
+
 Un `sections_ok` menor a 3 significa que alguna sección falló o salió sospechosa. El catálogo
-existente queda intacto: la corrida siguiente lo reintenta.
+existente queda intacto: la corrida siguiente lo reintenta. Y si ves
+`deactivation skipped: at least one section came back shorter than its baseline`, es el guard
+haciendo su trabajo: una sección vino incompleta y por eso no se retiró ningún producto.
 
 **Prueba local, sin browser y sin red:**
 
