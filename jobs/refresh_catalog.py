@@ -31,7 +31,9 @@ def _count_items(path):
     try:
         with open(path, encoding="utf-8") as handle:
             items = json.load(handle)
-    except (OSError, json.JSONDecodeError):
+    except (OSError, ValueError):
+        # ValueError covers both json.JSONDecodeError and UnicodeDecodeError: a file
+        # that is not valid UTF-8 must be excluded as suspicious, not abort the run.
         return 0
     return len(items) if isinstance(items, list) else 0
 
