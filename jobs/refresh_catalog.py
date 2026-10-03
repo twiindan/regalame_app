@@ -9,7 +9,7 @@ import tempfile
 
 from sqlmodel import Session, func, select
 
-from catalog import import_from_json
+from catalog import deactivate_absent_products, extract_asin, import_from_json
 from database import engine
 from models import ProductList
 from scraper import SECTIONS, scrape_all
@@ -26,16 +26,33 @@ def baseline_counts(session):
     return {list_key: count for list_key, count in rows}
 
 
-def _count_items(path):
-    """Number of products in a produced file; 0 when missing or unreadable."""
+def _count_importable(path):
+    """Number of distinct ASINs the import would create from a produced file.
+
+    Mirrors import_from_json: entries without a url are skipped and repeated ASINs
+    collapse to one product, so the guard compares like with like against the
+    per-list baseline of distinct ProductList rows. Counting raw JSON entries
+    instead would let a duplicate-padded file pass as healthy while importing a
+    handful of products — and with deactivation wired in, that would retire most
+    of the catalog.
+    """
     try:
         with open(path, encoding="utf-8") as handle:
             items = json.load(handle)
     except (OSError, ValueError):
         # ValueError covers both json.JSONDecodeError and UnicodeDecodeError: a file
         # that is not valid UTF-8 must be excluded as suspicious, not abort the run.
+        # (Contrast scraper.py's write path, which catches (OSError, UnicodeEncodeError).)
         return 0
-    return len(items) if isinstance(items, list) else 0
+    if not isinstance(items, list):
+        return 0
+    return len({
+        extract_asin(item["url"])
+        for item in items
+        if isinstance(item, dict)
+        and isinstance(item.get("url"), str)
+        and item["url"]
+    })
 
 
 def classify(produced, baseline):
@@ -48,17 +65,29 @@ def classify(produced, baseline):
     """
     healthy, suspicious = {}, []
     for list_key, path in produced.items():
-        count = _count_items(path)
+        count = _count_importable(path)
         previous = baseline.get(list_key, 0)
-        # The guard measures raw JSON entries, not importable products: the baseline counts
-        # distinct ProductList rows, while import_from_json collapses duplicate ASINs and
-        # skips entries without a url. A file padded with duplicates can therefore pass the
-        # guard and still import fewer products; the guard targets truncation, not dedup.
         if count == 0 or (previous and count < previous * MIN_HEALTHY_RATIO):
             suspicious.append(list_key)
         else:
             healthy[list_key] = path
     return healthy, sorted(suspicious)
+
+
+def _every_section_complete(produced, baseline):
+    """Whether every scraped section reached at least its previous size.
+
+    The import tolerates a section shrinking to ``MIN_HEALTHY_RATIO`` of its baseline,
+    because importing fewer products is safe. Retiring products is not: the Amazon
+    lists are capped at 50 items per category, so a working scrape keeps a section's
+    size stable and a drop means a degraded scrape rather than genuine churn. Demanding
+    a complete run can only delay a retirement; tolerating a short one can make
+    products disappear.
+    """
+    return all(
+        _count_importable(path) >= baseline.get(list_key, 0)
+        for list_key, path in produced.items()
+    )
 
 
 def _scrape_into(out_dir):
@@ -96,7 +125,7 @@ def _finish(session, produced, baseline, dry_run, log):
     healthy, suspicious = classify(produced, baseline)
     for list_key in suspicious:
         log(f"section={list_key} status=suspicious excluded "
-            f"produced={_count_items(produced[list_key])} baseline={baseline.get(list_key, 0)}")
+            f"produced={_count_importable(produced[list_key])} baseline={baseline.get(list_key, 0)}")
     for section in SECTIONS:
         if section.list_key not in produced:
             log(f"section={section.list_key} status=absent not-produced")
@@ -110,6 +139,16 @@ def _finish(session, produced, baseline, dry_run, log):
     stats = import_from_json(session, data_files=healthy, dry_run=dry_run)
     log(f"import: created={stats['created']} updated={stats['updated']} "
         f"lists={stats['lists']} sections_ok={len(healthy)}")
+
+    # Deactivation runs only on a complete, fully healthy run: on a partial run a
+    # product could be absent merely because its own section failed or came back short.
+    # len(healthy) == len(SECTIONS) already implies suspicious == []: healthy and
+    # suspicious partition produced, and produced is always a subset of SECTIONS.
+    if not dry_run and len(healthy) == len(SECTIONS):
+        if _every_section_complete(produced, baseline):
+            log(f"deactivated={deactivate_absent_products(session, list_keys=sorted(healthy))}")
+        else:
+            log("deactivation skipped: at least one section came back shorter than its baseline")
     return 0
 
 

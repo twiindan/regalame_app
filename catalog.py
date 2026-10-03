@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from urllib.parse import urlparse
 
-from sqlalchemy import case, delete, func
+from sqlalchemy import case, delete, func, update
 from sqlmodel import Session, select
 
 from models import Product, ProductList, utcnow_naive
@@ -187,6 +187,38 @@ def list_categories(session: Session) -> list[tuple[str, str]]:
     ).all()
     pairs = ((name, slug) for name, slug in rows)
     return sorted(pairs, key=lambda pair: (normalize_text(pair[0]), pair[1]))
+
+
+def deactivate_absent_products(session: Session, list_keys: list[str]) -> int:
+    """Mark inactive every product that appears in none of ``list_keys``.
+
+    Only the refresh job calls this, and only on a healthy run, where
+    ``list_keys`` is every scraped list: a product still present in any list is
+    never touched. Rows are flagged, never deleted, so existing URLs keep
+    resolving. Returns the number of products deactivated.
+    """
+    if not list_keys:
+        # An empty universe means nothing was considered, so nothing can be retired.
+        return 0
+    present = select(ProductList.product_id).where(ProductList.list_key.in_(list_keys))
+    absent = session.exec(
+        select(Product.id).where(
+            Product.is_active == True,  # noqa: E712
+            Product.id.not_in(present),
+        )
+    ).all()
+    if not absent:
+        return 0
+    session.exec(
+        update(Product)
+        .where(
+            Product.is_active == True,  # noqa: E712
+            Product.id.not_in(present),
+        )
+        .values(is_active=False, updated_at=utcnow_naive())
+    )
+    session.commit()
+    return len(absent)
 
 
 def _utcnaive_from_timestamp(timestamp: float) -> datetime:
