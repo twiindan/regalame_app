@@ -251,6 +251,7 @@ def _catalog_context(
     page: str = "1",
     always_indexable: bool = False,
     force_noindex: bool = False,
+    editorial_context: Optional[str] = None,
 ):
     requested_page = _to_int(page, 1)
     query = CatalogQuery(
@@ -261,6 +262,7 @@ def _catalog_context(
         max_price=_to_float(max_value),
         sort=sort if sort in PUBLIC_SORTS else "relevance",
         page=requested_page,
+        editorial_context=editorial_context,
     )
     result = search_products(session, query)
 
@@ -423,6 +425,7 @@ async def category_seo_page(
         base_path=f"/ideas/{category_slug}",
         title=category_slug.replace("-", " ").title(),
         category=category_slug, page=page, always_indexable=True,
+        editorial_context=category_slug,
     )
     context["category_name"] = next(
         (name for name, slug in context["categories"] if slug == category_slug),

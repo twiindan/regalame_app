@@ -215,3 +215,174 @@ def test_list_categories_unchanged_when_off(session, monkeypatch, seed_editorial
     seed_editorial(hidden, "excluded")
 
     assert {slug for _, slug in list_categories(session)} == {"hogar", "juguetes"}
+
+
+def test_sitemap_suppresses_zero_visible_category(client, session, enforce, seed_editorial):
+    visible = _make_product(session, "P1", "Cafetera", category="Hogar", slug="hogar")
+    hidden = _make_product(session, "P2", "Pistola", category="Juguetes", slug="juguetes")
+    seed_editorial(visible, "eligible")
+    seed_editorial(hidden, "excluded")
+
+    body = client.get("/sitemap.xml").text
+    assert "/ideas/hogar" in body
+    assert "/ideas/juguetes" not in body
+
+
+def test_sitemap_unchanged_when_off(client, session, monkeypatch, seed_editorial):
+    monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "off")
+    visible = _make_product(session, "P1", "Cafetera", category="Hogar", slug="hogar")
+    hidden = _make_product(session, "P2", "Pistola", category="Juguetes", slug="juguetes")
+    seed_editorial(visible, "eligible")
+    seed_editorial(hidden, "excluded")
+
+    body = client.get("/sitemap.xml").text
+    assert "/ideas/hogar" in body
+    assert "/ideas/juguetes" in body
+
+
+# --------------------------------------------------------------------------- #
+# 6.3/6.4 Route surfaces + /ideas context wiring
+# --------------------------------------------------------------------------- #
+
+
+def test_all_shared_surfaces_hide_excluded(client, session, catalog_seed, enforce,
+                                           seed_editorial):
+    a1, a2, b1 = catalog_seed
+    session.add_all([
+        ProductList(product_id=a1.id, list_key="trends", rank=9),
+        ProductList(product_id=a1.id, list_key="desired", rank=9),
+    ])
+    session.commit()
+    seed_editorial(a1, "excluded")
+    seed_editorial(a2, "eligible")
+    seed_editorial(b1, "eligible")
+
+    for path in ("/catalog", "/trends", "/most-desired", "/bestsellers",
+                 "/ideas/alimentacion-y-bebidas"):
+        assert "Café molido" not in client.get(path).text, path
+
+
+def test_dashboard_samples_hide_excluded(auth_client, session, catalog_seed, enforce,
+                                         seed_editorial):
+    a1, a2, b1 = catalog_seed
+    seed_editorial(a1, "excluded")
+    seed_editorial(a2, "eligible")
+    seed_editorial(b1, "eligible")
+
+    body = auth_client.get("/dashboard").text
+    assert "Café molido" not in body
+    assert "Cafetera express" in body
+
+
+def test_ideas_route_merges_context_visibility(client, session, enforce, seed_editorial):
+    contextual = _make_product(session, "C1", "Cuna portátil", category="Hogar", slug="hogar")
+    eligible = _make_product(session, "E1", "Cafetera", category="Hogar", slug="hogar")
+    other = _make_product(session, "C2", "Altavoz", category="Electrónica", slug="electronica")
+    seed_editorial(contextual, "contextual", "hogar")
+    seed_editorial(eligible, "eligible")
+    seed_editorial(other, "contextual", "electronica")
+
+    ideas_hogar = client.get("/ideas/hogar").text
+    assert "Cuna portátil" in ideas_hogar       # contextual matching the slug
+    assert "Cafetera" in ideas_hogar            # eligible of the category
+    assert "Altavoz" not in ideas_hogar         # contextual for another context
+
+    ideas_electronica = client.get("/ideas/electronica").text
+    assert "Altavoz" in ideas_electronica       # contextual matching its own context
+    assert "Cuna portátil" not in ideas_electronica
+
+    general = client.get("/catalog").text
+    assert "Cuna portátil" not in general       # contextual hidden on a general surface
+    assert "Cafetera" in general
+
+
+# --------------------------------------------------------------------------- #
+# 6.4/6.5 Blog empty state + hero fallback
+# --------------------------------------------------------------------------- #
+
+
+def test_blog_list_filters_and_renders_empty_state(client, session, enforce, seed_editorial):
+    product = _make_product(session, "BLOG1", "Café barato", category="Hogar", slug="hogar",
+                            price=5.0)
+    seed_editorial(product, "excluded")
+
+    post, products = get_blog_post_detail(session, "regalos-amigo-invisible-10-euros")
+    assert products == []
+    # The hero fallback must never be derived from an empty visible list.
+    assert post.get("hero_image") is None
+
+    body = client.get("/blog/regalos-amigo-invisible-10-euros").text
+    assert "No encontramos productos" in body
+    assert "Café barato" not in body
+
+
+def test_blog_hero_uses_the_first_visible_product(client, session, enforce, seed_editorial):
+    product = _make_product(session, "BLOG2", "Café bueno", category="Hogar", slug="hogar",
+                            price=5.0, image="img-blog2.jpg")
+    seed_editorial(product, "eligible")
+
+    post, products = get_blog_post_detail(session, "regalos-amigo-invisible-10-euros")
+    assert [p.asin for p in products] == ["BLOG2"]
+    assert post["hero_image"] == "img-blog2.jpg"
+
+
+# --------------------------------------------------------------------------- #
+# 6.5 Safety rails: wishes + import health
+# --------------------------------------------------------------------------- #
+
+
+def test_wish_can_add_an_excluded_product_under_enforce(auth_client, session, enforce,
+                                                        seed_editorial):
+    product = _make_product(session, "W1", "Pistola de agua", category="Juguetes",
+                            slug="juguetes")
+    seed_editorial(product, "excluded")
+
+    response = auth_client.post("/wishes", data={
+        "content": product.url,
+        "manual_title": product.title,
+        "manual_image": product.image_url,
+    })
+    assert response.status_code == 200
+
+    wishes = session.exec(select(Wish)).all()
+    assert [wish.title for wish in wishes] == ["Pistola de agua"]
+
+
+def test_existing_wishes_survive_classification(auth_client, session, test_user, enforce,
+                                                seed_editorial):
+    session.add(Wish(user_id=test_user.id, title="Regalo antiguo",
+                     url="https://www.amazon.es/dp/OLD", image_url="img-old.jpg"))
+    session.commit()
+    product = _make_product(session, "OLD", "Regalo antiguo", category="Juguetes",
+                            slug="juguetes")
+    seed_editorial(product, "excluded")
+
+    # The wish route does not go through search_products, so it stays visible.
+    wishes = session.exec(select(Wish)).all()
+    assert [wish.title for wish in wishes] == ["Regalo antiguo"]
+
+
+def test_curation_never_mutates_productlist(session, catalog_seed, enforce, seed_editorial):
+    import jobs.refresh_catalog as refresh_catalog
+
+    a1, a2, b1 = catalog_seed
+
+    def snapshot():
+        return sorted(
+            tuple(row) for row in session.exec(
+                select(ProductList.product_id, ProductList.list_key, ProductList.rank)
+            ).all()
+        )
+
+    before = snapshot()
+    seed_editorial(a1, "eligible")
+    seed_editorial(a2, "excluded")
+
+    search_products(session, CatalogQuery())
+    search_products(session, CatalogQuery(category_slug="alimentacion-y-bebidas",
+                                          editorial_context="alimentacion-y-bebidas"))
+    list_categories(session)
+
+    # Import-health metrics keep counting the unfiltered ProductList rows.
+    assert refresh_catalog.baseline_counts(session) == {"bestsellers": 2, "trends": 2}
+    assert snapshot() == before
