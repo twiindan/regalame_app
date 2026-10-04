@@ -14,6 +14,7 @@ from urllib.parse import urlparse
 from sqlalchemy import case, delete, func, update
 from sqlmodel import Session, select
 
+from curation import editorial_visibility, visible_category_slugs
 from models import Product, ProductList, utcnow_naive
 
 DEFAULT_PER_PAGE = 24
@@ -87,6 +88,7 @@ class CatalogQuery:
     sort: str = "relevance"
     page: int = 1
     per_page: int = DEFAULT_PER_PAGE
+    editorial_context: Optional[str] = None
 
 
 @dataclass
@@ -127,8 +129,28 @@ def search_products(session: Session, query: CatalogQuery) -> CatalogResult:
     filters = [Product.is_active == True]  # noqa: E712
     if term:
         filters.append(Product.title_normalized.like(f"%{escaped}%", escape="\\"))
-    if query.category_slug:
-        filters.append(Product.category_slug == query.category_slug)
+
+    # Editorial filtering joins the shared filters list BEFORE the count below, so
+    # totals and pagination reflect only visible products on every surface.
+    # `editorial_visibility` returns None under `off` (and performs no DB read),
+    # so the default world appends nothing and the executed SQL is unchanged.
+    visibility = editorial_visibility(session)
+    if (
+        query.category_slug
+        and visibility is not None
+        and query.editorial_context == query.category_slug
+    ):
+        # Context surface (/ideas/{slug}): the category filter MERGES with
+        # contextual visibility — eligible products of the category OR
+        # contextual products whose context matches the slug.
+        filters.append(visibility.context_category(query.category_slug))
+    else:
+        # General surface: keep the unchanged category filter and show `eligible`.
+        if query.category_slug:
+            filters.append(Product.category_slug == query.category_slug)
+        if visibility is not None:
+            filters.append(visibility.general())
+
     if query.source:
         filters.append(
             select(ProductList.id)
@@ -179,12 +201,21 @@ def search_products(session: Session, query: CatalogQuery) -> CatalogResult:
 
 
 def list_categories(session: Session) -> list[tuple[str, str]]:
-    """Return (display_name, slug) pairs for active products, accent-insensitively sorted."""
-    rows = session.exec(
+    """Return (display_name, slug) pairs for active products, accent-insensitively sorted.
+
+    Under `enforce` a category whose filtered visible count is zero is suppressed
+    (the sitemap renders this function, so it inherits the suppression); under
+    `off` the listing is unchanged.
+    """
+    visible_slugs = visible_category_slugs(session)
+    statement = (
         select(Product.category, Product.category_slug)
         .where(Product.is_active == True)  # noqa: E712
         .group_by(Product.category, Product.category_slug)
-    ).all()
+    )
+    if visible_slugs is not None:
+        statement = statement.where(Product.category_slug.in_(visible_slugs))
+    rows = session.exec(statement).all()
     pairs = ((name, slug) for name, slug in rows)
     return sorted(pairs, key=lambda pair: (normalize_text(pair[0]), pair[1]))
 
