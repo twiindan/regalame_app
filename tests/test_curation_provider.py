@@ -6,6 +6,7 @@ Unit 3b adds the transport seam and ``classify_product``. CI makes zero network
 calls: the transport is always injected or monkeypatched in these tests.
 """
 import json
+import os
 from dataclasses import FrozenInstanceError, fields
 
 import pytest
@@ -178,3 +179,107 @@ def test_classification_result_is_frozen_and_has_the_three_documented_fields():
     ]
     with pytest.raises(FrozenInstanceError):
         result.state = "excluded"  # type: ignore[misc]
+
+
+
+# --------------------------------------------------------------------------- #
+# 3.2 — production transport + minimal payload
+# --------------------------------------------------------------------------- #
+
+
+def _item(**overrides):
+    base = {
+        "title": "Cafetera",
+        "category": "Hogar y cocina",
+        "category_slug": "hogar-y-cocina",
+    }
+    base.update(overrides)
+    return base
+
+
+class _FakeResponse:
+    def __init__(self, body):
+        self._body = body
+
+    def raise_for_status(self):
+        return None
+
+    def json(self):
+        return self._body
+
+
+def test_transport_contract_is_payload_to_body():
+    from typing import Callable
+
+    assert curation_provider.Transport == Callable[[dict], dict]
+
+
+def test_provider_env_constants_default_from_the_environment():
+    assert curation_provider.EDITORIAL_PROVIDER_BASE_URL == os.getenv(
+        "EDITORIAL_PROVIDER_BASE_URL", "https://api.nan.builders/v1"
+    )
+    assert curation_provider.EDITORIAL_PROVIDER_MODEL == os.getenv(
+        "EDITORIAL_PROVIDER_MODEL", "qwen3.6"
+    )
+    assert curation_provider.EDITORIAL_PROVIDER_API_KEY == os.getenv(
+        "EDITORIAL_PROVIDER_API_KEY"
+    )
+
+
+def test_post_chat_completions_uses_bearer_auth_url_and_timeout(monkeypatch):
+    captured = {}
+
+    def fake_post(url, headers=None, json=None, timeout=None):
+        captured.update(url=url, headers=headers, json=json, timeout=timeout)
+        return _FakeResponse(_body(_content()))
+
+    monkeypatch.setattr(curation_provider.requests, "post", fake_post)
+
+    body = curation_provider._post_chat_completions(
+        {"model": "m"}, base_url="https://api.example/v1", api_key="secret", timeout=7.5
+    )
+
+    assert captured["url"] == "https://api.example/v1/chat/completions"
+    assert captured["headers"]["Authorization"] == "Bearer secret"
+    assert captured["timeout"] == 7.5
+    assert body == _body(_content())
+
+
+def test_post_chat_completions_refuses_without_an_api_key(monkeypatch):
+    def forbidden(*args, **kwargs):
+        raise AssertionError("no HTTP call may be attempted without an API key")
+
+    monkeypatch.setattr(curation_provider.requests, "post", forbidden)
+
+    with pytest.raises(ValueError):
+        curation_provider._post_chat_completions({"model": "m"}, api_key=None)
+
+
+def test_build_payload_contains_only_the_product_title_and_category():
+    item = _item(
+        user_id=7,
+        wishes=[{"receiver": "Ana", "email": "ana@example.com"}],
+        email="ana@example.com",
+    )
+
+    payload = curation_provider._build_payload(item, "qwen3.6")
+
+    product = json.loads(payload["messages"][1]["content"])
+    assert set(product) == {"title", "category"}
+    assert product["title"] == "Cafetera"
+    assert product["category"] == "Hogar y cocina"
+    assert payload["messages"][0]["role"] == "system"
+
+    serialized = json.dumps(payload, ensure_ascii=False)
+    for forbidden in ("user_id", "wishes", "email", "ana@example.com", "receiver"):
+        assert forbidden not in serialized
+
+
+def test_build_payload_sets_the_model_and_the_strict_response_format():
+    payload = curation_provider._build_payload(_item(), "override-model")
+
+    assert payload["model"] == "override-model"
+    assert payload["response_format"] == {
+        "type": "json_schema",
+        "json_schema": DECISION_JSON_SCHEMA,
+    }

@@ -1,20 +1,42 @@
 """NaN Builders provider adapter for editorial classification.
 
 Pure response validation plus the transport seam used by the classification
-job. This module performs no validation of its own beyond what the spec allows:
-every provider response is validated locally and strictly, and any invalid
-shape is treated as a failure (``None``) so it is never cached.
-
-Work Unit 3a covers the pure validation layer (``ClassificationResult``,
-``DECISION_JSON_SCHEMA``, the policy prompt and ``parse_provider_response``).
-Work Unit 3b adds the transport and ``classify_product``.
+job. Every provider response is validated locally and strictly, and any invalid
+shape is treated as a failure (``None``) so it is never cached. The production
+transport uses the pinned ``requests`` dependency; the transport is injectable so
+tests and CI make zero network calls.
 """
 
 import json
+import os
 from dataclasses import dataclass
-from typing import Iterable, Optional
+from typing import Callable, Iterable, Optional
+
+import requests
 
 from curation import EDITORIAL_CONTEXTS, EDITORIAL_STATES
+
+# --------------------------------------------------------------------------- #
+# Provider configuration (repo convention: module-level ``os.getenv``)
+# --------------------------------------------------------------------------- #
+
+#: Provider base URL; OpenAI-compatible ``/chat/completions`` is appended.
+EDITORIAL_PROVIDER_BASE_URL = os.getenv(
+    "EDITORIAL_PROVIDER_BASE_URL", "https://api.nan.builders/v1"
+)
+
+#: Model identifier sent in the request payload.
+EDITORIAL_PROVIDER_MODEL = os.getenv("EDITORIAL_PROVIDER_MODEL", "qwen3.6")
+
+#: Provider API key. No default: an unconfigured key fails the call (never raises
+#: to callers; ``classify_product`` turns it into a ``None`` result).
+EDITORIAL_PROVIDER_API_KEY = os.getenv("EDITORIAL_PROVIDER_API_KEY")
+
+#: A transport turns a request payload into a parsed JSON body.
+Transport = Callable[[dict], dict]
+
+_DEFAULT_TIMEOUT = 30.0
+
 
 
 @dataclass(frozen=True)
@@ -123,3 +145,50 @@ def parse_provider_response(body: dict,
 
     # A stray context on a non-contextual decision is normalized away.
     return ClassificationResult(state=state, context=None, reason=reason)
+
+
+# --------------------------------------------------------------------------- #
+# Transport
+# --------------------------------------------------------------------------- #
+
+
+def _post_chat_completions(payload: dict, *, base_url: Optional[str] = None,
+                           api_key: Optional[str] = None,
+                           timeout: float = _DEFAULT_TIMEOUT) -> dict:
+    """Production transport: POST ``payload`` to the chat-completions endpoint.
+
+    Resolves the base URL and API key from the explicit arguments or the module
+    env configuration, and authenticates with ``Authorization: Bearer <key>``.
+    Raises on any HTTP or key error; ``classify_product`` converts that into a
+    ``None`` result.
+    """
+    resolved_base_url = base_url if base_url is not None else EDITORIAL_PROVIDER_BASE_URL
+    resolved_api_key = api_key if api_key is not None else EDITORIAL_PROVIDER_API_KEY
+    if not resolved_api_key:
+        raise ValueError("EDITORIAL_PROVIDER_API_KEY is not configured")
+
+    response = requests.post(
+        f"{resolved_base_url}/chat/completions",
+        headers={"Authorization": f"Bearer {resolved_api_key}"},
+        json=payload,
+        timeout=timeout,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def _build_payload(item: dict, model: str) -> dict:
+    """Build the provider payload from a product item.
+
+    Data minimization: the only product facts sent are the title and the
+    observed category. User, wish and account data never enter the payload.
+    """
+    product = {"title": item.get("title"), "category": item.get("category")}
+    return {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": POLICY_PROMPT},
+            {"role": "user", "content": json.dumps(product, ensure_ascii=False)},
+        ],
+        "response_format": {"type": "json_schema", "json_schema": DECISION_JSON_SCHEMA},
+    }
