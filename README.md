@@ -47,6 +47,11 @@ Una aplicación moderna y rápida para organizar el "Amigo Invisible" (Secret Sa
    MAIL_FROM=info@regalame.app
    MAIL_PORT=587
    MAIL_SERVER=smtp.gmail.com
+   # Curación editorial del catálogo (opcional; por defecto off = shadow)
+   # EDITORIAL_FILTER_MODE=off
+   # EDITORIAL_PROVIDER_API_KEY=tu_api_key
+   # EDITORIAL_PROVIDER_BASE_URL=https://api.nan.builders/v1
+   # EDITORIAL_PROVIDER_MODEL=qwen3.6
    ```
 
 4. **Ejecutar migraciones**:
@@ -118,6 +123,45 @@ haciendo su trabajo: una sección vino incompleta y por eso no se retiró ningú
 ```bash
 python -m jobs.refresh_catalog --data-dir . --dry-run
 ```
+
+### Curación editorial del catálogo (servicios cron)
+
+La curación clasifica los productos del catálogo con IA (`eligible`, `contextual`,
+`excluded`, `unknown`) y filtra las superficies públicas. Corre en **modo shadow**
+por defecto (`EDITORIAL_FILTER_MODE=off`): los jobs pueden clasificar y persistir
+decisiones, pero la web no cambia en nada. El filtrado se activa recién cuando el
+gate de evaluación pasa y el backfill está completo al 100%.
+
+Se configura con **dos servicios cron** separados (mismo proyecto de Railway, mismo
+patrón que el refresco del catálogo: `Restart policy: Never` y el Cron Schedule
+**antes** de la primera corrida):
+
+1. **Clasificación** — Start command: `python -m jobs.classify_catalog`.
+   Variables: `DATABASE_URL`, `EDITORIAL_PROVIDER_API_KEY` y, si hace falta,
+   `EDITORIAL_PROVIDER_BASE_URL`, `EDITORIAL_PROVIDER_MODEL` y los límites
+   `EDITORIAL_JOB_*`. Probá primero con `--dry-run` (cero llamadas y cero
+   escrituras) y después sin él para persistir decisiones.
+2. **Gate de evaluación** — Start command: `python -m jobs.evaluate_curation`.
+   Es offline (no llama al proveedor): `--sample-out sample.json` emite la muestra
+   estratificada para etiquetar a mano, y `--labels sample.json` evalúa y registra
+   el veredicto. **No** necesita cron propio.
+
+| Variable | Default | Para qué |
+|----------|---------|----------|
+| `EDITORIAL_FILTER_MODE` | `off` | `off` = shadow; `enforce` = filtra (sólo si el gate pasa). Se lee una vez al importar: cambiarla requiere restart/redeploy. |
+| `EDITORIAL_PROVIDER_API_KEY` | — (secreto) | Bearer token del proveedor. Sin él, ninguna corrida real clasifica. |
+| `EDITORIAL_PROVIDER_BASE_URL` | `https://api.nan.builders/v1` | Base URL OpenAI-compatible. |
+| `EDITORIAL_PROVIDER_MODEL` | `qwen3.6` | Modelo; también entra en el fingerprint de reclasificación. |
+| `EDITORIAL_JOB_COMMIT_EVERY` | `25` | Commit de decisiones cada N productos. |
+| `EDITORIAL_JOB_RPM` | `60` | Máximo de requests por minuto. |
+| `EDITORIAL_JOB_MAX_SECONDS` | `3300` | Tope de tiempo por corrida (55 min). |
+| `EDITORIAL_JOB_MAX_PRODUCTS` | `500` | Tope de productos por corrida. |
+
+`EDITORIAL_POLICY_VERSION` y `EDITORIAL_CONTEXTS` **no** son variables de entorno:
+son constantes de código en `curation.py`. La secuencia completa de despliegue
+(migración → backfill shadow → gate → `enforce`), el gate exacto y el rollback
+están en
+[`docs/deploy/2026-10-04-curacion-regalos-ia-rollout-runbook.md`](docs/deploy/2026-10-04-curacion-regalos-ia-rollout-runbook.md).
 
 ## 📝 Licencia
 
