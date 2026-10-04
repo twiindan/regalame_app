@@ -9,12 +9,13 @@ import json
 from datetime import datetime
 
 import pytest
+from sqlmodel import select
 
 import curation
 import curation_provider
 import jobs.evaluate_curation as gate
 from curation_provider import ClassificationResult
-from models import Product
+from models import EditorialGateState, Product
 
 POLICY = curation.EDITORIAL_POLICY_VERSION
 MODEL = curation_provider.EDITORIAL_PROVIDER_MODEL
@@ -23,6 +24,10 @@ MODEL = curation_provider.EDITORIAL_PROVIDER_MODEL
 # --------------------------------------------------------------------------- #
 # Fixtures / helpers
 # --------------------------------------------------------------------------- #
+
+
+def _silent(*args, **kwargs):
+    pass
 
 
 def _product(session, *, asin, title=None, category="Hogar", slug="hogar", is_active=True):
@@ -311,3 +316,150 @@ def test_the_gate_makes_no_provider_calls(session, tmp_path, monkeypatch):
     report = gate.evaluate(session, _write_labels(tmp_path, labels))
 
     assert report.gate_passed is True
+
+
+# --------------------------------------------------------------------------- #
+# 5.2 — the single-row gate upsert, template output, and CLI
+# --------------------------------------------------------------------------- #
+
+
+def test_a_successful_run_upserts_exactly_one_gate_row(session, tmp_path):
+    labels, _ = _seed(
+        session, [{"asin": f"EL{i}", "ai": "eligible", "expected": "eligible"} for i in range(10)]
+    )
+
+    code = gate.run(session, labels_path=_write_labels(tmp_path, labels), log=_silent)
+
+    assert code == 0
+    rows = session.exec(select(EditorialGateState)).all()
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.gate_passed is True
+    assert row.coverage_ratio == 1.0
+    assert row.unknown_ratio == 0.0
+    assert row.overall_agreement == 1.0
+    assert row.excluded_leak_ratio == 0.0
+    assert row.policy_version == POLICY
+    assert row.model_id == MODEL
+    assert row.evaluated_at.tzinfo is None
+
+
+def test_a_re_run_updates_the_same_single_row(session, tmp_path):
+    labels, _ = _seed(
+        session, [{"asin": f"EL{i}", "ai": "eligible", "expected": "eligible"} for i in range(10)]
+    )
+    gate.run(session, labels_path=_write_labels(tmp_path, labels), log=_silent)
+
+    disagreeing = [{"asin": "EL0", "expected_state": "excluded"}]
+    code = gate.run(
+        session,
+        labels_path=_write_labels(tmp_path, disagreeing, name="second.json"),
+        log=_silent,
+    )
+
+    assert code == 0
+    rows = session.exec(select(EditorialGateState)).all()
+    assert len(rows) == 1
+    assert rows[0].gate_passed is False
+
+
+def test_a_malformed_labels_file_exits_1_without_writing(session, tmp_path):
+    _product(session, asin="EL0")
+    path = tmp_path / "bad.json"
+    path.write_text("{not json", encoding="utf-8")
+
+    code = gate.run(session, labels_path=str(path), log=_silent)
+
+    assert code == 1
+    assert session.exec(select(EditorialGateState)).all() == []
+
+
+def test_a_partially_filled_labels_file_exits_1_without_writing(session, tmp_path):
+    _product(session, asin="EL0")
+    path = tmp_path / "partial.json"
+    path.write_text(
+        json.dumps({"labels": [{"asin": "EL0", "expected_state": ""}]}), encoding="utf-8"
+    )
+
+    code = gate.run(session, labels_path=str(path), log=_silent)
+
+    assert code == 1
+    assert session.exec(select(EditorialGateState)).all() == []
+
+
+def test_run_without_labels_writes_the_label_template(session, tmp_path):
+    for index in range(3):
+        _product(session, asin=f"P{index}", slug="cat", category="Cat")
+    out = tmp_path / "sample.json"
+
+    code = gate.run(session, sample_out=str(out), log=_silent)
+
+    assert code == 0
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload["policy_version"] == POLICY
+    assert [entry["expected_state"] for entry in payload["labels"]] == ["", "", ""]
+    assert {entry["asin"] for entry in payload["labels"]} == {"P0", "P1", "P2"}
+    assert session.exec(select(EditorialGateState)).all() == []
+
+
+def test_a_run_makes_no_provider_calls(session, tmp_path, monkeypatch):
+    def explode(*args, **kwargs):
+        raise AssertionError("the evaluation gate must never call the provider")
+
+    monkeypatch.setattr(curation_provider, "classify_product", explode)
+    labels, _ = _seed(session, [{"asin": "EL0", "ai": "eligible", "expected": "eligible"}])
+
+    code = gate.run(session, labels_path=_write_labels(tmp_path, labels), log=_silent)
+
+    assert code == 0
+
+
+# --------------------------------------------------------------------------- #
+# 5.3 — the gate feeds the enforce preconditions (join with task 2.6)
+# --------------------------------------------------------------------------- #
+
+
+def test_a_passing_gate_makes_enforce_effective(session, tmp_path, monkeypatch):
+    labels, _ = _seed(
+        session, [{"asin": f"EL{i}", "ai": "eligible", "expected": "eligible"} for i in range(20)]
+    )
+    assert gate.run(session, labels_path=_write_labels(tmp_path, labels), log=_silent) == 0
+
+    monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "enforce")
+
+    assert curation.effective_filter_mode(session) == "enforce"
+
+
+def test_an_incomplete_backfill_keeps_enforce_off(session, tmp_path, monkeypatch):
+    rows = [{"asin": f"EL{i}", "ai": "eligible", "expected": "eligible"} for i in range(19)]
+    rows += [{"asin": "MISS", "ai": None, "expected": "unknown"}]
+    labels, _ = _seed(session, rows)
+    assert gate.run(session, labels_path=_write_labels(tmp_path, labels), log=_silent) == 0
+
+    row = session.exec(select(EditorialGateState)).first()
+    assert row.coverage_ratio < 1.0
+    monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "enforce")
+
+    assert curation.effective_filter_mode(session) == "off"
+
+
+# --------------------------------------------------------------------------- #
+# 5.2 — CLI shape
+# --------------------------------------------------------------------------- #
+
+
+def test_parse_args_supports_labels_and_sample_out():
+    args = gate._parse_args(["--labels", "l.json", "--sample-out", "s.json"])
+
+    assert args.labels == "l.json"
+    assert args.sample_out == "s.json"
+
+
+def test_main_uses_the_injected_session(session, tmp_path):
+    labels, _ = _seed(session, [{"asin": "EL0", "ai": "eligible", "expected": "eligible"}])
+    path = _write_labels(tmp_path, labels)
+
+    code = gate.main(["--labels", path], session=session)
+
+    assert code == 0
+    assert len(session.exec(select(EditorialGateState)).all()) == 1
