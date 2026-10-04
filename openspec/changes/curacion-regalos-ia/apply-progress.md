@@ -334,3 +334,82 @@ None. All 230 baseline tests remain green with no semantic modification (full su
 ### Status
 
 8/8 Phase 4 tasks complete across PR 4a (`1fe5481`, 334), PR 4b (`0159a0e`, 110) and PR 4c (`36c2506`, 159). Ready for next batch (Work Unit 5 / PR 5 — `jobs/evaluate_curation.py`).
+
+---
+
+## Batch: Work Unit 5 / PR 5 — Phase 5: Evaluation Gate (`jobs/evaluate_curation.py`)
+
+**Mode:** Strict TDD
+**Delivery:** auto-chain / stacked-to-main (PR 5 targets the PR 4 slice)
+**Status:** Complete — 3/3 Phase 5 tasks. Ready for next batch (Work Unit 6 / PR 6).
+
+**Re-slice note (review budget):** Work Unit 5 landed as **three** stacked
+commits, each a cohesive behavior under the 400-line budget: **5a** the
+stratified sample and the human-labels contract, **5b** the offline metric math,
+and **5c** the single-row gate upsert plus CLI wiring and the enforce-precondition
+join. No tests or code were removed to fit the budget.
+
+### Completed Tasks
+
+- [x] 5.1 RED — `tests/test_curation_gate.py`: deterministic category-stratified `sample_products`; `evaluate` metric math (pass at 92% agreement / ~3% excluded-leak / 8% unknown / 100% coverage; fail at 87% agreement; fail at 8% leak; fail at 97% coverage; pass-with-`unknown`-flag at 14%); malformed/partially-filled labels rejected; successful run upserts exactly one gate row; zero provider calls.
+- [x] 5.2 GREEN — `jobs/evaluate_curation.py`: `sample_products`, `evaluate`, `GateReport`, `run(session, labels_path=None, sample_out=None, log=print)`, `main(argv=None, session=None)`, label-template output, single-row `EditorialGateState` upsert.
+- [x] 5.3 Verify — a passing gate row with `coverage_ratio == 1.0` and the current `policy_version` makes `curation.effective_filter_mode` return `enforce`; an incomplete-coverage gate keeps it `off`.
+
+### Files Changed
+
+| File | Action | What Was Done |
+|------|--------|---------------|
+| `jobs/evaluate_curation.py` | Created | Offline gate harness: `LabelsError`, `GateReport`, threshold constants, `sample_products`, `_load_labels`, `evaluate`, `_upsert_gate`, `_build_template`/`_emit_template`, `run`, `_parse_args`, `main`. Reads persisted decisions + a labels file; makes zero provider calls; coverage reuses `curation.pending_products` so backfill completeness cannot drift. |
+| `tests/test_curation_gate.py` | Created | 26 tests: stratified deterministic sampling (3), labels contract (5), threshold constants, five spec metric scenarios, offline (evaluate + run), single-row upsert + re-run update, malformed/partially-filled exit 1 with no write, template output, CLI parse + injected-session `main`, and the two enforce-precondition join tests. |
+| `openspec/changes/curacion-regalos-ia/tasks.md` | Modified | Marked Phase 5 tasks 5.1–5.3 `[x]`. |
+
+### TDD Cycle Evidence
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|-----|-------|-------------|----------|
+| 5.1 (5a) | `tests/test_curation_gate.py` | Unit | ✅ 251/251 full suite | ✅ `ModuleNotFoundError: jobs.evaluate_curation` | ✅ 9 passed | ✅ 9 cases (round-robin spread + determinism, cap-at-available, inactive excluded, well-formed parse, unparseable JSON, empty entries, blank state, out-of-enum state, missing asin) | ✅ strata ordered deterministically; `_load_labels` validation extracted |
+| 5.1 (5b) | `tests/test_curation_gate.py` | Unit | ✅ 9/9 focused | ✅ `no attribute 'evaluate'` (7 failed) | ✅ 16 passed | ✅ 12 cases (threshold constants; 5 metric scenarios incl. 92/3/8/100, 87% agreement, 8% leak, 97% coverage, 14% unknown-flag; offline sentinel; model/policy/labeled_count) | ✅ coverage reuses `pending_products`; `_decisions_by_product` helper |
+| 5.2/5.3 (5c) | `tests/test_curation_gate.py` | Integration | ✅ 16/16 focused | ✅ `no attribute 'run'/'main'/'_parse_args'` (10 failed) | ✅ 26 passed | ✅ 10 cases (exactly-one-row upsert + fields/naive timestamp, re-run updates same row, malformed exit 1 no write, partially-filled exit 1 no write, template output no write, run offline, passing-gate → enforce, incomplete-coverage → off, CLI parse, injected-session main) | ✅ `_upsert_gate` created/updated branches |
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | `python -m pytest -q tests/test_curation_gate.py` → **26 passed in 0.33s**; `python -m pytest -q tests/test_curation_gate.py -k precondition` → **2 passed, 24 deselected** |
+| Runtime harness command/scenario and exact result | `DATABASE_URL=sqlite:///<tmp>/gate.db python -m jobs.evaluate_curation --sample-out <tmp>/sample.json` against a temp SQLite DB seeded with 3 products (2× `hogar`, 1× `electronica`) → **`sample=3 written=<tmp>/sample.json`**, exit 0; the template round-robin listed `A2` (electronica) then `A0`, `A1` (hogar), each `expected_state=""`. No provider call. |
+| Rollback boundary | Delete `jobs/evaluate_curation.py` + `tests/test_curation_gate.py` and revert the Phase 5 lines in `tasks.md`. Nothing imports the gate; `DELETE FROM editorial_gate_state` returns `effective_filter_mode` to `off`. |
+
+### Deviations from Design
+
+- `GateReport` carries two fields beyond the design's implied set — `unknown_flagged` (the SHOULD-threshold warning) and `labeled_count`. Both are read-only reporting values; the persisted row keeps exactly the nine designed columns.
+- `coverage_ratio` is computed as `(active - pending) / active` reusing `curation.pending_products` rather than re-deriving fingerprint matching, so backfill completeness is defined identically to the classification job and cannot drift.
+- `unknown_ratio` and `coverage_ratio` are measured across **all active products** (per the spec wording "across active products after backfill"), while agreement/leak are measured over the human-labeled sample. In the tests the active set equals the seeded catalog.
+- The human-labels file format is a JSON object `{"policy_version", "labels": [{"asin", "expected_state"}]}`. A blank `expected_state` is a partially-filled file and is rejected; `_load_labels` raises `LabelsError`, which `run` catches to return exit 1 **before** any write.
+- The `sample_products` template also carries `"policy_version"` so the operator sees which policy the labels are for; `evaluate` does not require it.
+
+### Issues Found
+
+None. All 251 baseline tests remain green with no semantic modification (full suite: 277 passed).
+
+### Commits (5a / 5b / 5c re-slice)
+
+| Hash | Message | Files | Authored lines |
+|------|---------|-------|----------------|
+| `c4d4dcf` | `feat(curation): stratify the evaluation sample and validate the human-labels file` | `jobs/evaluate_curation.py`, `tests/test_curation_gate.py` | 222 (< 400) |
+| `e0f120c` | `feat(curation): compute the evaluation-gate metrics against human labels` | `jobs/evaluate_curation.py`, `tests/test_curation_gate.py` | 276 (< 400) |
+| `53b852f` | `feat(curation): persist the evaluation verdict and wire the gate CLI` | `jobs/evaluate_curation.py`, `tests/test_curation_gate.py` | 263 (< 400) |
+| `ad1e853` | `test(curation): name the gate tests for the task 5.3 precondition selector` | `tests/test_curation_gate.py` | small test-only rename |
+| this artifacts commit | `docs(sdd): track curacion-regalos-ia openspec artifacts` | `openspec/**` | artifacts |
+
+### Workload / PR Boundary
+
+- Mode: chained PR slice (stacked-to-main); **PR 5 split into PR 5a + PR 5b + PR 5c** to fit the 400-line review budget.
+- Work unit 5a: `sample_products` + `LabelsError` + `_load_labels` — **222 authored lines**.
+- Work unit 5b: threshold constants + `GateReport` + `_decisions_by_product` + `evaluate` — **276 authored lines**.
+- Work unit 5c: `_upsert_gate` + template output + `run`/`main`/CLI — **263 authored lines**.
+- Boundary: starts after the Phase 4 classification job; ends with the standalone offline gate + its 26 tests. No consumer wired (the gate's verdict is read by `curation.effective_filter_mode`, already covered by Phase 2).
+- Review budget: every slice is under 400 authored lines and each was verified green independently (`python -m pytest -q tests/test_curation_gate.py`).
+
+### Status
+
+3/3 Phase 5 tasks complete across PR 5a (`c4d4dcf`, 222), PR 5b (`e0f120c`, 276) and PR 5c (`53b852f`, 263). Ready for next batch (Work Unit 6 / PR 6 — centralized filtering wiring).
