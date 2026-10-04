@@ -419,7 +419,7 @@ def test_a_run_makes_no_provider_calls(session, tmp_path, monkeypatch):
 # --------------------------------------------------------------------------- #
 
 
-def test_a_passing_gate_makes_enforce_effective(session, tmp_path, monkeypatch):
+def test_a_passing_gate_meets_the_enforce_precondition(session, tmp_path, monkeypatch):
     labels, _ = _seed(
         session, [{"asin": f"EL{i}", "ai": "eligible", "expected": "eligible"} for i in range(20)]
     )
@@ -430,7 +430,7 @@ def test_a_passing_gate_makes_enforce_effective(session, tmp_path, monkeypatch):
     assert curation.effective_filter_mode(session) == "enforce"
 
 
-def test_an_incomplete_backfill_keeps_enforce_off(session, tmp_path, monkeypatch):
+def test_an_incomplete_backfill_fails_the_enforce_precondition(session, tmp_path, monkeypatch):
     rows = [{"asin": f"EL{i}", "ai": "eligible", "expected": "eligible"} for i in range(19)]
     rows += [{"asin": "MISS", "ai": None, "expected": "unknown"}]
     labels, _ = _seed(session, rows)
