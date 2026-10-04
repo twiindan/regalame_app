@@ -251,3 +251,86 @@ None. All 177 baseline tests remain green with no semantic modification (full su
 ### Status
 
 3/3 Phase 3 tasks complete across PR 3a (`40f20b1`, 305), PR 3b (`c410f67`, 190) and PR 3c (`17d77f9`, 256). Ready for next batch (Work Unit 4 / PR 4 — `jobs/classify_catalog.py`).
+
+---
+
+## Batch: Work Unit 4 / PR 4 — Phase 4: Classification Job (`jobs/classify_catalog.py`)
+
+**Mode:** Strict TDD
+**Delivery:** auto-chain / stacked-to-main (PR 4 targets the PR 3 slice)
+**Status:** Complete — 8/8 Phase 4 tasks. Ready for next batch (Work Unit 5 / PR 5).
+
+**Re-slice note (review budget):** Work Unit 4 landed as **three** stacked
+commits, each a cohesive behavior under the 400-line budget: **4a** the
+incremental job core with failure-not-cached decisions, **4b** batched commits
+with a resumable run limit, and **4c** the configured rate/wall/product bounds.
+No tests or code were removed to fit the budget.
+
+### Completed Tasks
+
+- [x] 4.1 RED — `tests/test_classify_catalog.py`: incremental selection (only pending/stale sent), active-only scope, dry-run zero calls/zero writes.
+- [x] 4.2 GREEN — `jobs/classify_catalog.py`: selection via `curation.pending_products`, dry-run early return, valid-only decision persistence.
+- [x] 4.3 RED — idempotent re-run (zero calls, no row changes) + resumable run (`limit` reached then restarted).
+- [x] 4.4 GREEN — commit every `EDITORIAL_JOB_COMMIT_EVERY` (default 25) via `curation.apply_decision`; the decision table is the only checkpoint.
+- [x] 4.5 RED — bounded rate/wall-time/per-run cap + failure-not-cached + job continues after a failed product.
+- [x] 4.6 GREEN — sequential loop (concurrency 1), inter-request `_sleep` targeting `EDITORIAL_JOB_RPM`, wall check before each request, per-run cap, `stopped=reason` log.
+- [x] 4.7 Runtime harness (manual) — dry-run CLI verified offline (below); the shadow run is CI-external (needs a real `EDITORIAL_PROVIDER_API_KEY`).
+- [x] 4.8 Verify — focused suite green; full suite green; no regression.
+
+### Files Changed
+
+| File | Action | What Was Done |
+|------|--------|---------------|
+| `jobs/classify_catalog.py` | Created | Job mirroring `refresh_catalog`: module docstring, `_now`/`_sleep` clock seams, `_product_item`, `run(session, classify_fn=curation_provider.classify_product, *, dry_run, limit, max_seconds, log)`, `_log_progress`, `_parse_args`, `main`. Env bounds `EDITORIAL_JOB_COMMIT_EVERY`/`_RPM`/`_MAX_SECONDS`/`_MAX_PRODUCTS`. FIRST production consumer of `curation.pending_products` + `curation_provider.classify_product`. |
+| `tests/test_classify_catalog.py` | Created | 21 integration tests: incremental/active-only/dry-run, item contains `category_slug`, valid persistence (eligible/contextual), failure-not-cached (transport failure, invalid response, transient failure retains prior), idempotent re-run, resumable `limit`, batch progress log, env bound defaults, virtual-clock rate/wall/cap bounds, continues-after-failure, CLI parse + injected-session `main`. |
+| `openspec/changes/curacion-regalos-ia/tasks.md` | Modified | Marked Phase 4 tasks 4.1–4.8 `[x]`. |
+
+### TDD Cycle Evidence
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|-----|-------|-------------|----------|
+| 4.1–4.2 (4a) | `tests/test_classify_catalog.py` | Integration | ✅ 230/230 full suite | ✅ `ModuleNotFoundError: jobs.classify_catalog` | ✅ 11 passed | ✅ 11 cases (current vs stale vs fresh, active-only, dry-run zero, item slug, eligible/contextual persist, transport failure, invalid response, transient-failure retention, CLI) | ✅ `_product_item` extracted |
+| 4.3–4.4 (4b) | `tests/test_classify_catalog.py` | Integration | ✅ 11/11 focused | ✅ `limit` ignored (3 calls, expected 2); `EDITORIAL_JOB_COMMIT_EVERY` absent | ✅ 15 passed | ✅ 4 cases (idempotent zero-call/no-row-change, interrupted+resume, `stopped=limit`, batch log 1/2 + 2/3) | ✅ `_log_progress` extracted |
+| 4.5–4.6 (4c) | `tests/test_classify_catalog.py` | Integration | ✅ 15/15 focused | ✅ bound constants absent (5 failed) | ✅ 21 passed | ✅ 6 cases (env defaults, RPM gaps, wall stop+defer, per-run cap, limit overrides cap, continues-after-failure) | ✅ `_now`/`_sleep` seams; autouse no-op sleep keeps tests deterministic |
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | `python -m pytest -q tests/test_classify_catalog.py` → **21 passed in 0.09s** |
+| Runtime harness command/scenario and exact result | `python -m jobs.classify_catalog --dry-run` against a temporary SQLite DB seeded with 1 product → **`dry-run pending=1 elapsed=0.0`** and **0** `editorial_decision` rows (zero provider calls, zero writes). The shadow run (`EDITORIAL_PROVIDER_API_KEY=…`) is CI-external and was not run in this worktree. |
+| Rollback boundary | Delete `jobs/classify_catalog.py` + `tests/test_classify_catalog.py`. No production code imports the job yet (cron wiring is a deploy/Phase 7 concern); persisted decisions are inert while mode is `off`. |
+
+### Deviations from Design
+
+- `run`'s signature carries the full fixed contract (`limit`, `max_seconds`) from 4a, but `limit` is implemented in 4b and `max_seconds`/rate/cap in 4c; this is commit slicing, not a contract deviation.
+- Clock seams `_now()` / `_sleep()` are module-level functions rather than injected parameters: the design fixes the `run` signature, so bounds are tested by monkeypatching the seams (a virtual clock shared by the job and the fake provider).
+- The `item` dict passed to `classify_fn` is `{title, category, category_slug}` — the binding constraint requires the product's own `category_slug` for the provider's v1 context rule.
+- Failure-not-cached holds by construction (a decision is written only from a validated, non-`None` result); the "job continues after a failed product" assertion validates that by-construction behavior rather than a fresh RED.
+- Per-run cap reason is `limit` when the explicit `--limit` triggers and `max_products` when the configured `EDITORIAL_JOB_MAX_PRODUCTS` triggers; an explicit `limit` overrides the configured cap.
+
+### Issues Found
+
+None. All 230 baseline tests remain green with no semantic modification (full suite: 251 passed).
+
+### Commits (4a / 4b / 4c re-slice)
+
+| Hash | Message | Files | Authored lines |
+|------|---------|-------|----------------|
+| `1fe5481` | `feat(curation): run incremental catalog classification with failure-not-cached decisions` | `jobs/classify_catalog.py`, `tests/test_classify_catalog.py` | 334 (< 400) |
+| `0159a0e` | `feat(curation): commit classification decisions in batches with a resumable run limit` | `jobs/classify_catalog.py`, `tests/test_classify_catalog.py` | 110 (< 400) |
+| `36c2506` | `feat(curation): bound classification runs by rate, wall time, and product cap` | `jobs/classify_catalog.py`, `tests/test_classify_catalog.py` | 159 (< 400) |
+| this artifacts commit | `docs(sdd): track curacion-regalos-ia openspec artifacts` | `openspec/**` | artifacts |
+
+### Workload / PR Boundary
+
+- Mode: chained PR slice (stacked-to-main); **PR 4 split into PR 4a + PR 4b + PR 4c** to fit the 400-line review budget.
+- Work unit 4a: incremental selection + dry-run + valid-only persistence + CLI — **334 authored lines**.
+- Work unit 4b: batched commits (`EDITORIAL_JOB_COMMIT_EVERY`) + resumable `limit` + progress logs — **110 authored lines**.
+- Work unit 4c: rate/wall/per-run bounds + `stopped=reason` — **159 authored lines**.
+- Boundary: starts after the Phase 3 `curation_provider.py` adapter; ends with the standalone job + its 21 tests. No cron wiring yet (deploy/Phase 7).
+- Review budget: every slice is under 400 authored lines and each was verified green independently (`python -m pytest -q tests/test_classify_catalog.py`).
+
+### Status
+
+8/8 Phase 4 tasks complete across PR 4a (`1fe5481`, 334), PR 4b (`0159a0e`, 110) and PR 4c (`36c2506`, 159). Ready for next batch (Work Unit 5 / PR 5 — `jobs/evaluate_curation.py`).
