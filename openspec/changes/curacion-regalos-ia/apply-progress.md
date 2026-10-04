@@ -502,3 +502,89 @@ None. All 277 pre-existing tests remain green with no semantic modification (ful
 ### Status
 
 7/7 Phase 6 tasks complete across PR 6a (`ebaf737`, 327), PR 6b (`dd6d1fa`, 184) and PR 6c (`3c53dbb`, 38 + goldens). Ready for next batch (Work Unit 7 / PR 7 — config/env docs, runbook, final verification).
+
+---
+
+## Batch: Work Unit 7 / PR 7 — Phase 7: Config/Env Docs, Runbook, Final Verification
+
+**Mode:** Strict TDD (docs-only slice — no behavior change, no RED test required)
+**Delivery:** auto-chain / stacked-to-main (PR 7 targets the PR 6 slice)
+**Status:** Complete — 3/3 Phase 7 tasks. **All 7 work units / 42 tasks complete. Ready for archive.**
+
+**Slice note (review budget):** Phase 7 is documentation only. It landed as a
+**single** docs commit (`README.md` + the new rollout runbook, **218 authored
+lines < 400**), because the README section and the runbook cross-reference each
+other — splitting them would leave a commit pointing at a file the next commit
+adds, violating work-unit commit coherence. No application code changed.
+
+### Completed Tasks
+
+- [x] 7.1 Document all env vars — the runbook's "Environment variables" table
+  covers all **8** `os.getenv` reads with defaults and purpose, and explicitly
+  separates the two **non-env code constants** (`EDITORIAL_POLICY_VERSION`,
+  `EDITORIAL_CONTEXTS`); the README quick list mirrors it.
+- [x] 7.2 Deployment/rollout runbook — rollout sequence (migration → shadow
+  backfill → evaluation gate → enable `enforce`), the exact `enforce`
+  precondition, both Railway cron entries with the restart-loop caveat, the
+  migration step integrated by reference to the existing migration runbook (not
+  duplicated), and rollback (`EDITORIAL_FILTER_MODE=off` / `DELETE FROM
+  editorial_gate_state`).
+- [x] 7.3 Final verification — full suite green; the shadow `off` default changed
+  no existing behavior.
+
+### Files Changed
+
+| File | Action | What Was Done |
+|------|--------|---------------|
+| `README.md` | Modified | Added the editorial vars to the `.env` example; new "Curación editorial del catálogo (servicios cron)" subsection: the two cron services, the restart caveat, the env-var quick table, and a link to the runbook. |
+| `docs/deploy/2026-10-04-curacion-regalos-ia-rollout-runbook.md` | Created | Full operator runbook: components, env-var reference (8 vars + 2 constants), Railway cron setup for `jobs.classify_catalog` / `jobs.evaluate_curation`, restart-loop caveat, migration step (by reference), 4-phase rollout, exact `enforce` precondition, rollback, verification. |
+| `openspec/changes/curacion-regalos-ia/tasks.md` | Modified | Marked Phase 7 tasks 7.1–7.3 `[x]`. |
+
+### TDD Cycle Evidence
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|-----|-------|-------------|----------|
+| 7.1–7.2 | N/A — docs only | N/A | ✅ 305/305 full suite | N/A (no production code; `Do NOT change application behavior`) | N/A — docs | N/A | ✅ README/runbook cross-referenced to avoid duplication |
+| 7.3 | `tests/` (full suite) | Regression | ✅ 305/305 baseline | N/A — verification task | ✅ 305 passed | N/A | ➖ None needed |
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | `python -m pytest -q --ignore=tests/test_e2e.py` → **305 passed in 6.47s** (identical to the pre-change baseline; docs-only slice) |
+| Runtime harness command/scenario and exact result | **N/A — docs-only, no runtime boundary.** The documented variable names were confirmed against the code with `grep -rn 'os.getenv("EDITORIAL' curation.py curation_provider.py jobs/classify_catalog.py` → 8 matches (7 one-line + `EDITORIAL_PROVIDER_BASE_URL` across its multi-line call), matching the runbook table exactly. |
+| Rollback boundary | Revert `README.md` and delete `docs/deploy/2026-10-04-curacion-regalos-ia-rollout-runbook.md`. Documentation only; zero behavior change, no code to revert. |
+
+### Deviations from Design
+
+- The scope prompt grouped `EDITORIAL_POLICY_VERSION` and `EDITORIAL_CONTEXTS`
+  under "env vars", but the code reads them as **module constants**, not
+  `os.getenv`. Documented them as policy constants (in a clearly separate
+  section) to keep the docs truthful; the verification grep confirms only 8
+  `os.getenv("EDITORIAL…")` reads exist. This is an honesty correction, not a
+  behavior deviation.
+- The runbook is written in English to match its sibling
+  `docs/deploy/…migration-runbook.md`; the README additions are in Spanish to
+  match the README's existing convention.
+
+### Issues Found
+
+None. Full suite 305 passed, unchanged from the Phase 6 baseline; no application
+behavior modified.
+
+### Commits
+
+| Hash | Message | Files | Authored lines |
+|------|---------|-------|----------------|
+| `df37ba7` | `docs(curation): document the editorial curation rollout and rollback runbook` | `README.md`, `docs/deploy/…rollout-runbook.md` | 218 (< 400) |
+| this artifacts commit | `docs(sdd): track curacion-regalos-ia openspec artifacts` | `openspec/**` | artifacts |
+
+### Workload / PR Boundary
+
+- Mode: chained PR slice (stacked-to-main).
+- Work unit 7: config/env docs + rollout runbook + final verification — **218 authored lines (< 400)**.
+- Boundary: starts after the Phase 6 filtering wiring; ends with the operator documentation and a green full suite. No code change.
+
+### Status
+
+3/3 Phase 7 tasks complete in commit `df37ba7` (218 authored lines). **All 7 work units / 42 tasks complete; full suite 305 green. Ready for archive.**

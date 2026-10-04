@@ -130,9 +130,9 @@ These are hard constraints on the implementation — treat them as part of each 
 
 **Work Unit 7.** Files: docs/deploy notes (new/edited), no application behavior. Rollback: docs only.
 
-- [ ] 7.1 Document all new env vars consistently: `EDITORIAL_PROVIDER_API_KEY`, `EDITORIAL_PROVIDER_BASE_URL` (default `https://api.nan.builders/v1`), `EDITORIAL_PROVIDER_MODEL` (default `qwen3.6`), `EDITORIAL_FILTER_MODE` (`off` default / `enforce`), `EDITORIAL_JOB_RPM` (60), `EDITORIAL_JOB_MAX_SECONDS` (3300), `EDITORIAL_JOB_MAX_PRODUCTS` (500), `EDITORIAL_JOB_COMMIT_EVERY` (25). Expected: an operator can run dry-run → shadow → gate → enforce from the docs alone.
-- [ ] 7.2 Add the deployment/rollout runbook: (1) deploy with `EDITORIAL_FILTER_MODE` unset ⇒ `off`, T1/T2 prove zero public change; (2) cron dry-run then shadow until 100% coverage; (3) label the stratified sample and run the gate; (4) set `enforce` only after `gate_passed=true` with `coverage_ratio == 1.0`; rollback = flip to `off` / `DELETE FROM editorial_gate_state`. Include the Postgres migration verification from task 1.5.
-- [ ] 7.3 Final verification: `python -m pytest -q --ignore=tests/test_e2e.py` green (128 baseline + all new tests). Record the final collected count and confirm the shadow `off` default changed no existing behavior. Expected: full suite green.
+- [x] 7.1 Document all new env vars consistently: `EDITORIAL_PROVIDER_API_KEY`, `EDITORIAL_PROVIDER_BASE_URL` (default `https://api.nan.builders/v1`), `EDITORIAL_PROVIDER_MODEL` (default `qwen3.6`), `EDITORIAL_FILTER_MODE` (`off` default / `enforce`), `EDITORIAL_JOB_RPM` (60), `EDITORIAL_JOB_MAX_SECONDS` (3300), `EDITORIAL_JOB_MAX_PRODUCTS` (500), `EDITORIAL_JOB_COMMIT_EVERY` (25). Expected: an operator can run dry-run → shadow → gate → enforce from the docs alone.
+- [x] 7.2 Add the deployment/rollout runbook: (1) deploy with `EDITORIAL_FILTER_MODE` unset ⇒ `off`, T1/T2 prove zero public change; (2) cron dry-run then shadow until 100% coverage; (3) label the stratified sample and run the gate; (4) set `enforce` only after `gate_passed=true` with `coverage_ratio == 1.0`; rollback = flip to `off` / `DELETE FROM editorial_gate_state`. Include the Postgres migration verification from task 1.5.
+- [x] 7.3 Final verification: `python -m pytest -q --ignore=tests/test_e2e.py` green (128 baseline + all new tests). Record the final collected count and confirm the shadow `off` default changed no existing behavior. Expected: full suite green.
 
 ---
 
