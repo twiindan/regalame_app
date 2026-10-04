@@ -5,13 +5,17 @@ and the strictly-additive migration chain (down_revision ``9f1c7b2a4d3e``).
 """
 import ast
 import importlib.util
+import inspect
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
 import pytest
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session
+from sqlmodel import Session, select
 
+import curation
+from catalog import normalize_text
 from models import EditorialDecision, EditorialGateState, Product
 
 MIGRATIONS_DIR = Path(__file__).resolve().parents[1] / "alembic" / "versions"
@@ -229,3 +233,231 @@ def test_migration_downgrade_drops_the_editorial_tables():
     _, path = _load_migration_module()
     dropped = _drop_table_names(path.read_text())
     assert sorted(dropped) == ["editorial_decision", "editorial_gate_state"]
+
+
+# --------------------------------------------------------------------------- #
+# Phase 2 — curation.py domain service
+# --------------------------------------------------------------------------- #
+
+
+@dataclass(frozen=True)
+class _Result:
+    """Structural stand-in for ``curation_provider.ClassificationResult``."""
+
+    state: str
+    context: str | None
+    reason: str
+
+
+def _make_product(session, asin, title, *, category="Hogar y cocina", slug="hogar-y-cocina",
+                  active=True):
+    from models import Product
+
+    product = Product(
+        asin=asin,
+        title=title,
+        title_normalized=normalize_text(title),
+        url=f"https://www.amazon.es/dp/{asin}",
+        category=category,
+        category_slug=slug,
+        scraped_at=datetime(2026, 1, 1),
+        is_active=active,
+    )
+    session.add(product)
+    session.commit()
+    session.refresh(product)
+    return product
+
+
+# --------------------------------------------------------------------------- #
+# 2.1–2.2 Fingerprint rules
+# --------------------------------------------------------------------------- #
+
+
+def test_fingerprint_is_deterministic():
+    args = ("cafetera", "Hogar y cocina", "1", "qwen3.6")
+    assert curation.compute_fingerprint(*args) == curation.compute_fingerprint(*args)
+
+
+def test_fingerprint_matches_the_json_canonical_sha256_formula():
+    # Locks the exact serialization: json.dumps(list, ensure_ascii=False) + sha256.
+    assert curation.compute_fingerprint("cafetera", "Hogar y cocina", "1", "qwen3.6") == (
+        "7f184ce78dadc997558485edd36dea8eddfe4485603eae1268404819433856c0"
+    )
+
+
+def test_fingerprint_is_json_canonical_not_delimiter_joined():
+    # A naive ",".join would alias these two inputs; canonical JSON cannot.
+    assert curation.compute_fingerprint("a,b", "c", "1", "m") != (
+        curation.compute_fingerprint("a", "b,c", "1", "m")
+    )
+
+
+def test_fingerprint_has_exactly_the_documented_inputs():
+    # Price/rank/scraped_at/updated_at/is_active are not inputs: assert by construction.
+    params = list(inspect.signature(curation.compute_fingerprint).parameters)
+    assert params == ["title_normalized", "category", "policy_version", "model_id"]
+
+
+@pytest.mark.parametrize("index", range(4))
+def test_fingerprint_is_sensitive_to_each_single_input(index):
+    base = ["cafetera", "Hogar y cocina", "1", "qwen3.6"]
+    changed = list(base)
+    changed[index] = changed[index] + "-x"
+    assert curation.compute_fingerprint(*base) != curation.compute_fingerprint(*changed)
+
+
+def test_editorial_states_and_policy_constants():
+    assert curation.EDITORIAL_STATES == ("eligible", "contextual", "excluded", "unknown")
+    assert curation.EDITORIAL_POLICY_VERSION == "1"
+    assert isinstance(curation.EDITORIAL_CONTEXTS, frozenset)
+
+
+# --------------------------------------------------------------------------- #
+# 2.3–2.4 Pending selection, apply/upsert, manual wins, unknown semantics
+# --------------------------------------------------------------------------- #
+
+
+def test_pending_products_returns_only_active_products_without_a_decision(session):
+    pending = _make_product(session, "P1", "Cafetera")
+    _make_product(session, "P2", "Taza", active=False)
+
+    result = curation.pending_products(session, policy_version="1", model_id="m")
+
+    assert [product.asin for product in result] == ["P1"]
+    assert result[0].id == pending.id
+
+
+def test_pending_products_skips_current_fingerprint(session):
+    product = _make_product(session, "P1", "Cafetera")
+    curation.apply_decision(
+        session, product, _Result("eligible", None, "ok"), model_id="m", policy_version="1"
+    )
+    session.commit()
+
+    assert curation.pending_products(session, policy_version="1", model_id="m") == []
+
+
+def test_pending_products_flags_fingerprint_mismatch(session):
+    product = _make_product(session, "P1", "Cafetera")
+    curation.apply_decision(
+        session, product, _Result("eligible", None, "ok"), model_id="m", policy_version="1"
+    )
+    session.commit()
+
+    product.title_normalized = normalize_text("Cafetera nueva")
+    session.add(product)
+    session.commit()
+
+    result = curation.pending_products(session, policy_version="1", model_id="m")
+    assert [p.asin for p in result] == ["P1"]
+
+
+def test_pending_products_never_returns_a_manual_override(session):
+    product = _make_product(session, "P1", "Cafetera")
+    session.add(EditorialDecision(product_id=product.id, manual_state="eligible",
+                                  manual_updated_at=datetime(2026, 1, 1)))
+    session.commit()
+
+    assert curation.pending_products(session, policy_version="1", model_id="m") == []
+
+
+def test_pending_products_respects_limit(session):
+    _make_product(session, "P1", "Uno")
+    _make_product(session, "P2", "Dos")
+    _make_product(session, "P3", "Tres")
+
+    result = curation.pending_products(session, policy_version="1", model_id="m", limit=2)
+
+    assert len(result) == 2
+
+
+def test_apply_decision_upserts_by_product_id_and_writes_the_ai_columns(session):
+    product = _make_product(session, "P1", "Cafetera")
+
+    decision = curation.apply_decision(
+        session, product, _Result("eligible", None, "good gift"),
+        model_id="m", policy_version="1",
+    )
+    session.commit()
+
+    assert decision.product_id == product.id
+    assert decision.state == "eligible"
+    assert decision.context is None
+    assert decision.reason == "good gift"
+    assert decision.model_id == "m"
+    assert decision.policy_version == "1"
+    assert decision.input_fingerprint == curation.compute_fingerprint(
+        product.title_normalized, product.category, "1", "m"
+    )
+    assert decision.classified_at is not None
+
+    # Re-applying updates the same row instead of creating a duplicate.
+    curation.apply_decision(
+        session, product, _Result("excluded", None, "nope"),
+        model_id="m", policy_version="1",
+    )
+    session.commit()
+    rows = session.exec(
+        select(EditorialDecision).where(EditorialDecision.product_id == product.id)
+    ).all()
+    assert len(rows) == 1
+    assert rows[0].state == "excluded"
+
+
+def test_apply_decision_normalizes_context_for_non_contextual(session):
+    product = _make_product(session, "P1", "Cafetera")
+
+    decision = curation.apply_decision(
+        session, product, _Result("eligible", "hogar-y-cocina", "ok"),
+        model_id="m", policy_version="1",
+    )
+
+    assert decision.context is None
+
+
+def test_apply_decision_preserves_context_for_contextual(session):
+    product = _make_product(session, "P1", "Cafetera")
+
+    decision = curation.apply_decision(
+        session, product, _Result("contextual", "hogar-y-cocina", "ok"),
+        model_id="m", policy_version="1",
+    )
+
+    assert decision.context == "hogar-y-cocina"
+
+
+def test_apply_decision_never_writes_manual_columns(session):
+    product = _make_product(session, "P1", "Cafetera")
+    decision = EditorialDecision(
+        product_id=product.id,
+        manual_state="eligible",
+        manual_context="hogar-y-cocina",
+        manual_reason="operator",
+        manual_updated_at=datetime(2026, 1, 1),
+    )
+    session.add(decision)
+    session.commit()
+
+    curation.apply_decision(
+        session, product, _Result("excluded", None, "ai"), model_id="m", policy_version="1"
+    )
+    session.commit()
+    session.refresh(decision)
+
+    assert decision.manual_state == "eligible"
+    assert decision.manual_context == "hogar-y-cocina"
+    assert decision.manual_reason == "operator"
+    assert decision.state == "excluded"
+    assert curation.effective_state(decision) == "eligible"
+
+
+def test_effective_state_resolves_unknown_and_applies_manual_wins():
+    assert curation.effective_state(None) == "unknown"
+    assert curation.effective_state(EditorialDecision(product_id=1)) == "unknown"
+    assert curation.effective_state(
+        EditorialDecision(product_id=1, state="excluded")
+    ) == "excluded"
+    assert curation.effective_state(
+        EditorialDecision(product_id=1, state="excluded", manual_state="contextual")
+    ) == "contextual"
