@@ -10,8 +10,14 @@ from datetime import datetime
 
 import pytest
 
+import curation
+import curation_provider
 import jobs.evaluate_curation as gate
+from curation_provider import ClassificationResult
 from models import Product
+
+POLICY = curation.EDITORIAL_POLICY_VERSION
+MODEL = curation_provider.EDITORIAL_PROVIDER_MODEL
 
 
 # --------------------------------------------------------------------------- #
@@ -135,3 +141,173 @@ def test_load_labels_rejects_an_entry_without_an_asin(tmp_path):
 
     with pytest.raises(gate.LabelsError):
         gate._load_labels(str(path))
+
+
+def _decide(session, product, state, context=None):
+    """Persist a *current* (matching-fingerprint) AI decision for ``product``."""
+    result = ClassificationResult(state=state, context=context, reason="label")
+    curation.apply_decision(session, product, result, model_id=MODEL, policy_version=POLICY)
+    session.commit()
+
+
+def _seed(session, rows):
+    """Create products and their AI decisions.
+
+    ``rows`` is a list of dicts ``{asin, ai, expected, context?}``. ``ai=None``
+    leaves the product with no decision (an uncovered / unknown product). Returns
+    ``(labels, products)`` where ``labels`` is the human-labels list payload.
+    """
+    products = [
+        Product(
+            asin=row["asin"],
+            title=row["asin"],
+            title_normalized=row["asin"].lower(),
+            image_url=None,
+            url=f"https://www.amazon.es/dp/{row['asin']}",
+            category=row.get("category", "Hogar"),
+            category_slug=row.get("slug", "hogar"),
+            price_numeric=None,
+            price_raw="N/A",
+            scraped_at=datetime(2026, 1, 1),
+        )
+        for row in rows
+    ]
+    session.add_all(products)
+    session.commit()
+    for product in products:
+        session.refresh(product)
+
+    labels = []
+    for row, product in zip(rows, products):
+        if row.get("ai") is not None:
+            _decide(session, product, row["ai"], row.get("context"))
+        labels.append({"asin": row["asin"], "expected_state": row["expected"]})
+    return labels, products
+
+
+def _write_labels(tmp_path, labels, *, policy_version=POLICY, name="labels.json"):
+    path = tmp_path / name
+    path.write_text(
+        json.dumps({"policy_version": policy_version, "labels": labels}), encoding="utf-8"
+    )
+    return str(path)
+
+
+def _sample_rows():
+    """92% agreement / ~3% excluded-leak / 8% unknown / 100% coverage."""
+    rows = [{"asin": f"UNK{i}", "ai": "unknown", "expected": "unknown"} for i in range(8)]
+    rows += [{"asin": f"EX{i}", "ai": "excluded", "expected": "excluded"} for i in range(32)]
+    rows += [{"asin": "LEAK", "ai": "eligible", "expected": "excluded"}]
+    rows += [{"asin": f"EL{i}", "ai": "eligible", "expected": "eligible"} for i in range(52)]
+    rows += [
+        {"asin": f"CTX{i}", "ai": "contextual", "expected": "eligible", "context": "hogar"}
+        for i in range(7)
+    ]
+    return rows
+
+
+# --------------------------------------------------------------------------- #
+# 5.1 — the exact adopted thresholds
+# --------------------------------------------------------------------------- #
+
+
+def test_gate_thresholds_match_the_specification():
+    assert gate.GATE_MIN_OVERALL_AGREEMENT == 0.90
+    assert gate.GATE_MAX_EXCLUDED_LEAK_RATIO == 0.05
+    assert gate.GATE_MAX_UNKNOWN_RATIO == 0.10
+    assert gate.GATE_REQUIRED_COVERAGE_RATIO == 1.0
+
+
+# --------------------------------------------------------------------------- #
+# 5.1 — metric math (the spec scenarios)
+# --------------------------------------------------------------------------- #
+
+
+def test_gate_passes_when_all_must_thresholds_hold(session, tmp_path):
+    labels, _ = _seed(session, _sample_rows())
+
+    report = gate.evaluate(session, _write_labels(tmp_path, labels))
+
+    assert report.gate_passed is True
+    assert report.overall_agreement == pytest.approx(0.92)
+    assert report.excluded_leak_ratio == pytest.approx(1 / 33)
+    assert report.unknown_ratio == pytest.approx(0.08)
+    assert report.coverage_ratio == 1.0
+    assert report.unknown_flagged is False
+    assert report.model_id == MODEL
+    assert report.policy_version == POLICY
+    assert report.labeled_count == 100
+
+
+def test_gate_fails_on_agreement(session, tmp_path):
+    rows = [{"asin": f"EL{i}", "ai": "eligible", "expected": "eligible"} for i in range(87)]
+    rows += [
+        {"asin": f"CTX{i}", "ai": "contextual", "expected": "eligible", "context": "hogar"}
+        for i in range(13)
+    ]
+    labels, _ = _seed(session, rows)
+
+    report = gate.evaluate(session, _write_labels(tmp_path, labels))
+
+    assert report.overall_agreement == pytest.approx(0.87)
+    assert report.excluded_leak_ratio == 0.0
+    assert report.coverage_ratio == 1.0
+    assert report.gate_passed is False
+
+
+def test_gate_fails_on_excluded_leakage(session, tmp_path):
+    rows = [{"asin": f"EX{i}", "ai": "excluded", "expected": "excluded"} for i in range(23)]
+    rows += [{"asin": f"LK{i}", "ai": "eligible", "expected": "excluded"} for i in range(2)]
+    rows += [{"asin": f"EL{i}", "ai": "eligible", "expected": "eligible"} for i in range(70)]
+    rows += [
+        {"asin": f"CTX{i}", "ai": "contextual", "expected": "eligible", "context": "hogar"}
+        for i in range(5)
+    ]
+    labels, _ = _seed(session, rows)
+
+    report = gate.evaluate(session, _write_labels(tmp_path, labels))
+
+    assert report.overall_agreement == pytest.approx(0.93)
+    assert report.excluded_leak_ratio == pytest.approx(0.08)
+    assert report.gate_passed is False
+
+
+def test_gate_fails_on_incomplete_backfill(session, tmp_path):
+    rows = [{"asin": f"EL{i}", "ai": "eligible", "expected": "eligible"} for i in range(97)]
+    rows += [{"asin": f"MISS{i}", "ai": None, "expected": "unknown"} for i in range(3)]
+    labels, _ = _seed(session, rows)
+
+    report = gate.evaluate(session, _write_labels(tmp_path, labels))
+
+    assert report.coverage_ratio == pytest.approx(0.97)
+    assert report.overall_agreement == pytest.approx(1.0)
+    assert report.gate_passed is False
+
+
+def test_gate_passes_but_flags_a_residual_unknown_share(session, tmp_path):
+    rows = [{"asin": f"UNK{i}", "ai": "unknown", "expected": "unknown"} for i in range(14)]
+    rows += [{"asin": f"EL{i}", "ai": "eligible", "expected": "eligible"} for i in range(86)]
+    labels, _ = _seed(session, rows)
+
+    report = gate.evaluate(session, _write_labels(tmp_path, labels))
+
+    assert report.unknown_ratio == pytest.approx(0.14)
+    assert report.gate_passed is True
+    assert report.unknown_flagged is True
+
+
+# --------------------------------------------------------------------------- #
+# 5.1 — evaluation is offline
+# --------------------------------------------------------------------------- #
+
+
+def test_the_gate_makes_no_provider_calls(session, tmp_path, monkeypatch):
+    def explode(*args, **kwargs):
+        raise AssertionError("the evaluation gate must never call the provider")
+
+    monkeypatch.setattr(curation_provider, "classify_product", explode)
+    labels, _ = _seed(session, [{"asin": "EL0", "ai": "eligible", "expected": "eligible"}])
+
+    report = gate.evaluate(session, _write_labels(tmp_path, labels))
+
+    assert report.gate_passed is True
