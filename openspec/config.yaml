@@ -1,0 +1,56 @@
+schema: spec-driven
+
+context: |
+  Project: regalame_app (Regálame — Secret Santa MVP with Amazon affiliate monetization).
+  Stack: Python 3.13, FastAPI 0.124, SQLModel 0.0.27 / SQLAlchemy 2.0, Alembic 1.17, Pydantic 2.12, Uvicorn/Gunicorn.
+  Frontend: Jinja2 server-side rendering + HTMX, TailwindCSS via CDN (no Node, no bundler).
+  Architecture: modern monolith. Routes in main.py, models in models.py, engine/session in database.py, business logic in services.py, catalog in catalog.py + jobs/ + scraper/.
+  Testing: pytest 8.2.2 + httpx TestClient against SQLite in-memory (StaticPool) via tests/conftest.py. CI ignores tests/test_e2e.py (Playwright, deliberately not a dependency).
+  Conventions: keep business logic in services.py, thin routes, FastAPI dependency injection for DB sessions; pinned requirements baseline is intentional (sqlmodel datetime TZ regression).
+
+strict_tdd: true
+
+testing:
+  runner: pytest
+  command: "python -m pytest -q --ignore=tests/test_e2e.py"
+  install: "python -m pip install -r requirements-dev.txt"
+  python_version: "3.13"
+  coverage: "not configured"
+  linter: "not configured"
+  typechecker: "not configured"
+  formatter: "not configured"
+  e2e: "tests/test_e2e.py (Playwright, requires a live server, excluded from CI)"
+
+projects:
+  - path: "."
+    stack: "Python 3.13 / FastAPI / SQLModel"
+    test_command: "python -m pytest -q --ignore=tests/test_e2e.py"
+    framework: "pytest"
+
+rules:
+  proposal:
+    - Include a rollback plan for risky changes.
+    - State the impact on the Amazon catalog pipeline and affiliate link generation when relevant.
+  specs:
+    - Use Given/When/Then for scenarios.
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY).
+  design:
+    - Keep business logic in services.py and routes thin.
+    - Use FastAPI dependency injection for DB sessions.
+    - Document architecture decisions with rationale.
+  tasks:
+    - Group by phase and use hierarchical numbering.
+    - Keep tasks completable in one session.
+    - Add or adjust pytest coverage for every behavior change.
+  apply:
+    guidelines:
+      - Follow existing code patterns and keep the pinned dependency baseline.
+      - Frontend stays Jinja2 + HTMX; do not introduce Node, React, or a bundler.
+    tdd: true
+    test_command: "python -m pytest -q --ignore=tests/test_e2e.py"
+  verify:
+    test_command: "python -m pytest -q --ignore=tests/test_e2e.py"
+    build_command: ""
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas.
