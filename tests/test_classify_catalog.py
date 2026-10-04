@@ -216,6 +216,83 @@ def test_a_transient_failure_retains_a_prior_valid_decision_and_leaves_it_pendin
 
 
 # --------------------------------------------------------------------------- #
+# 4.3 — idempotent and resumable
+# --------------------------------------------------------------------------- #
+
+
+def test_a_completed_backfill_re_run_makes_zero_calls_and_changes_no_rows(session):
+    product = _product(session, asin="P1", title="Cafetera")
+
+    job.run(session, classify_fn=_Recorder(), log=silent)
+    before = _decision(session, product.id)
+    stamp, fingerprint = before.classified_at, before.input_fingerprint
+
+    recorder = _Recorder()
+    code = job.run(session, classify_fn=recorder, log=silent)
+
+    assert code == 0
+    assert recorder.calls == []
+    after = _decision(session, product.id)
+    assert after.classified_at == stamp
+    assert after.input_fingerprint == fingerprint
+
+
+def test_an_interrupted_run_resumes_without_re_requesting_committed_products(session):
+    for index in range(3):
+        _product(session, asin=f"P{index}", title=f"T{index}")
+
+    first = _Recorder()
+    job.run(session, classify_fn=first, limit=2, log=silent)
+
+    assert [call["title"] for call in first.calls] == ["T0", "T1"]
+    assert len(session.exec(select(EditorialDecision)).all()) == 2
+
+    second = _Recorder()
+    job.run(session, classify_fn=second, log=silent)
+
+    assert [call["title"] for call in second.calls] == ["T2"]
+    assert len(session.exec(select(EditorialDecision)).all()) == 3
+    assert _pending(session) == []
+
+
+def test_the_run_limit_stops_cleanly_with_exit_zero(session):
+    for index in range(3):
+        _product(session, asin=f"P{index}", title=f"T{index}")
+
+    logs = []
+    code = job.run(session, classify_fn=_Recorder(), limit=2, log=logs.append)
+
+    assert code == 0
+    assert any("stopped=limit" in line for line in logs)
+    assert len(session.exec(select(EditorialDecision)).all()) == 2
+    assert len(_pending(session)) == 1
+
+
+# --------------------------------------------------------------------------- #
+# 4.4 — batched commits + progress logs
+# --------------------------------------------------------------------------- #
+
+
+def test_progress_log_lines_report_each_batch(session, monkeypatch):
+    monkeypatch.setattr(job, "EDITORIAL_JOB_COMMIT_EVERY", 2)
+    for index in range(3):
+        _product(session, asin=f"P{index}", title=f"T{index}")
+
+    logs = []
+    job.run(session, classify_fn=_Recorder(), log=logs.append)
+
+    batches = [
+        line for line in logs
+        if re.search(r"batch=\d+ classified=\d+ pending=\d+ elapsed=", line)
+    ]
+    assert len(batches) == 2
+    first = re.search(r"batch=(\d+) classified=(\d+) pending=(\d+)", batches[0])
+    last = re.search(r"batch=(\d+) classified=(\d+) pending=(\d+)", batches[1])
+    assert first.groups() == ("1", "2", "1")
+    assert last.groups() == ("2", "3", "0")
+
+
+# --------------------------------------------------------------------------- #
 # 4.2 — CLI shape
 # --------------------------------------------------------------------------- #
 

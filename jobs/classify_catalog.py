@@ -7,6 +7,7 @@ classification result, so provider failures are never cached.
 """
 
 import argparse
+import os
 import sys
 import time
 
@@ -17,6 +18,10 @@ import curation_provider
 from curation import EDITORIAL_POLICY_VERSION
 from curation_provider import EDITORIAL_PROVIDER_MODEL
 from database import engine
+
+#: Decisions are committed every this many products; the decision table itself is
+#: the resumability checkpoint, so a restarted run skips committed work.
+EDITORIAL_JOB_COMMIT_EVERY = int(os.getenv("EDITORIAL_JOB_COMMIT_EVERY", "25"))
 
 
 def _now() -> float:
@@ -56,9 +61,18 @@ def run(session, classify_fn=curation_provider.classify_product, *, dry_run=Fals
         log(f"dry-run pending={len(pending)} elapsed={_now() - started:.1f}")
         return 0
 
+    commit_every = max(1, EDITORIAL_JOB_COMMIT_EVERY)
     classified = 0
     processed = 0
+    batch = 0
+    last_committed = 0
+    stopped = None
+
     for product in pending:
+        if limit is not None and processed >= limit:
+            stopped = "limit"
+            break
+
         result = classify_fn(_product_item(product))
         processed += 1
         if result is not None:
@@ -68,10 +82,26 @@ def run(session, classify_fn=curation_provider.classify_product, *, dry_run=Fals
             )
             classified += 1
 
-    session.commit()
-    log(f"classified={classified} pending={len(pending) - processed} "
-        f"elapsed={_now() - started:.1f}")
+        if processed % commit_every == 0:
+            session.commit()
+            batch += 1
+            last_committed = processed
+            _log_progress(log, batch, classified, len(pending), processed, started)
+
+    if processed > last_committed:
+        session.commit()
+        batch += 1
+        _log_progress(log, batch, classified, len(pending), processed, started)
+
+    if stopped is not None:
+        log(f"stopped={stopped} processed={processed} classified={classified} "
+            f"pending={len(pending) - processed} elapsed={_now() - started:.1f}")
     return 0
+
+
+def _log_progress(log, batch, classified, total_pending, processed, started) -> None:
+    log(f"batch={batch} classified={classified} pending={total_pending - processed} "
+        f"elapsed={_now() - started:.1f}")
 
 
 def _parse_args(argv):
