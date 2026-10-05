@@ -293,9 +293,16 @@ def test_build_payload_sets_the_model_and_the_strict_response_format():
     payload = curation_provider._build_payload(_item(), "override-model")
 
     assert payload["model"] == "override-model"
+    # NaN Builders accepts the OpenAI-nested form (``json_schema`` wraps the
+    # named, strict schema) and rejects the flat ``{"type", "json_schema":
+    # <schema>}`` shape with HTTP 400 invalid_request_error.
     assert payload["response_format"] == {
         "type": "json_schema",
-        "json_schema": DECISION_JSON_SCHEMA,
+        "json_schema": {
+            "name": "editorial_decision",
+            "strict": True,
+            "schema": DECISION_JSON_SCHEMA,
+        },
     }
 
 

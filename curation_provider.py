@@ -51,10 +51,11 @@ class ClassificationResult:
     reason: str
 
 
-#: Strict object schema handed to the provider as ``response_format.json_schema``.
-#: ``state`` is constrained to the four editorial states, ``context`` is nullable,
-#: and ``reason`` must be non-empty. The provider is not trusted to honour it;
-#: ``parse_provider_response`` re-validates every field regardless.
+#: Strict object schema handed to the provider as the named schema inside
+#: ``response_format.json_schema``. ``state`` is constrained to the four editorial
+#: states, ``context`` is nullable, and ``reason`` must be non-empty. The provider
+#: is not trusted to honour it; ``parse_provider_response`` re-validates every
+#: field regardless.
 DECISION_JSON_SCHEMA = {
     "type": "object",
     "properties": {
@@ -193,7 +194,14 @@ def _build_payload(item: dict, model: str) -> dict:
             {"role": "system", "content": POLICY_PROMPT},
             {"role": "user", "content": json.dumps(product, ensure_ascii=False)},
         ],
-        "response_format": {"type": "json_schema", "json_schema": DECISION_JSON_SCHEMA},
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "editorial_decision",
+                "strict": True,
+                "schema": DECISION_JSON_SCHEMA,
+            },
+        },
     }
 
 
