@@ -413,3 +413,92 @@ None. All 251 baseline tests remain green with no semantic modification (full su
 ### Status
 
 3/3 Phase 5 tasks complete across PR 5a (`c4d4dcf`, 222), PR 5b (`e0f120c`, 276) and PR 5c (`53b852f`, 263). Ready for next batch (Work Unit 6 / PR 6 — centralized filtering wiring).
+
+---
+
+## Batch: Work Unit 6 / PR 6 — Phase 6: Centralized Filtering Wiring
+
+**Mode:** Strict TDD
+**Delivery:** auto-chain / stacked-to-main (PR 6 targets the PR 5 slice)
+**Status:** Complete — 7/7 Phase 6 tasks. Ready for next batch (Work Unit 7 / PR 7).
+
+**Re-slice note (review budget):** Work Unit 6 landed as **three** stacked
+commits, each a cohesive behavior under the 400-line budget: **6a** the
+mode-gated catalog predicate + category suppression + the strict-TDD test
+infrastructure (T1 shadow structural proof), **6b** the `/ideas` context
+pass-through and the curation-aware blog empty state (route/blog/safety tests),
+and **6c** the T2 golden-baseline lock (9 generated snapshots + the assertion
+test). No tests or code were removed to fit the budget; the generated goldens
+are excluded from the authored count per the work-unit-commits skill.
+
+### Completed Tasks
+
+- [x] 6.1 RED — default `off`; `--editorial-update-baselines` option + `seed_editorial`, `sql_statements`, `editorial_update_baselines` fixtures in `tests/conftest.py`; T1 structural (no editorial SQL under `off`) and byte-identical-with-vs-without-decision-rows tests.
+- [x] 6.2 GREEN — `CatalogQuery.editorial_context`; `search_products` appends the shared-filter predicate before the count (mode-gated); `list_categories` filters to `visible_category_slugs` under `enforce`.
+- [x] 6.3 RED — `enforce` general/context/excluded/unknown visibility; filtered totals + page-2 tail; all shared surfaces hide the excluded product; `/ideas` context merge.
+- [x] 6.4 GREEN — `_catalog_context(..., editorial_context=)` + `/ideas/{category_slug}` pass-through in `main.py`; explicit non-empty hero guard in `services.py`; curation-aware empty state in `templates/blog_post.html`.
+- [x] 6.5 RED/GREEN — zero-visible category suppressed from `list_categories` and `/sitemap.xml` (sitemap inherits, no code change); unchanged under `off`; blog empty state + hero fallback; wish list unaffected (add excluded product + existing wishes survive); `refresh_catalog.baseline_counts` counts unfiltered `ProductList` and curation never mutates it.
+- [x] 6.6 T2 — 9 golden `tests/baselines/editorial_off_<surface>.html` snapshots generated with `--editorial-update-baselines` under `off` + byte-for-byte assertion test.
+- [x] 6.7 Verify — focused suite green; full suite green with no semantic modification to existing tests.
+
+### Files Changed
+
+| File | Action | What Was Done |
+|------|--------|---------------|
+| `catalog.py` | Modified | `CatalogQuery.editorial_context`; `search_products` computes `editorial_visibility(session)` and appends `context_category(slug)` on the context surface else the unchanged category filter + `general()`, all into the shared `filters` list **before** `count`; `list_categories` filters to `visible_category_slugs(session)` under `enforce` (None ⇒ unchanged). |
+| `main.py` | Modified | `_catalog_context` gains `editorial_context` and forwards it into `CatalogQuery`; `/ideas/{category_slug}` passes `editorial_context=category_slug`. Sitemap untouched (renders `list_categories`). |
+| `services.py` | Modified | `get_blog_post_detail`: hero fallback restructured to an explicit non-empty-list guard (`if products and not post.get("hero_image")`); pagination already flows through the filtered `search_products`. |
+| `templates/blog_post.html` | Modified | Curation-aware empty state (stable "No encontramos productos" phrase + catalog link) for when filtering empties the list. |
+| `tests/conftest.py` | Modified | `pytest_addoption` for `--editorial-update-baselines`; `editorial_update_baselines`, `sql_statements` (`before_cursor_execute` capture), and `seed_editorial` fixtures. |
+| `tests/test_editorial_filtering.py` | Created | 28 tests: default off; T1 structural + byte-identical; enforce visibility/totals/pagination; category + sitemap suppression; route surfaces incl. dashboard; `/ideas` context merge; blog empty/hero; wish + ProductList safety rails; T2 golden baselines. |
+| `tests/baselines/` | Created | 9 generated `editorial_off_<surface>.html` snapshots (home, catalog, catalog_category, trends, most_desired, bestsellers, ideas, blog, sitemap). |
+| `openspec/changes/curacion-regalos-ia/tasks.md` | Modified | Marked Phase 6 tasks 6.1–6.7 `[x]`. |
+
+### TDD Cycle Evidence
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|-----|-------|-------------|----------|
+| 6.1 (6a) | `tests/test_editorial_filtering.py` | Integration | ✅ 277/277 full suite | ✅ `fixture 'seed_editorial' not found` + enforce failures (20 failed, 8 passed) | ✅ offline/T1 green | ✅ 3 cases (default off, no-editorial-SQL capture, byte-identical with/without rows) | ✅ fixtures extracted to `conftest.py` |
+| 6.2–6.3 (6a) | `tests/test_editorial_filtering.py` | Integration | ✅ 277/277 | ✅ 20 failed pre-wiring | ✅ 9 passed | ✅ 9 cases (eligible-only, contextual matcher + general hide, excluded/unknown hidden, totals 12/3, page-2 tail, list_categories suppress + off) | ✅ predicate helpers reused from `curation` |
+| 6.4–6.5 (6b) | `tests/test_editorial_filtering.py` | Integration | ✅ 9/9 focused | ✅ route/context/blog tests failed pre-wiring | ✅ 19 passed | ✅ 10 cases (2 sitemap, dashboard, all-surfaces, ideas merge, blog empty + hero, wish add, wish survive, ProductList immutable) | ✅ hero guard expressed as `products and not ...` |
+| 6.6 (6c) | `tests/test_editorial_filtering.py` | Regression (T2) | ✅ 19/19 focused | ✅ missing baseline (RED) | ✅ 28 passed after `--editorial-update-baselines` | ✅ 9 surfaces | ➖ None needed |
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | `python -m pytest -q tests/test_editorial_filtering.py` → **28 passed in 1.2s**; `python -m pytest -q --ignore=tests/test_e2e.py` → **305 passed in 6.5s** |
+| Runtime harness command/scenario and exact result | Real FastAPI app through `TestClient`: `/`, `/catalog`, `/catalog?category=…`, `/trends`, `/most-desired`, `/bestsellers`, `/ideas/{slug}`, `/blog/{slug}`, `/sitemap.xml`, `/dashboard`, `/wishes` exercised under `off` and `enforce`. `--editorial-update-baselines` regenerated the 9 `tests/baselines/editorial_off_*.html` snapshots; a normal run then matched them byte-for-byte (9 passed). T1 captured the executed SQL via `before_cursor_execute` and proved zero editorial-table references under `off`. |
+| Rollback boundary | Primary = config flip (`EDITORIAL_FILTER_MODE=off`, or `DELETE FROM editorial_gate_state`) — no code revert; persisted decisions become inert. Reverting the three commits (`3c53dbb`, `dd6d1fa`, `ebaf737`) plus deleting `tests/baselines/` restores the pre-wiring code with no unrelated change. |
+
+### Deviations from Design
+
+- `services.py` required no behavior change for correctness: `get_blog_post_detail` already paginates over `search_products` (now filtered) and already guarded the hero on product truthiness. The edit makes the "never derived from an empty list" contract explicit (`if products and not post.get("hero_image")`) and documents the filtered-set flow. The template's empty state was already graceful; it is now curation-aware (updated copy + catalog link) while keeping a stable testable phrase.
+- `list_categories` calls `visible_category_slugs(session)` and `search_products` independently calls `editorial_visibility(session)`, so an `enforce` catalog page performs two small gate reads instead of one. This mirrors design Decision 8 ("one tiny SELECT per `search_products`/`list_categories` call") and keeps the two paths decoupled; the `off` path still performs zero reads.
+- The T1 byte-identical test compares responses within the same test (decision rows absent vs present) rather than against a stored pre-change capture; this is the data-independence proof Decision 4 specifies, and T2 supplies the separate pre-change drift lock.
+
+### Issues Found
+
+None. All 277 pre-existing tests remain green with no semantic modification (full suite: 305 passed = 277 + 28 new).
+
+### Commits (6a / 6b / 6c re-slice)
+
+| Hash | Message | Files | Authored lines |
+|------|---------|-------|----------------|
+| `ebaf737` | `feat(curation): gate catalog search and category listing with editorial visibility` | `catalog.py`, `tests/conftest.py`, `tests/test_editorial_filtering.py` | 327 (< 400) |
+| `dd6d1fa` | `feat(curation): route the ideas context and make the blog empty state curation-aware` | `main.py`, `services.py`, `templates/blog_post.html`, `tests/test_editorial_filtering.py` | 184 (< 400) |
+| `3c53dbb` | `test(curation): lock the off-mode surfaces with golden baselines` | `tests/test_editorial_filtering.py`, `tests/baselines/` | 38 authored + 9 generated goldens (excluded) |
+| this artifacts commit | `docs(sdd): track curacion-regalos-ia openspec artifacts` | `openspec/**` | artifacts |
+
+### Workload / PR Boundary
+
+- Mode: chained PR slice (stacked-to-main); **PR 6 split into PR 6a + PR 6b + PR 6c** to fit the 400-line review budget.
+- Work unit 6a: predicate insertion + `list_categories` suppression + T1 test infra/tests — **327 authored lines**.
+- Work unit 6b: `/ideas` context wiring + blog empty state + route/blog/safety tests — **184 authored lines**.
+- Work unit 6c: T2 golden baselines + assertion test — **38 authored lines** (+ generated snapshots).
+- Boundary: starts after the Phase 5 evaluation gate; ends with every public product surface (catalog/trends/desired/bestsellers/ideas/blog/dashboard), navigation, and the sitemap filtered under `enforce` and provably unchanged under `off`. First production consumers of `curation.editorial_visibility` / `visible_category_slugs`.
+- Review budget: every slice is under 400 authored lines and each was verified green independently (`python -m pytest -q tests/test_editorial_filtering.py`).
+
+### Status
+
+7/7 Phase 6 tasks complete across PR 6a (`ebaf737`, 327), PR 6b (`dd6d1fa`, 184) and PR 6c (`3c53dbb`, 38 + goldens). Ready for next batch (Work Unit 7 / PR 7 — config/env docs, runbook, final verification).

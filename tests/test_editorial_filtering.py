@@ -386,3 +386,41 @@ def test_curation_never_mutates_productlist(session, catalog_seed, enforce, seed
     # Import-health metrics keep counting the unfiltered ProductList rows.
     assert refresh_catalog.baseline_counts(session) == {"bestsellers": 2, "trends": 2}
     assert snapshot() == before
+
+
+# --------------------------------------------------------------------------- #
+# 6.6 T2 golden baselines
+# --------------------------------------------------------------------------- #
+
+OFF_SURFACES = [
+    ("/", "home"),
+    ("/catalog", "catalog"),
+    ("/catalog?category=alimentacion-y-bebidas", "catalog_category"),
+    ("/trends", "trends"),
+    ("/most-desired", "most_desired"),
+    ("/bestsellers", "bestsellers"),
+    ("/ideas/alimentacion-y-bebidas", "ideas"),
+    ("/blog/regalos-amigo-invisible-10-euros", "blog"),
+    ("/sitemap.xml", "sitemap"),
+]
+
+
+@pytest.mark.parametrize("path,name", OFF_SURFACES, ids=[name for _, name in OFF_SURFACES])
+def test_off_mode_matches_golden_baseline(client, catalog_seed, seed_editorial, monkeypatch,
+                                          editorial_update_baselines, path, name):
+    monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "off")
+    # The baselines must prove that decision rows change nothing under off.
+    for product in catalog_seed:
+        seed_editorial(product, "excluded")
+
+    body = client.get(path).text
+    target = BASELINES_DIR / f"editorial_off_{name}.html"
+
+    if editorial_update_baselines:
+        BASELINES_DIR.mkdir(parents=True, exist_ok=True)
+        target.write_text(body, encoding="utf-8")
+
+    assert target.exists(), (
+        f"missing golden baseline {target}; regenerate with --editorial-update-baselines"
+    )
+    assert body == target.read_text(encoding="utf-8"), f"off-mode drift on {path}"

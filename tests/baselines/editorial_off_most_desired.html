@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- SEO Blocks -->
+    <title>Los Más Deseados | Regálame</title>
+    <meta name="description" content="Explora el catálogo de regalos: busca, filtra por categoría, fuente y precio, y ordena los resultados.">
+    
+    <!-- Schema.org Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Regálame",
+      "applicationCategory": "LifestyleApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "EUR"
+      },
+      "description": "Organiza tu Amigo Invisible y crea listas de regalos con IA. Chat anónimo y sugerencias de Amazon integradas.",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "120"
+      }
+    }
+    </script>
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://regalame.app/">
+    <meta property="og:title" content="Los Más Deseados | Regálame">
+    <meta property="og:description" content="Explora el catálogo de regalos: busca, filtra por categoría, fuente y precio, y ordena los resultados.">
+    <meta property="og:image" content="https://regalame.app/static/og-image-default.jpg">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://regalame.app/">
+    <meta property="twitter:title" content="Los Más Deseados | Regálame">
+    <meta property="twitter:description" content="Explora el catálogo de regalos: busca, filtra por categoría, fuente y precio, y ordena los resultados.">
+    <meta property="twitter:image" content="https://regalame.app/static/og-image-default.jpg">
+
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- TailwindCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        glass: "rgba(255, 255, 255, 0.1)",
+                        glassBorder: "rgba(255, 255, 255, 0.2)",
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+        
+        /* Mesh Gradient Animation */
+        .mesh-bg {
+            background: radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+                        radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
+                        radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+            background-size: 200% 200%;
+            animation: gradient-move 15s ease infinite;
+        }
+        
+        @keyframes gradient-move {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .glass-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.2s;
+        }
+        .glass-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    </style>
+
+    
+    
+</head>
+<body class="min-h-screen flex flex-col font-sans">
+
+    <!-- Background -->
+    <div class="fixed inset-0 -z-50 mesh-bg"></div>
+
+    <!-- Navbar -->
+    <nav class="fixed top-0 w-full z-50 glass-panel border-b border-white/10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-violet-500 flex items-center">
+                        <i class="ph-fill ph-gift mr-2 text-pink-500"></i>Regálame
+                    </a>
+                </div>
+                <form action="/catalog" method="GET" class="hidden md:block flex-1 max-w-xs mx-6">
+                    <input type="search" name="q" placeholder="Buscar productos..."
+                           class="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-indigo-400">
+                </form>
+                <div class="flex items-center space-x-4">
+                    <div class="hidden md:flex space-x-4 mr-4 border-r border-white/10 pr-4">
+                        <a href="/trends" class="text-sm text-gray-400 hover:text-white transition-colors">Tendencias</a>
+                        <a href="/bestsellers" class="text-sm text-gray-400 hover:text-white transition-colors">Top Ventas</a>
+                        <a href="/catalog" class="text-sm text-gray-400 hover:text-white transition-colors">Catálogo</a>
+                        <a href="/blog" class="text-sm text-pink-300 hover:text-white transition-colors font-medium flex items-center gap-1">
+                            <i class="ph-bold ph-lightbulb"></i> Ideas y Guías
+                        </a>
+                    </div>
+                    
+                        <a href="/" class="text-sm font-medium hover:text-pink-400 transition-colors">Login</a>
+                    
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <main class="flex-grow container mx-auto px-4 pt-24 pb-12">
+        
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+    <div class="text-center mb-8 mt-4">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 mb-3">Los Más Deseados</h1>
+    </div>
+
+    <form method="GET" action="/most-desired"
+          hx-get="/most-desired" hx-target="#catalog-results" hx-swap="outerHTML" hx-push-url="true"
+          class="glass-panel rounded-2xl p-5 mb-8 space-y-4">
+        <input type="hidden" name="source" value="desired">
+
+        <div class="flex flex-col md:flex-row gap-3">
+            <label class="sr-only" for="catalog-q">Buscar productos</label>
+            <input id="catalog-q" type="search" name="q" value="" placeholder="Buscar productos..."
+                   class="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-gray-200 placeholder-gray-500 focus:outline-none focus:border-indigo-400">
+            <label class="sr-only" for="catalog-sort">Ordenar por</label>
+            <select id="catalog-sort" name="sort" class="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-gray-200">
+                <option value="relevance" selected>Relevancia</option>
+                <option value="price_asc" >Precio: menor a mayor</option>
+                <option value="price_desc" >Precio: mayor a menor</option>
+                <option value="newest" >Más recientes</option>
+            </select>
+            <label class="sr-only" for="catalog-min">Precio mínimo</label>
+            <input id="catalog-min" type="number" step="0.01" name="min" value="" placeholder="Precio mín."
+                   class="w-full md:w-32 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-gray-200 placeholder-gray-500">
+            <label class="sr-only" for="catalog-max">Precio máximo</label>
+            <input id="catalog-max" type="number" step="0.01" name="max" value="" placeholder="Precio máx."
+                   class="w-full md:w-32 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-gray-200 placeholder-gray-500">
+            <button type="submit" class="bg-indigo-500 hover:bg-indigo-400 text-white px-6 py-2.5 rounded-xl font-bold transition-all">Filtrar</button>
+        </div>
+
+        
+    </form>
+
+    
+<div id="catalog-results">
+    <p class="text-sm text-gray-400 mb-4">
+        
+            0 resultados
+        
+    </p>
+
+    
+    <div id="no-results" class="text-center py-20">
+        <div class="bg-white/5 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
+            <i class="ph-duotone ph-magnifying-glass text-4xl text-gray-500"></i>
+        </div>
+        <h3 class="text-xl font-bold text-gray-400">
+            No hay resultados para tu búsqueda
+        </h3>
+    </div>
+    
+
+    
+</div>
+</div>
+
+<div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-full shadow-2xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-2 font-bold pointer-events-none">
+    <i class="ph-bold ph-check-circle text-xl"></i>
+    ¡Añadido a tu lista!
+</div>
+
+<script>
+    function showToast(btn) {
+        const icon = btn.querySelector('i');
+        const originalClass = icon.className;
+
+        icon.className = "ph-bold ph-check";
+        btn.classList.add('bg-green-500', 'border-green-600');
+        btn.classList.remove('bg-indigo-500');
+
+        const toast = document.getElementById('toast');
+        toast.classList.remove('translate-y-20', 'opacity-0');
+
+        setTimeout(() => {
+            icon.className = originalClass;
+            btn.classList.remove('bg-green-500', 'border-green-600');
+            btn.classList.add('bg-indigo-500');
+            toast.classList.add('translate-y-20', 'opacity-0');
+        }, 2000);
+    }
+</script>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/5 py-6 text-center text-sm text-gray-500 mt-auto">
+        <div class="text-center text-slate-500 text-sm py-8">
+            <p>&copy; 2025 Regálame. Tus deseos, hechos realidad.</p>
+            <div class="flex justify-center gap-4 mt-2">
+                <a href="#" class="hover:text-pink-600">Privacidad</a>
+                <span class="text-slate-300">|</span>
+                <a href="#" class="hover:text-pink-600">Términos</a>
+                <span class="text-slate-300">|</span>
+                <a href="/blog" class="hover:text-pink-600">Blog</a>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>
