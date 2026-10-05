@@ -60,6 +60,49 @@ The curation jobs run out-of-band, exactly like `jobs/refresh_catalog.py`: they
 are **separate Railway services** pointing at the same repository, never the web
 `Procfile`. Each service needs its own cron entry.
 
+### Creating the services in the dashboard (step by step)
+
+Do this **after** the web service has deployed from `main`. The app calls
+`create_db_and_tables()` at startup (`main.py`), so the first web boot creates
+`editorial_decision` and `editorial_gate_state` in Postgres — reconcile Alembic
+afterwards (see [Migration step](#migration-step)).
+
+For the classification job:
+
+1. Project → **`+ New`** → **GitHub Repo** → select the `regalame_app` repository.
+   Rename the service (e.g. `curation-classify`).
+2. **Settings → Source:** branch `main`.
+3. **Settings → Build:** Dockerfile path `scraper/Dockerfile`; Root Directory =
+   repository root.
+4. **Settings → Deploy** — set these **before the first run**:
+   - **Start Command:** `python -m jobs.classify_catalog --dry-run` for the first
+     run (zero provider calls, zero writes), then switch to
+     `python -m jobs.classify_catalog`.
+   - **Cron Schedule:** `0 * * * *` (hourly, UTC) while the backfill runs.
+   - **Restart Policy:** `Never`.
+5. **Variables:** `DATABASE_URL` = `${{Postgres.DATABASE_URL}}`, the provider key
+   (`NAN_API_KEY` or `EDITORIAL_PROVIDER_API_KEY`), and
+   `EDITORIAL_JOB_CONCURRENCY=4`. Do **not** set `EDITORIAL_FILTER_MODE` — unset
+   means `off` (shadow).
+6. Deploy, confirm the `--dry-run` log line and **zero** outbound calls, then
+   change the Start Command to the real one and redeploy.
+
+**Schedule sizing.** Each run is capped by `EDITORIAL_JOB_MAX_SECONDS` (55 min), so
+a full ~3.7k-product backfill needs several hourly runs; Railway **skips** a run
+whose predecessor is still active. After `pending=0`, drop to a daily entry. The
+evaluation gate needs **no** cron entry — run it on demand (below).
+
+For the evaluation gate, either run it on demand against the Railway database:
+
+```bash
+railway run python -m jobs.evaluate_curation --sample-out sample.json
+# label sample.json by hand, then:
+railway run python -m jobs.evaluate_curation --labels sample.json
+```
+
+or create a second service with the same recipe, **no** Cron Schedule, and Start
+Command `python -m jobs.evaluate_curation`, triggered manually.
+
 ### `python -m jobs.classify_catalog` — classification backfill / shadow
 
 1. Railway → same project → **New Service** → same repository.
@@ -114,6 +157,20 @@ Run the companion Postgres verification **before** deploying this change:
 re-`upgrade head`). CI never runs Alembic — `tests/conftest.py` uses
 `SQLModel.metadata.create_all` — so this manual step is the only executable proof
 the migration applies and reverts cleanly.
+
+**Reconciling a `create_all`-managed production database.** The app still creates
+tables at startup (`main.py`), so production Postgres may have no `alembic_version`
+row at all. If the web deploy already created the two editorial tables, **do not**
+run `alembic upgrade head` — it would fail with *table already exists*. Instead,
+mark the schema current without running DDL:
+
+```bash
+railway run alembic stamp b3d9f1a7c250
+```
+
+Use `alembic upgrade head` only when the database is Alembic-managed end to end
+(an `alembic_version` row already tracks the earlier migrations). When in doubt,
+inspect whether `alembic_version` exists before choosing.
 
 ## Rollout sequence
 
