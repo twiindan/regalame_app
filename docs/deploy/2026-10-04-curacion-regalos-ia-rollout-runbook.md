@@ -32,7 +32,7 @@ it — for the web service, `EDITORIAL_FILTER_MODE` in particular.
 | `EDITORIAL_FILTER_MODE` | `off` | `curation.py` | Filter mode. `off` = shadow (public behavior unchanged); `enforce` = apply the editorial predicate **only if the gate passes** (see below). |
 | `EDITORIAL_PROVIDER_BASE_URL` | `https://api.nan.builders/v1` | `curation_provider.py` | Provider base URL; the adapter POSTs to `<base>/chat/completions`. |
 | `EDITORIAL_PROVIDER_MODEL` | `qwen3.6` | `curation_provider.py` | Model id; also an input to the reclassification fingerprint. |
-| `EDITORIAL_PROVIDER_API_KEY` | *(none — secret)* | `curation_provider.py` | Bearer token for the provider. Required for any non-dry-run classification run; the adapter refuses to call out without it. |
+| `EDITORIAL_PROVIDER_API_KEY` (preferred) / `NAN_API_KEY` | *(none — secret)* | `curation_provider.py` | Bearer token for the provider. Supply it as `EDITORIAL_PROVIDER_API_KEY`; the adapter also accepts the shared `NAN_API_KEY` as a fallback (preferred name wins when both are set). Required for any non-dry-run classification run; the adapter refuses to call out without either. |
 | `EDITORIAL_JOB_COMMIT_EVERY` | `25` | `jobs/classify_catalog.py` | Commit the in-flight decisions every N products (the decision table itself is the resumability checkpoint). |
 | `EDITORIAL_JOB_RPM` | `60` | `jobs/classify_catalog.py` | Max provider requests per minute; the job spaces sequential requests to respect it. `0` disables the pacing. |
 | `EDITORIAL_JOB_MAX_SECONDS` | `3300` | `jobs/classify_catalog.py` | Wall-clock bound per run (55 min, under the ~61 min cron floor). Reaching it stops cleanly and defers the rest. |
@@ -68,8 +68,9 @@ are **separate Railway services** pointing at the same repository, never the web
    - **Start command:** `python -m jobs.classify_catalog`.
    - **Root directory:** repository root.
 3. Environment: `DATABASE_URL` (`${{Postgres.DATABASE_URL}}`),
-   `EDITORIAL_PROVIDER_API_KEY`, and optionally `EDITORIAL_PROVIDER_BASE_URL`,
-   `EDITORIAL_PROVIDER_MODEL` and the `EDITORIAL_JOB_*` bounds.
+   `EDITORIAL_PROVIDER_API_KEY` (or the shared `NAN_API_KEY`), and optionally
+   `EDITORIAL_PROVIDER_BASE_URL`, `EDITORIAL_PROVIDER_MODEL` and the
+   `EDITORIAL_JOB_*` bounds.
 4. Useful flags: `--dry-run` (select and report only; zero provider calls, zero
    writes), `--limit N`, `--max-seconds N`.
 

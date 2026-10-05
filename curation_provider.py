@@ -30,8 +30,10 @@ EDITORIAL_PROVIDER_BASE_URL = os.getenv(
 EDITORIAL_PROVIDER_MODEL = os.getenv("EDITORIAL_PROVIDER_MODEL", "qwen3.6")
 
 #: Provider API key. No default: an unconfigured key fails the call (never raises
-#: to callers; ``classify_product`` turns it into a ``None`` result).
-EDITORIAL_PROVIDER_API_KEY = os.getenv("EDITORIAL_PROVIDER_API_KEY")
+#: to callers; ``classify_product`` turns it into a ``None`` result). It may be
+#: supplied as ``EDITORIAL_PROVIDER_API_KEY`` (preferred) or, as a fallback, the
+#: shared ``NAN_API_KEY`` used across the NaN Builders environment.
+EDITORIAL_PROVIDER_API_KEY = os.getenv("EDITORIAL_PROVIDER_API_KEY") or os.getenv("NAN_API_KEY")
 
 #: A transport turns a request payload into a parsed JSON body.
 Transport = Callable[[dict], dict]
