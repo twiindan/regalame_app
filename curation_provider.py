@@ -30,8 +30,10 @@ EDITORIAL_PROVIDER_BASE_URL = os.getenv(
 EDITORIAL_PROVIDER_MODEL = os.getenv("EDITORIAL_PROVIDER_MODEL", "qwen3.6")
 
 #: Provider API key. No default: an unconfigured key fails the call (never raises
-#: to callers; ``classify_product`` turns it into a ``None`` result).
-EDITORIAL_PROVIDER_API_KEY = os.getenv("EDITORIAL_PROVIDER_API_KEY")
+#: to callers; ``classify_product`` turns it into a ``None`` result). It may be
+#: supplied as ``EDITORIAL_PROVIDER_API_KEY`` (preferred) or, as a fallback, the
+#: shared ``NAN_API_KEY`` used across the NaN Builders environment.
+EDITORIAL_PROVIDER_API_KEY = os.getenv("EDITORIAL_PROVIDER_API_KEY") or os.getenv("NAN_API_KEY")
 
 #: A transport turns a request payload into a parsed JSON body.
 Transport = Callable[[dict], dict]
@@ -49,10 +51,11 @@ class ClassificationResult:
     reason: str
 
 
-#: Strict object schema handed to the provider as ``response_format.json_schema``.
-#: ``state`` is constrained to the four editorial states, ``context`` is nullable,
-#: and ``reason`` must be non-empty. The provider is not trusted to honour it;
-#: ``parse_provider_response`` re-validates every field regardless.
+#: Strict object schema handed to the provider as the named schema inside
+#: ``response_format.json_schema``. ``state`` is constrained to the four editorial
+#: states, ``context`` is nullable, and ``reason`` must be non-empty. The provider
+#: is not trusted to honour it; ``parse_provider_response`` re-validates every
+#: field regardless.
 DECISION_JSON_SCHEMA = {
     "type": "object",
     "properties": {
@@ -191,7 +194,14 @@ def _build_payload(item: dict, model: str) -> dict:
             {"role": "system", "content": POLICY_PROMPT},
             {"role": "user", "content": json.dumps(product, ensure_ascii=False)},
         ],
-        "response_format": {"type": "json_schema", "json_schema": DECISION_JSON_SCHEMA},
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "editorial_decision",
+                "strict": True,
+                "schema": DECISION_JSON_SCHEMA,
+            },
+        },
     }
 
 

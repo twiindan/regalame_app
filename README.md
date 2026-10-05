@@ -49,7 +49,7 @@ Una aplicación moderna y rápida para organizar el "Amigo Invisible" (Secret Sa
    MAIL_SERVER=smtp.gmail.com
    # Curación editorial del catálogo (opcional; por defecto off = shadow)
    # EDITORIAL_FILTER_MODE=off
-   # EDITORIAL_PROVIDER_API_KEY=tu_api_key
+   # EDITORIAL_PROVIDER_API_KEY=tu_api_key   # o el compartido NAN_API_KEY
    # EDITORIAL_PROVIDER_BASE_URL=https://api.nan.builders/v1
    # EDITORIAL_PROVIDER_MODEL=qwen3.6
    ```
@@ -137,10 +137,11 @@ patrón que el refresco del catálogo: `Restart policy: Never` y el Cron Schedul
 **antes** de la primera corrida):
 
 1. **Clasificación** — Start command: `python -m jobs.classify_catalog`.
-   Variables: `DATABASE_URL`, `EDITORIAL_PROVIDER_API_KEY` y, si hace falta,
-   `EDITORIAL_PROVIDER_BASE_URL`, `EDITORIAL_PROVIDER_MODEL` y los límites
-   `EDITORIAL_JOB_*`. Probá primero con `--dry-run` (cero llamadas y cero
-   escrituras) y después sin él para persistir decisiones.
+   Variables: `DATABASE_URL`, `EDITORIAL_PROVIDER_API_KEY` (o el compartido
+   `NAN_API_KEY`) y, si hace falta, `EDITORIAL_PROVIDER_BASE_URL`,
+   `EDITORIAL_PROVIDER_MODEL` y los límites `EDITORIAL_JOB_*`. Probá primero con
+   `--dry-run` (cero llamadas y cero escrituras) y después sin él para persistir
+   decisiones.
 2. **Gate de evaluación** — Start command: `python -m jobs.evaluate_curation`.
    Es offline (no llama al proveedor): `--sample-out sample.json` emite la muestra
    estratificada para etiquetar a mano, y `--labels sample.json` evalúa y registra
@@ -149,7 +150,7 @@ patrón que el refresco del catálogo: `Restart policy: Never` y el Cron Schedul
 | Variable | Default | Para qué |
 |----------|---------|----------|
 | `EDITORIAL_FILTER_MODE` | `off` | `off` = shadow; `enforce` = filtra (sólo si el gate pasa). Se lee una vez al importar: cambiarla requiere restart/redeploy. |
-| `EDITORIAL_PROVIDER_API_KEY` | — (secreto) | Bearer token del proveedor. Sin él, ninguna corrida real clasifica. |
+| `EDITORIAL_PROVIDER_API_KEY` (o `NAN_API_KEY`) | — (secreto) | Bearer token del proveedor. Se toma de `EDITORIAL_PROVIDER_API_KEY` (preferido) o, como fallback, del compartido `NAN_API_KEY`. Sin ninguno, ninguna corrida real clasifica. |
 | `EDITORIAL_PROVIDER_BASE_URL` | `https://api.nan.builders/v1` | Base URL OpenAI-compatible. |
 | `EDITORIAL_PROVIDER_MODEL` | `qwen3.6` | Modelo; también entra en el fingerprint de reclasificación. |
 | `EDITORIAL_JOB_COMMIT_EVERY` | `25` | Commit de decisiones cada N productos. |

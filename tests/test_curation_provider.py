@@ -5,6 +5,7 @@ Work Unit 3a pins the pure validation contract (``parse_provider_response``,
 Unit 3b adds the transport seam and ``classify_product``. CI makes zero network
 calls: the transport is always injected or monkeypatched in these tests.
 """
+import importlib.util
 import inspect
 import json
 import os
@@ -36,6 +37,11 @@ def _content(state="eligible", context=None, reason="good gift"):
 def _body(content):
     """A minimal OpenAI-compatible chat-completions body."""
     return {"choices": [{"message": {"content": content}}]}
+
+
+def _secrets_match(actual, expected):
+    """Compare two credentials without letting pytest render either on failure."""
+    return (actual is None) == (expected is None) and actual == expected
 
 
 # --------------------------------------------------------------------------- #
@@ -224,8 +230,9 @@ def test_provider_env_constants_default_from_the_environment():
     assert curation_provider.EDITORIAL_PROVIDER_MODEL == os.getenv(
         "EDITORIAL_PROVIDER_MODEL", "qwen3.6"
     )
-    assert curation_provider.EDITORIAL_PROVIDER_API_KEY == os.getenv(
-        "EDITORIAL_PROVIDER_API_KEY"
+    assert _secrets_match(
+        curation_provider.EDITORIAL_PROVIDER_API_KEY,
+        os.getenv("EDITORIAL_PROVIDER_API_KEY") or os.getenv("NAN_API_KEY"),
     )
 
 
@@ -249,6 +256,10 @@ def test_post_chat_completions_uses_bearer_auth_url_and_timeout(monkeypatch):
 
 
 def test_post_chat_completions_refuses_without_an_api_key(monkeypatch):
+    # Pin the module default to "unconfigured" so the assertion is independent of
+    # whichever credential var happens to be present in the ambient environment.
+    monkeypatch.setattr(curation_provider, "EDITORIAL_PROVIDER_API_KEY", None)
+
     def forbidden(*args, **kwargs):
         raise AssertionError("no HTTP call may be attempted without an API key")
 
@@ -282,9 +293,16 @@ def test_build_payload_sets_the_model_and_the_strict_response_format():
     payload = curation_provider._build_payload(_item(), "override-model")
 
     assert payload["model"] == "override-model"
+    # NaN Builders accepts the OpenAI-nested form (``json_schema`` wraps the
+    # named, strict schema) and rejects the flat ``{"type", "json_schema":
+    # <schema>}`` shape with HTTP 400 invalid_request_error.
     assert payload["response_format"] == {
         "type": "json_schema",
-        "json_schema": DECISION_JSON_SCHEMA,
+        "json_schema": {
+            "name": "editorial_decision",
+            "strict": True,
+            "schema": DECISION_JSON_SCHEMA,
+        },
     }
 
 
@@ -483,3 +501,80 @@ def test_classify_returns_none_when_the_api_key_is_unconfigured(monkeypatch):
     monkeypatch.setattr(curation_provider.requests, "post", forbidden)
 
     assert classify_product(_item()) is None
+
+
+# --------------------------------------------------------------------------- #
+# 3.4 — credential resolution: EDITORIAL_PROVIDER_API_KEY or NAN_API_KEY
+# --------------------------------------------------------------------------- #
+
+
+def _load_provider_with_env(monkeypatch, *, editorial=None, nan=None):
+    """Load a fresh, isolated copy of ``curation_provider`` under a controlled env.
+
+    The credential is read once at import time, so exercising the env precedence
+    needs a fresh exec. Loading under a private module name leaves the canonical
+    ``curation_provider`` (and its dataclass identity) untouched for the suite.
+    """
+    for name, value in (("EDITORIAL_PROVIDER_API_KEY", editorial), ("NAN_API_KEY", nan)):
+        if value is None:
+            monkeypatch.delenv(name, raising=False)
+        else:
+            monkeypatch.setenv(name, value)
+
+    spec = importlib.util.spec_from_file_location(
+        "curation_provider_under_test", curation_provider.__file__
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _captured_bearer(monkeypatch, module):
+    """Patch ``requests.post`` on ``module`` and return the captured headers sink."""
+    captured = {}
+
+    def fake_post(url, headers=None, json=None, timeout=None):
+        captured.update(headers=headers)
+        return _FakeResponse(_body(_content()))
+
+    monkeypatch.setattr(module.requests, "post", fake_post)
+    return captured
+
+
+def test_provider_key_falls_back_to_nan_api_key(monkeypatch):
+    module = _load_provider_with_env(monkeypatch, editorial=None, nan="nan-secret")
+    captured = _captured_bearer(monkeypatch, module)
+
+    assert module.EDITORIAL_PROVIDER_API_KEY == "nan-secret"
+
+    result = module.classify_product(_item())
+
+    assert result is not None
+    assert captured["headers"]["Authorization"] == "Bearer nan-secret"
+
+
+def test_editorial_provider_api_key_wins_over_nan_api_key(monkeypatch):
+    module = _load_provider_with_env(
+        monkeypatch, editorial="editorial-secret", nan="nan-secret"
+    )
+    captured = _captured_bearer(monkeypatch, module)
+
+    assert module.EDITORIAL_PROVIDER_API_KEY == "editorial-secret"
+
+    result = module.classify_product(_item())
+
+    assert result is not None
+    assert captured["headers"]["Authorization"] == "Bearer editorial-secret"
+
+
+def test_classify_returns_none_when_neither_provider_key_is_configured(monkeypatch):
+    module = _load_provider_with_env(monkeypatch, editorial=None, nan=None)
+
+    assert module.EDITORIAL_PROVIDER_API_KEY is None
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("no HTTP call may be attempted without an API key")
+
+    monkeypatch.setattr(module.requests, "post", forbidden)
+
+    assert module.classify_product(_item()) is None
