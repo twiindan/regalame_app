@@ -33,8 +33,10 @@ it — for the web service, `EDITORIAL_FILTER_MODE` in particular.
 | `EDITORIAL_PROVIDER_BASE_URL` | `https://api.nan.builders/v1` | `curation_provider.py` | Provider base URL; the adapter POSTs to `<base>/chat/completions`. |
 | `EDITORIAL_PROVIDER_MODEL` | `qwen3.6` | `curation_provider.py` | Model id; also an input to the reclassification fingerprint. |
 | `EDITORIAL_PROVIDER_API_KEY` (preferred) / `NAN_API_KEY` | *(none — secret)* | `curation_provider.py` | Bearer token for the provider. Supply it as `EDITORIAL_PROVIDER_API_KEY`; the adapter also accepts the shared `NAN_API_KEY` as a fallback (preferred name wins when both are set). Required for any non-dry-run classification run; the adapter refuses to call out without either. |
+| `EDITORIAL_PROVIDER_REASONING_EFFORT` | *(empty — omitted)* | `curation_provider.py` | Optional OpenAI-compatible `reasoning_effort`. The default omits the field. A real-call probe found `minimal` ~8x faster but with roughly double the invalid-decision rate: the model answers `contextual` with an invented sub-context that the v1 validator rejects, so those products are never cached and coverage cannot reach 1.0. Treat `minimal` / `low` as opt-in only, and only after the contextual vocabulary is widened or the gate tolerates it. |
 | `EDITORIAL_JOB_COMMIT_EVERY` | `25` | `jobs/classify_catalog.py` | Commit the in-flight decisions every N products (the decision table itself is the resumability checkpoint). |
-| `EDITORIAL_JOB_RPM` | `60` | `jobs/classify_catalog.py` | Max provider requests per minute; the job spaces sequential requests to respect it. `0` disables the pacing. |
+| `EDITORIAL_JOB_RPM` | `60` | `jobs/classify_catalog.py` | Max provider requests per minute; paces the **starts** even while concurrent calls are in flight. `0` disables the pacing. |
+| `EDITORIAL_JOB_CONCURRENCY` | `1` | `jobs/classify_catalog.py` | Provider calls allowed in flight at once. `1` keeps the original sequential behavior; production uses `4`, leaving one of NaN's five concurrent slots free. Calls run on worker threads, but **all** DB reads, writes and commits stay on the main thread (SQLModel `Session` is not thread-safe). |
 | `EDITORIAL_JOB_MAX_SECONDS` | `3300` | `jobs/classify_catalog.py` | Wall-clock bound per run (55 min, under the ~61 min cron floor). Reaching it stops cleanly and defers the rest. |
 | `EDITORIAL_JOB_MAX_PRODUCTS` | `500` | `jobs/classify_catalog.py` | Per-run product cap. `--limit` on the CLI overrides it. |
 
@@ -69,8 +71,12 @@ are **separate Railway services** pointing at the same repository, never the web
    - **Root directory:** repository root.
 3. Environment: `DATABASE_URL` (`${{Postgres.DATABASE_URL}}`),
    `EDITORIAL_PROVIDER_API_KEY` (or the shared `NAN_API_KEY`), and optionally
-   `EDITORIAL_PROVIDER_BASE_URL`, `EDITORIAL_PROVIDER_MODEL` and the
-   `EDITORIAL_JOB_*` bounds.
+   `EDITORIAL_PROVIDER_BASE_URL`, `EDITORIAL_PROVIDER_MODEL`, the
+   `EDITORIAL_JOB_*` bounds and `EDITORIAL_PROVIDER_REASONING_EFFORT`. For
+   production throughput set `EDITORIAL_JOB_CONCURRENCY=4` (leave the fifth
+   slot of NaN's concurrent allowance free); leave
+   `EDITORIAL_PROVIDER_REASONING_EFFORT` empty unless the evaluation gate can
+   tolerate the higher invalid-decision rate documented above.
 4. Useful flags: `--dry-run` (select and report only; zero provider calls, zero
    writes), `--limit N`, `--max-seconds N`.
 
