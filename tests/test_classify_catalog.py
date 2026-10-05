@@ -8,6 +8,8 @@ provider calls and zero network calls: every test injects a recording fake
 
 import os
 import re
+import threading
+import time
 from datetime import datetime
 
 import pytest
@@ -328,6 +330,10 @@ def test_default_bounds_come_from_the_environment():
     assert job.EDITORIAL_JOB_COMMIT_EVERY == int(os.getenv("EDITORIAL_JOB_COMMIT_EVERY", "25"))
 
 
+def test_default_concurrency_is_one_from_the_environment():
+    assert job.EDITORIAL_JOB_CONCURRENCY == int(os.getenv("EDITORIAL_JOB_CONCURRENCY", "1"))
+
+
 def test_request_rate_never_exceeds_the_configured_rpm(session, monkeypatch):
     monkeypatch.setattr(job, "EDITORIAL_JOB_RPM", 60)  # one request per second
     monkeypatch.setattr(job, "EDITORIAL_JOB_MAX_SECONDS", 3600)
@@ -397,6 +403,116 @@ def test_an_explicit_limit_overrides_the_configured_product_cap(session, monkeyp
     job.run(session, classify_fn=_Recorder(), limit=1, log=silent)
 
     assert len(session.exec(select(EditorialDecision)).all()) == 1
+
+
+# --------------------------------------------------------------------------- #
+# 4.6 — concurrency: bounded in-flight provider calls, main-thread DB writes
+# --------------------------------------------------------------------------- #
+
+
+class _ConcurrencyProbe:
+    """Thread-safe ``classify_fn`` recording the peak number of in-flight calls."""
+
+    def __init__(self, *, delay=0.03, result=None):
+        self.delay = delay
+        self.result = result if result is not None else _result()
+        self.calls = []
+        self._lock = threading.Lock()
+        self.in_flight = 0
+        self.peak = 0
+
+    def __call__(self, item):
+        with self._lock:
+            self.calls.append(item)
+            self.in_flight += 1
+            self.peak = max(self.peak, self.in_flight)
+        time.sleep(self.delay)
+        with self._lock:
+            self.in_flight -= 1
+        return self.result
+
+
+def test_concurrent_run_never_exceeds_the_configured_concurrency(session, monkeypatch):
+    monkeypatch.setattr(job, "EDITORIAL_JOB_CONCURRENCY", 3)
+    monkeypatch.setattr(job, "EDITORIAL_JOB_RPM", 0)
+    monkeypatch.setattr(job, "EDITORIAL_JOB_MAX_SECONDS", 3600)
+    for index in range(9):
+        _product(session, asin=f"P{index}", title=f"T{index}")
+    probe = _ConcurrencyProbe(delay=0.03)
+
+    code = job.run(session, classify_fn=probe, log=silent)
+
+    assert code == 0
+    assert probe.peak <= 3
+    assert probe.peak >= 2  # prove the calls actually overlapped
+    assert len(session.exec(select(EditorialDecision)).all()) == 9
+
+
+def test_concurrent_run_persists_every_valid_decision(session, monkeypatch):
+    monkeypatch.setattr(job, "EDITORIAL_JOB_CONCURRENCY", 4)
+    monkeypatch.setattr(job, "EDITORIAL_JOB_RPM", 0)
+    for index in range(5):
+        _product(session, asin=f"P{index}", title=f"T{index}")
+    recorder = _Recorder()
+
+    code = job.run(session, classify_fn=recorder, log=silent)
+
+    assert code == 0
+    assert len(recorder.calls) == 5
+    assert len(session.exec(select(EditorialDecision)).all()) == 5
+    assert _pending(session) == []
+
+
+def test_concurrent_dry_run_makes_zero_calls(session, monkeypatch):
+    monkeypatch.setattr(job, "EDITORIAL_JOB_CONCURRENCY", 4)
+    _product(session, asin="P1", title="Cafetera")
+    recorder = _Recorder()
+
+    code = job.run(session, classify_fn=recorder, dry_run=True, log=silent)
+
+    assert code == 0
+    assert recorder.calls == []
+    assert session.exec(select(EditorialDecision)).all() == []
+
+
+def test_concurrent_run_respects_the_rpm_bound(session, monkeypatch):
+    monkeypatch.setattr(job, "EDITORIAL_JOB_CONCURRENCY", 3)
+    monkeypatch.setattr(job, "EDITORIAL_JOB_RPM", 600)  # 100 ms between starts
+    monkeypatch.setattr(job, "EDITORIAL_JOB_MAX_SECONDS", 3600)
+    monkeypatch.setattr(job, "_sleep", time.sleep)  # real pacing for this test
+    for index in range(5):
+        _product(session, asin=f"P{index}", title=f"T{index}")
+    lock = threading.Lock()
+    starts = []
+
+    def classify(item):
+        with lock:
+            starts.append(time.monotonic())
+        time.sleep(0.25)  # in flight across several pacing slots
+        return _result()
+
+    code = job.run(session, classify_fn=classify, log=silent)
+
+    assert code == 0
+    assert len(starts) == 5
+    gaps = [later - earlier for earlier, later in zip(starts, starts[1:])]
+    assert all(gap >= 0.1 - 0.03 for gap in gaps), gaps
+
+
+def test_concurrent_run_honors_the_product_cap_and_reports_the_stop(session, monkeypatch):
+    monkeypatch.setattr(job, "EDITORIAL_JOB_CONCURRENCY", 3)
+    monkeypatch.setattr(job, "EDITORIAL_JOB_RPM", 0)
+    for index in range(6):
+        _product(session, asin=f"P{index}", title=f"T{index}")
+    logs = []
+
+    code = job.run(session, classify_fn=_ConcurrencyProbe(delay=0.01), limit=4,
+                   log=logs.append)
+
+    assert code == 0
+    assert any("stopped=limit" in line for line in logs)
+    assert len(session.exec(select(EditorialDecision)).all()) == 4
+    assert len(_pending(session)) == 2
 
 
 # --------------------------------------------------------------------------- #
