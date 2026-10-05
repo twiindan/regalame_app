@@ -7,16 +7,19 @@ never by re-asking the model. Mirrors ``jobs/refresh_catalog.py``: a synchronous
 ``run(session, ...)`` seam plus a ``main()`` CLI.
 """
 
+import argparse
 import json
+import sys
 from dataclasses import dataclass
 
-from sqlmodel import select
+from sqlmodel import Session, select
 
 import curation
 import curation_provider
 from curation import EDITORIAL_POLICY_VERSION, EDITORIAL_STATES
 from curation_provider import EDITORIAL_PROVIDER_MODEL
-from models import EditorialDecision, Product
+from database import engine
+from models import EditorialDecision, EditorialGateState, Product, utcnow_naive
 
 #: Adopted gate thresholds (concrete so they are testable; re-tunable by
 #: updating the specification).
@@ -179,3 +182,105 @@ def evaluate(session, labels_path):
         unknown_flagged=unknown_ratio > GATE_MAX_UNKNOWN_RATIO,
         labeled_count=len(labels),
     )
+
+
+def _upsert_gate(session, report):
+    """Upsert the single gate row (created on the first run, updated after)."""
+    gate = session.exec(select(EditorialGateState).limit(1)).first()
+    if gate is None:
+        gate = EditorialGateState(
+            gate_passed=report.gate_passed,
+            coverage_ratio=report.coverage_ratio,
+            unknown_ratio=report.unknown_ratio,
+            overall_agreement=report.overall_agreement,
+            excluded_leak_ratio=report.excluded_leak_ratio,
+            policy_version=report.policy_version,
+            model_id=report.model_id,
+        )
+        session.add(gate)
+    else:
+        gate.gate_passed = report.gate_passed
+        gate.coverage_ratio = report.coverage_ratio
+        gate.unknown_ratio = report.unknown_ratio
+        gate.overall_agreement = report.overall_agreement
+        gate.excluded_leak_ratio = report.excluded_leak_ratio
+        gate.policy_version = report.policy_version
+        gate.model_id = report.model_id
+        gate.updated_at = utcnow_naive()
+        session.add(gate)
+    session.commit()
+    return gate
+
+
+def _build_template(session):
+    """The stratified label template an operator fills in before evaluation."""
+    sample = sample_products(session)
+    return {
+        "policy_version": EDITORIAL_POLICY_VERSION,
+        "labels": [{"asin": product.asin, "expected_state": ""} for product in sample],
+    }
+
+
+def _emit_template(session, sample_out, log):
+    template = _build_template(session)
+    if sample_out:
+        with open(sample_out, "w", encoding="utf-8") as handle:
+            json.dump(template, handle, ensure_ascii=False, indent=2)
+        log(f"sample={len(template['labels'])} written={sample_out}")
+    else:
+        log(json.dumps(template, ensure_ascii=False))
+    return 0
+
+
+def run(session, labels_path=None, sample_out=None, log=print):
+    """Run the gate. Returns 0 on success, 1 on a malformed labels file.
+
+    With ``labels_path=None`` the stratified label template is emitted (to
+    ``sample_out`` or the log); no gate row is written and no provider call is
+    made. With a labels file, the metrics are measured and the single gate row
+    is upserted — a malformed file returns 1 *before* any write.
+    """
+    if labels_path is None:
+        return _emit_template(session, sample_out, log)
+
+    try:
+        report = evaluate(session, labels_path)
+    except LabelsError as exc:
+        log(f"labels=invalid error={exc}")
+        return 1
+
+    _upsert_gate(session, report)
+    log(
+        f"gate_passed={report.gate_passed} coverage={report.coverage_ratio:.4f} "
+        f"agreement={report.overall_agreement:.4f} leak={report.excluded_leak_ratio:.4f} "
+        f"unknown={report.unknown_ratio:.4f} flagged={report.unknown_flagged}"
+    )
+    return 0
+
+
+def _parse_args(argv):
+    parser = argparse.ArgumentParser(
+        description="Evaluate editorial classification quality offline"
+    )
+    parser.add_argument(
+        "--labels", default=None,
+        help="Human-labels JSON file to evaluate against the persisted decisions",
+    )
+    parser.add_argument(
+        "--sample-out", default=None,
+        help="Write the stratified label template to this path instead of evaluating",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv=None, session=None):
+    """CLI entry point. Returns the exit code."""
+    args = _parse_args(argv)
+    if session is not None:
+        return run(session, labels_path=args.labels, sample_out=args.sample_out)
+    with Session(engine) as owned:
+        return run(owned, labels_path=args.labels, sample_out=args.sample_out)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
