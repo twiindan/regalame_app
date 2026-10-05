@@ -123,3 +123,45 @@ class ProductList(SQLModel, table=True):
     product_id: int = Field(foreign_key="product.id", index=True)
     list_key: str = Field(index=True)
     rank: int
+
+class EditorialDecision(SQLModel, table=True):
+    """One editorial decision per product (AI output + manual override).
+
+    The AI-produced columns and the manual-override columns are separate
+    nullable groups; the effective decision is ``coalesce(manual, ai)`` at the
+    read sites. A manual override always wins over a fresh AI decision.
+    """
+    __tablename__ = "editorial_decision"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    product_id: int = Field(foreign_key="product.id", unique=True, index=True)
+
+    # AI-produced decision (nullable: a manual override may exist on its own).
+    state: Optional[str] = None
+    context: Optional[str] = None
+    reason: Optional[str] = None
+    model_id: Optional[str] = None
+    policy_version: Optional[str] = None
+    input_fingerprint: Optional[str] = None
+    classified_at: Optional[datetime] = Field(default_factory=utcnow_naive)
+
+    # Manual override (nullable: absent until an operator sets it).
+    manual_state: Optional[str] = None
+    manual_context: Optional[str] = None
+    manual_reason: Optional[str] = None
+    manual_updated_at: Optional[datetime] = None
+
+class EditorialGateState(SQLModel, table=True):
+    """Single-row record of the last evaluation-gate verdict."""
+    __tablename__ = "editorial_gate_state"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    gate_passed: bool
+    coverage_ratio: float
+    unknown_ratio: float
+    overall_agreement: Optional[float] = None
+    excluded_leak_ratio: Optional[float] = None
+    policy_version: str
+    model_id: str
+    evaluated_at: datetime = Field(default_factory=utcnow_naive)
+    updated_at: datetime = Field(default_factory=utcnow_naive)
