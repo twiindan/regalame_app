@@ -40,9 +40,10 @@ EDITORIAL_PROVIDER_API_KEY = os.getenv("EDITORIAL_PROVIDER_API_KEY") or os.geten
 #: lowered settings return a materially higher rate of *unusable* decisions: the
 #: model answers ``contextual`` with an invented sub-context (e.g. ``coffee-
 #: enthusiast``) that the v1 validator rejects, so those products are never cached
-#: and coverage cannot reach 1.0. Opt in with ``minimal`` (roughly 8x faster, but
-#: measured ~2x the invalid-decision rate) or ``low`` only when that tradeoff is
-#: acceptable. An empty value also omits the field.
+#: and coverage cannot reach 1.0. The system prompt now names the exact allowed
+#: context vocabulary, which addresses that failure mode at the default effort;
+#: the lowered settings remain opt-in until a re-probe confirms them. An empty
+#: value also omits the field.
 EDITORIAL_PROVIDER_REASONING_EFFORT = (
     os.getenv("EDITORIAL_PROVIDER_REASONING_EFFORT") or None
 )
@@ -97,6 +98,28 @@ POLICY_PROMPT = (
     "unknown means gift suitability cannot be determined from the title and category. "
     "Base the decision only on the title and category provided."
 )
+
+
+def _context_constraint(allowed_contexts: Iterable[str]) -> str:
+    """System-prompt suffix naming the exact contextual vocabulary.
+
+    The model invents slugs (``coffee-enthusiast``, ``alcohol``) when it answers
+    ``contextual``; telling it the exact values ``parse_provider_response`` will
+    accept is what turns those answers from invalid into cacheable decisions.
+    Rendered here, never into the constant ``POLICY_PROMPT``.
+    """
+    values = sorted(set(allowed_contexts))
+    if values:
+        rendered = ", ".join(values)
+        return (
+            " When state is contextual, context MUST be exactly one of: "
+            f"{rendered}. If none of these fit, choose eligible, excluded, or unknown instead."
+        )
+    return (
+        " When state is contextual, context MUST be exactly one of the allowed "
+        "category contexts; none are available here, so choose eligible, excluded, "
+        "or unknown instead."
+    )
 
 
 def _resolve_allowed_contexts(allowed_contexts: Optional[Iterable[str]]) -> set[str]:
@@ -197,21 +220,27 @@ def _post_chat_completions(payload: dict, *, base_url: Optional[str] = None,
     return response.json()
 
 
-def _build_payload(item: dict, model: str, *, reasoning_effort=_UNSET) -> dict:
+def _build_payload(item: dict, model: str, *, allowed_contexts: Optional[Iterable[str]] = None,
+                   reasoning_effort=_UNSET) -> dict:
     """Build the provider payload from a product item.
 
     Data minimization: the only product facts sent are the title and the
-    observed category. User, wish and account data never enter the payload.
-    ``reasoning_effort`` defaults to the module-level
+    observed category (plus the allowed context vocabulary in the system prompt,
+    which is category metadata, never user data). ``allowed_contexts`` defaults
+    to ``_allowed_contexts(item)`` so the prompt always names the exact values the
+    strict validator accepts. ``reasoning_effort`` defaults to the module-level
     ``EDITORIAL_PROVIDER_REASONING_EFFORT`` and is omitted entirely when falsy.
     """
     if reasoning_effort is _UNSET:
         reasoning_effort = EDITORIAL_PROVIDER_REASONING_EFFORT
+    if allowed_contexts is None:
+        allowed_contexts = _allowed_contexts(item)
+    system_prompt = POLICY_PROMPT + _context_constraint(allowed_contexts)
     product = {"title": item.get("title"), "category": item.get("category")}
     payload = {
         "model": model,
         "messages": [
-            {"role": "system", "content": POLICY_PROMPT},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": json.dumps(product, ensure_ascii=False)},
         ],
         "response_format": {
@@ -267,8 +296,8 @@ def classify_product(item: dict, *, transport: Optional[Transport] = None,
             timeout=timeout,
         )
 
-    payload = _build_payload(item, resolved_model)
     allowed_contexts = _allowed_contexts(item)
+    payload = _build_payload(item, resolved_model, allowed_contexts=allowed_contexts)
 
     for _ in range(max(0, int(max_attempts))):
         try:

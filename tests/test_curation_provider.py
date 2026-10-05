@@ -306,6 +306,35 @@ def test_build_payload_sets_the_model_and_the_strict_response_format():
     }
 
 
+def test_build_payload_renders_the_allowed_context_vocabulary_into_the_system_prompt():
+    # The model invents slugs (``coffee-enthusiast``, ``alcohol``) for
+    # ``contextual`` answers; the prompt must name the exact values the strict
+    # validator accepts so a valid decision is not thrown away as out-of-vocabulary.
+    payload = curation_provider._build_payload(
+        _item(), "m", allowed_contexts={"hogar-y-cocina"}
+    )
+
+    system = payload["messages"][0]["content"]
+    assert payload["messages"][0]["role"] == "system"
+    assert "hogar-y-cocina" in system
+    assert "context MUST be exactly one of" in system
+
+
+def test_build_payload_defaults_the_context_vocabulary_from_the_item():
+    payload = curation_provider._build_payload(_item(), "m")
+
+    system = payload["messages"][0]["content"]
+    assert "hogar-y-cocina" in system
+    assert "context MUST be exactly one of" in system
+
+
+def test_build_payload_renders_the_constraint_even_with_an_empty_vocabulary():
+    payload = curation_provider._build_payload(_item(category_slug=None), "m")
+
+    system = payload["messages"][0]["content"]
+    assert "context MUST be exactly one of" in system
+
+
 # --------------------------------------------------------------------------- #
 # 3.5 — optional reasoning_effort on the request payload
 # --------------------------------------------------------------------------- #
@@ -403,6 +432,19 @@ def test_classify_sends_the_minimal_build_payload():
     assert transport.payloads[0] == curation_provider._build_payload(
         _item(), curation_provider.EDITORIAL_PROVIDER_MODEL
     )
+
+
+def test_classify_product_propagates_the_items_allowed_context_vocabulary_into_the_prompt():
+    transport = _RecordingTransport(
+        body=_body(_content(state="contextual", context="hogar-y-cocina", reason="home only"))
+    )
+
+    result = classify_product(_item(), transport=transport)
+
+    assert result is not None
+    system = transport.payloads[0]["messages"][0]["content"]
+    assert "hogar-y-cocina" in system
+    assert "context MUST be exactly one of" in system
 
 
 def test_classify_returns_none_when_the_transport_raises():
