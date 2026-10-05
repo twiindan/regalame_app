@@ -10,6 +10,7 @@ tests and CI make zero network calls.
 import json
 import os
 from dataclasses import dataclass
+from functools import partial
 from typing import Callable, Iterable, Optional
 
 import requests
@@ -148,7 +149,7 @@ def parse_provider_response(body: dict,
 
 
 # --------------------------------------------------------------------------- #
-# Transport
+# Transport + classification
 # --------------------------------------------------------------------------- #
 
 
@@ -192,3 +193,56 @@ def _build_payload(item: dict, model: str) -> dict:
         ],
         "response_format": {"type": "json_schema", "json_schema": DECISION_JSON_SCHEMA},
     }
+
+
+def _allowed_contexts(item: dict) -> set[str]:
+    """The v1 contextual vocabulary for a product item.
+
+    v1: a contextual decision is valid only when its context equals the
+    product's own ``category_slug`` (plus the closed policy vocabulary, empty at
+    v1). It is supplied from the item because ``parse_provider_response`` is pure
+    and cannot know the product.
+    """
+    allowed = set(EDITORIAL_CONTEXTS)
+    slug = item.get("category_slug")
+    if isinstance(slug, str) and slug:
+        allowed.add(slug)
+    return allowed
+
+
+def classify_product(item: dict, *, transport: Optional[Transport] = None,
+                     timeout: float = _DEFAULT_TIMEOUT, max_attempts: int = 2,
+                     base_url: Optional[str] = None, model: Optional[str] = None,
+                     api_key: Optional[str] = None) -> Optional[ClassificationResult]:
+    """Classify one product, returning ``None`` on any failure.
+
+    ``transport`` is injectable (tests pass a fake; CI makes zero network calls).
+    When omitted, the production ``requests`` transport is used with the explicit
+    configuration or the module env defaults. Any transport error, timeout, or
+    invalid response yields ``None``; attempts are bounded by ``max_attempts`` and
+    this function never raises to its caller.
+    """
+    resolved_model = model if model is not None else EDITORIAL_PROVIDER_MODEL
+
+    if transport is None:
+        resolved_base_url = base_url if base_url is not None else EDITORIAL_PROVIDER_BASE_URL
+        resolved_api_key = api_key if api_key is not None else EDITORIAL_PROVIDER_API_KEY
+        transport = partial(
+            _post_chat_completions,
+            base_url=resolved_base_url,
+            api_key=resolved_api_key,
+            timeout=timeout,
+        )
+
+    payload = _build_payload(item, resolved_model)
+    allowed_contexts = _allowed_contexts(item)
+
+    for _ in range(max(0, int(max_attempts))):
+        try:
+            body = transport(payload)
+        except Exception:
+            continue
+        result = parse_provider_response(body, allowed_contexts=allowed_contexts)
+        if result is not None:
+            return result
+    return None

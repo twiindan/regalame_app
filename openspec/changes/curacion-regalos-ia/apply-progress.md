@@ -165,3 +165,89 @@ recorded here (`68d1083`) was stale/wrong and has been removed.
 ### Status
 
 10/10 Phase 2 tasks complete across PR 2a (`ae30a59`, 386 lines) and PR 2b (`7e824d0`, 399 lines). Ready for next batch (Work Unit 3 / PR 3 — `curation_provider.py`).
+
+---
+
+## Batch: Work Unit 3 / PR 3 — Phase 3: Provider Adapter (`curation_provider.py`)
+
+**Mode:** Strict TDD
+**Delivery:** auto-chain / stacked-to-main (PR 3 targets the PR 2 slice)
+**Status:** Complete — 3/3 Phase 3 tasks. Ready for next batch (Work Unit 4 / PR 4).
+
+**Re-slice note (review budget):** Work Unit 3 landed as **three** stacked
+commits, each a cohesive behavior under the 400-line budget: **3a** pure response
+validation, **3b** the production transport + minimal payload, and **3c**
+`classify_product` orchestration with bounded retries and the v1 context rule.
+The first attempt at a two-way split left the `classify_product` slice at 413
+authored lines, so it was split once more rather than exceed the budget. No
+tests or code were removed to fit the budget.
+
+### Completed Tasks
+
+- [x] 3.1 RED — `tests/test_curation_provider.py`: invalid-shape ⇒ `None`, transport seam, payload minimization, overrides/env reach the request (`ModuleNotFoundError: No module named 'curation_provider'`).
+- [x] 3.2 GREEN — `curation_provider.py` with frozen `ClassificationResult`, `Transport`, strict `DECISION_JSON_SCHEMA`, `POLICY_PROMPT`, `parse_provider_response`, `_post_chat_completions`, and the EXPANDED `classify_product`.
+- [x] 3.3 Verify zero-network — injected fake transport everywhere; `requests.post` monkeypatched to a fake (or to a failing sentinel) on the production path.
+
+### Files Changed
+
+| File | Action | What Was Done |
+|------|--------|---------------|
+| `curation_provider.py` | Created | Env config (`EDITORIAL_PROVIDER_BASE_URL` / `_MODEL` / `_API_KEY`), `Transport = Callable[[dict], dict]`, frozen `ClassificationResult`, strict `DECISION_JSON_SCHEMA`, `POLICY_PROMPT`, pure `parse_provider_response`, `_post_chat_completions` over `requests`, `_build_payload`, `_allowed_contexts`, and the EXPANDED `classify_product`. |
+| `tests/test_curation_provider.py` | Created | 53 tests: validation (well-formed, missing/empty choices, non-object content, enum, contextual context, empty reason, stray-context normalization, schema/prompt/frozen constants), transport/payload (`_post_chat_completions` bearer/url/timeout, env defaults, minimal payload), and `classify_product` (expanded signature, injected transport, bounded retries, timeout/invalid/never-raises, v1 context rule, env/override propagation, zero-network guard). |
+| `openspec/changes/curacion-regalos-ia/tasks.md` | Modified | Marked Phase 3 tasks 3.1–3.3 `[x]`. |
+
+### TDD Cycle Evidence
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|-----|-------|-------------|----------|
+| 3.1–3.2 (3a) | `tests/test_curation_provider.py` | Unit | ✅ 177/177 full suite | ✅ `ModuleNotFoundError: curation_provider` | ✅ 31 passed | ✅ 31 cases (valid bodies, 4 missing-choice shapes, 6 non-object contents, 4 enum shapes, 3 contextual-context shapes, 3 reason shapes, stray context, schema/prompt/frozen) | ✅ `_resolve_allowed_contexts` extracted |
+| 3.2 (3b) | `tests/test_curation_provider.py` | Unit | ✅ 31/31 provider | ✅ transport/payload names absent (ImportError before implementation) | ✅ 37 passed | ✅ 6 cases (transport contract, env defaults, bearer/url/timeout, no-key refusal, minimal payload, response_format) | ➖ None needed |
+| 3.2–3.3 (3c) | `tests/test_curation_provider.py` | Unit | ✅ 37/37 provider | ✅ `cannot import name 'classify_product'` | ✅ 53 passed | ✅ 16 cases (expanded signature, injected transport, minimal build-payload equality, transport error, timeout, 2/3 bounded retries, invalid response, never raises, v1 context rule both ways, no-slug rejection, env/override model, overrides/env reach request, injected transport bypasses `requests.post`, unconfigured key) | ➖ None needed |
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | 3a `python -m pytest -q tests/test_curation_provider.py` → **31 passed**; 3b → **37 passed**; 3c → **53 passed** |
+| Runtime harness command/scenario and exact result | **N/A in CI — zero network by contract.** The adapter's only runtime boundary is the provider HTTP call; every test injects a fake transport, and the production-transport tests monkeypatch `curation_provider.requests.post` with a fake (or a sentinel that raises if reached). The gated manual harness (one real `classify_product` call with `EDITORIAL_PROVIDER_API_KEY` set) from the tasks/design is intentionally CI-external and was not run in this worktree. |
+| Rollback boundary | Delete `curation_provider.py` and `tests/test_curation_provider.py`. Nothing imports `curation_provider` in production yet (`jobs/classify_catalog.py` in PR 4 is the first consumer); zero behavior change. |
+
+### TDD Cycle Summary
+
+- **Total Phase 3 tests written**: 53.
+- **Total tests passing**: 53/53 focused; 230/230 full suite.
+- **Layers used**: Unit (53).
+- **Approval tests (refactoring)**: None — new module.
+- **Pure functions created**: `parse_provider_response`, `_resolve_allowed_contexts`, `_build_payload`, `_allowed_contexts`.
+
+### Deviations from Design
+
+- `parse_provider_response` gains a keyword-only `allowed_contexts: Iterable[str] | None = None` (design signature was `parse_provider_response(body)`). The v1 rule needs the product's own `category_slug`, which a pure function of `body` cannot know; `classify_product` supplies `{category_slug} | EDITORIAL_CONTEXTS`. When omitted it defaults to `EDITORIAL_CONTEXTS` (empty at v1), so a contextual body with no product slug is strictly rejected. The positional `parse_provider_response(body)` call form is preserved.
+- `_post_chat_completions` gains keyword-only `base_url` / `api_key` / `timeout` so per-call overrides and env-derived values reach the request; `classify_product` binds them with `functools.partial` so the seam stays `Transport = Callable[[dict], dict]` (design Decision 6).
+- `classify_product` retries on **both** transport exceptions and invalid responses, bounded by `max_attempts` (total attempts, default 2), then returns `None`. Both are failures the spec says must never be cached, so retrying the invalid case is consistent with "retries are bounded".
+- The state enum and the closed context vocabulary are imported from `curation` (`EDITORIAL_STATES` / `EDITORIAL_CONTEXTS`) so the adapter and the domain cannot drift; `curation` never imports `curation_provider`, so there is no cycle.
+
+### Issues Found
+
+None. All 177 baseline tests remain green with no semantic modification (full suite: 230 passed).
+
+### Commits (3a / 3b / 3c re-slice)
+
+| Hash | Message | Files | Authored lines |
+|------|---------|-------|----------------|
+| `40f20b1` | `feat(curation): validate provider editorial responses strictly` | `curation_provider.py`, `tests/test_curation_provider.py` | 305 (< 400) |
+| `c410f67` | `feat(curation): add provider transport and minimal request payload` | `curation_provider.py`, `tests/test_curation_provider.py` | 190 (< 400) |
+| `17d77f9` | `feat(curation): classify products with bounded retries and v1 context rule` | `curation_provider.py`, `tests/test_curation_provider.py` | 256 (< 400) |
+
+### Workload / PR Boundary
+
+- Mode: chained PR slice (stacked-to-main); **PR 3 split into PR 3a + PR 3b + PR 3c** to fit the 400-line review budget.
+- Work unit 3a: pure validation (`ClassificationResult`, `DECISION_JSON_SCHEMA`, `POLICY_PROMPT`, `parse_provider_response`) — **305 authored lines**.
+- Work unit 3b: env config + `Transport` + `_post_chat_completions` + `_build_payload` — **190 authored lines**.
+- Work unit 3c: `_allowed_contexts` + EXPANDED `classify_product` — **256 authored lines**.
+- Boundary: starts after the Phase 2 `curation.py` domain; ends with the standalone `curation_provider.py` adapter + its 53 tests. No production consumer yet (Phase 4 job).
+- Review budget: every slice is under 400 authored lines and each was verified green independently (`python -m pytest -q tests/test_curation_provider.py`).
+
+### Status
+
+3/3 Phase 3 tasks complete across PR 3a (`40f20b1`, 305), PR 3b (`c410f67`, 190) and PR 3c (`17d77f9`, 256). Ready for next batch (Work Unit 4 / PR 4 — `jobs/classify_catalog.py`).
