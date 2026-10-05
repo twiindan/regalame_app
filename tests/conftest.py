@@ -1,5 +1,8 @@
+from datetime import datetime
+
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import event
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
@@ -16,6 +19,77 @@ engine = create_engine(
     connect_args={"check_same_thread": False}, 
     poolclass=StaticPool
 )
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--editorial-update-baselines",
+        action="store_true",
+        default=False,
+        help=(
+            "Regenerate tests/baselines/editorial_off_<surface>.html golden "
+            "snapshots. Only run this after an intentional pre-change behavior "
+            "change; review the resulting diff."
+        ),
+    )
+
+
+@pytest.fixture(name="editorial_update_baselines")
+def editorial_update_baselines_fixture(request):
+    """True when the suite was launched with --editorial-update-baselines."""
+    return request.config.getoption("--editorial-update-baselines")
+
+
+@pytest.fixture(name="sql_statements")
+def sql_statements_fixture():
+    """Capture every SQL statement executed on the shared test engine.
+
+    Used by the shadow-mode structural proof (T1): under ``off`` no statement
+    may reference the editorial tables. The listener is attached just for the
+    requesting test and removed afterwards so other tests stay untouched.
+    """
+    statements = []
+
+    def record(conn, cursor, statement, parameters, context, executemany):
+        statements.append(statement)
+
+    event.listen(engine, "before_cursor_execute", record)
+    try:
+        yield statements
+    finally:
+        event.remove(engine, "before_cursor_execute", record)
+
+
+@pytest.fixture(name="seed_editorial")
+def seed_editorial_fixture(session: Session):
+    """Insert an ``EditorialDecision`` row for a seeded product.
+
+    Defaults to an AI-produced decision (``state`` can be ``None`` for a
+    manual-only row). The visibility predicates only read the state/context
+    columns, so the fingerprint is a placeholder.
+    """
+    from curation import EDITORIAL_POLICY_VERSION
+    from models import EditorialDecision
+
+    def seed(product, state, context=None, *, manual_state=None, manual_context=None,
+             model_id="qwen3.6", policy_version=EDITORIAL_POLICY_VERSION):
+        decision = EditorialDecision(
+            product_id=product.id,
+            state=state,
+            context=context,
+            reason=f"{state or manual_state} decision",
+            model_id=model_id,
+            policy_version=policy_version,
+            input_fingerprint="seed",
+            manual_state=manual_state,
+            manual_context=manual_context,
+            manual_updated_at=datetime(2026, 1, 1) if manual_state is not None else None,
+        )
+        session.add(decision)
+        session.commit()
+        return decision
+
+    return seed
 
 @pytest.fixture(name="session")
 def session_fixture():

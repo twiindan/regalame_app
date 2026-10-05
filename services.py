@@ -209,7 +209,12 @@ def get_blog_post_detail(session: Session, slug: str):
             break
         page += 1
 
-    if not post.get("hero_image") and products:
+    # Pagination already runs over the filtered visible set: search_products
+    # applies the editorial predicate before computing totals, so the loop above
+    # never collects hidden products. A hero image is only ever derived from a
+    # non-empty visible list; when filtering empties the list the post keeps its
+    # configured hero (or none) and the template renders the curated empty state.
+    if products and not post.get("hero_image"):
         post = {**post, "hero_image": products[0].image_url}
 
     return post, products
