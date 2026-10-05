@@ -307,6 +307,52 @@ def test_build_payload_sets_the_model_and_the_strict_response_format():
 
 
 # --------------------------------------------------------------------------- #
+# 3.5 — optional reasoning_effort on the request payload
+# --------------------------------------------------------------------------- #
+
+
+def test_reasoning_effort_env_constant_defaults_to_unset():
+    # The probe showed the lowered settings reject more decisions, so the shipped
+    # default omits the field; setting the variable opts into an explicit effort.
+    assert curation_provider.EDITORIAL_PROVIDER_REASONING_EFFORT == (
+        os.getenv("EDITORIAL_PROVIDER_REASONING_EFFORT") or None
+    )
+
+
+def test_build_payload_includes_reasoning_effort_from_the_module_default(monkeypatch):
+    monkeypatch.setattr(curation_provider, "EDITORIAL_PROVIDER_REASONING_EFFORT", "minimal")
+
+    payload = curation_provider._build_payload(_item(), "m")
+
+    assert payload["reasoning_effort"] == "minimal"
+
+
+def test_build_payload_omits_reasoning_effort_when_unset(monkeypatch):
+    monkeypatch.setattr(curation_provider, "EDITORIAL_PROVIDER_REASONING_EFFORT", None)
+
+    payload = curation_provider._build_payload(_item(), "m")
+
+    assert "reasoning_effort" not in payload
+
+
+def test_build_payload_explicit_reasoning_effort_overrides_the_default(monkeypatch):
+    monkeypatch.setattr(curation_provider, "EDITORIAL_PROVIDER_REASONING_EFFORT", "minimal")
+
+    payload = curation_provider._build_payload(_item(), "m", reasoning_effort="low")
+
+    assert payload["reasoning_effort"] == "low"
+
+
+def test_classify_product_sends_the_configured_reasoning_effort(monkeypatch):
+    monkeypatch.setattr(curation_provider, "EDITORIAL_PROVIDER_REASONING_EFFORT", "minimal")
+    transport = _RecordingTransport(body=_body(_content()))
+
+    classify_product(_item(), transport=transport)
+
+    assert transport.payloads[0]["reasoning_effort"] == "minimal"
+
+
+# --------------------------------------------------------------------------- #
 # 3.3 — classify_product orchestration and failure semantics
 # --------------------------------------------------------------------------- #
 

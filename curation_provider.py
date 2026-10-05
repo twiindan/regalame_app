@@ -35,10 +35,26 @@ EDITORIAL_PROVIDER_MODEL = os.getenv("EDITORIAL_PROVIDER_MODEL", "qwen3.6")
 #: shared ``NAN_API_KEY`` used across the NaN Builders environment.
 EDITORIAL_PROVIDER_API_KEY = os.getenv("EDITORIAL_PROVIDER_API_KEY") or os.getenv("NAN_API_KEY")
 
+#: Optional OpenAI-compatible ``reasoning_effort`` sent on every request. The
+#: default is unset — the field is omitted — because the latency probe showed the
+#: lowered settings return a materially higher rate of *unusable* decisions: the
+#: model answers ``contextual`` with an invented sub-context (e.g. ``coffee-
+#: enthusiast``) that the v1 validator rejects, so those products are never cached
+#: and coverage cannot reach 1.0. Opt in with ``minimal`` (roughly 8x faster, but
+#: measured ~2x the invalid-decision rate) or ``low`` only when that tradeoff is
+#: acceptable. An empty value also omits the field.
+EDITORIAL_PROVIDER_REASONING_EFFORT = (
+    os.getenv("EDITORIAL_PROVIDER_REASONING_EFFORT") or None
+)
+
 #: A transport turns a request payload into a parsed JSON body.
 Transport = Callable[[dict], dict]
 
 _DEFAULT_TIMEOUT = 30.0
+
+#: Sentinel: ``_build_payload`` resolves the module-level
+#: ``EDITORIAL_PROVIDER_REASONING_EFFORT`` when the caller does not pass a value.
+_UNSET = object()
 
 
 
@@ -181,14 +197,18 @@ def _post_chat_completions(payload: dict, *, base_url: Optional[str] = None,
     return response.json()
 
 
-def _build_payload(item: dict, model: str) -> dict:
+def _build_payload(item: dict, model: str, *, reasoning_effort=_UNSET) -> dict:
     """Build the provider payload from a product item.
 
     Data minimization: the only product facts sent are the title and the
     observed category. User, wish and account data never enter the payload.
+    ``reasoning_effort`` defaults to the module-level
+    ``EDITORIAL_PROVIDER_REASONING_EFFORT`` and is omitted entirely when falsy.
     """
+    if reasoning_effort is _UNSET:
+        reasoning_effort = EDITORIAL_PROVIDER_REASONING_EFFORT
     product = {"title": item.get("title"), "category": item.get("category")}
-    return {
+    payload = {
         "model": model,
         "messages": [
             {"role": "system", "content": POLICY_PROMPT},
@@ -203,6 +223,9 @@ def _build_payload(item: dict, model: str) -> dict:
             },
         },
     }
+    if reasoning_effort:
+        payload["reasoning_effort"] = reasoning_effort
+    return payload
 
 
 def _allowed_contexts(item: dict) -> set[str]:
