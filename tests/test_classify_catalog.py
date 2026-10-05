@@ -638,3 +638,24 @@ def test_concurrent_failure_logs_the_underlying_error(session, monkeypatch):
     assert len(failures) == 1
     assert "title='Boom'" in failures[0]
     assert "provider exploded" in failures[0]
+
+
+def test_run_surfaces_the_production_provider_failure_reason(session, monkeypatch):
+    """The default ``classify_fn`` threads the job's logger into the provider.
+
+    The provider swallows every failure and returns ``None``; without this the job
+    could only report ``result=failed`` and never *why*.
+    """
+    product = _product(session, asin="P1", title="Cafetera")
+
+    def boom(payload, **kwargs):
+        raise RuntimeError("provider unreachable")
+
+    monkeypatch.setattr(curation_provider, "_post_chat_completions", boom)
+
+    logs = []
+    code = job.run(session, log=logs.append)  # production default classify_fn
+
+    assert code == 0
+    assert any("provider unreachable" in line for line in logs)
+    assert _decision(session, product.id) is None
