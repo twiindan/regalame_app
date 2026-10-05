@@ -405,14 +405,15 @@ def test_classify_product_signature_matches_the_expanded_contract():
     params = inspect.signature(classify_product).parameters
 
     assert list(params) == [
-        "item", "transport", "timeout", "max_attempts", "base_url", "model", "api_key",
+        "item", "transport", "timeout", "max_attempts", "base_url", "model", "api_key", "log",
     ]
     assert params["item"].kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
-    for name in ("transport", "timeout", "max_attempts", "base_url", "model", "api_key"):
+    for name in ("transport", "timeout", "max_attempts", "base_url", "model", "api_key", "log"):
         assert params[name].kind is inspect.Parameter.KEYWORD_ONLY, name
     assert params["transport"].default is None
     assert params["timeout"].default == 30.0
     assert params["max_attempts"].default == 2
+    assert params["log"].default is None
 
 
 def test_classify_returns_a_result_via_an_injected_transport():
@@ -666,3 +667,83 @@ def test_classify_returns_none_when_neither_provider_key_is_configured(monkeypat
     monkeypatch.setattr(module.requests, "post", forbidden)
 
     assert module.classify_product(_item()) is None
+
+
+# --------------------------------------------------------------------------- #
+# 3.6 — failure diagnostics: the log seam names *why* a call failed
+# --------------------------------------------------------------------------- #
+
+
+def test_classify_logs_the_transport_error_and_the_title():
+    transport = _RecordingTransport(exc=RuntimeError("connection reset"))
+    lines = []
+
+    result = classify_product(_item(title="Cafetera"), transport=transport, log=lines.append)
+
+    assert result is None
+    assert len(lines) == 1
+    assert "provider_failed" in lines[0]
+    assert "title='Cafetera'" in lines[0]
+    assert "attempts=2" in lines[0]
+    assert "connection reset" in lines[0]
+
+
+def test_classify_logs_the_missing_api_key_reason(monkeypatch):
+    # The opacity this closes: without a key the adapter returns None exactly like
+    # any other failure, so the run could not tell "no credential" from "provider down".
+    monkeypatch.setattr(curation_provider, "EDITORIAL_PROVIDER_API_KEY", None)
+    lines = []
+
+    result = classify_product(_item(), log=lines.append)
+
+    assert result is None
+    assert len(lines) == 1
+    assert "EDITORIAL_PROVIDER_API_KEY is not configured" in lines[0]
+
+
+def test_classify_logs_invalid_response_when_the_transport_succeeds_with_garbage():
+    transport = _RecordingTransport(body={"choices": []})
+    lines = []
+
+    result = classify_product(_item(), transport=transport, log=lines.append)
+
+    assert result is None
+    assert len(lines) == 1
+    assert "reason=invalid_response" in lines[0]
+
+
+def test_classify_logs_a_single_failure_line_even_with_several_attempts():
+    transport = _RecordingTransport(exc=RuntimeError("boom"))
+    lines = []
+
+    classify_product(_item(), transport=transport, max_attempts=3, log=lines.append)
+
+    assert len(lines) == 1
+
+
+def test_classify_never_logs_on_success():
+    transport = _RecordingTransport(body=_body(_content()))
+    lines = []
+
+    result = classify_product(_item(), transport=transport, log=lines.append)
+
+    assert result is not None
+    assert lines == []
+
+
+def test_classify_is_silent_by_default(capsys):
+    transport = _RecordingTransport(exc=RuntimeError("boom"))
+
+    assert classify_product(_item(), transport=transport) is None
+
+    assert capsys.readouterr().out == ""
+
+
+def test_classify_bounds_the_logged_title():
+    transport = _RecordingTransport(exc=RuntimeError("boom"))
+    lines = []
+
+    classify_product(_item(title="X" * 200), transport=transport, log=lines.append)
+
+    assert "X" * 200 not in lines[0]
+    assert "..." in lines[0]

@@ -272,10 +272,21 @@ def _allowed_contexts(item: dict) -> set[str]:
     return allowed
 
 
+def _log_title(item: dict, limit: int = 80) -> str:
+    """A bounded rendering of the item title for a failure diagnostic."""
+    title = item.get("title")
+    rendered = "" if title is None else str(title)
+    if len(rendered) > limit:
+        rendered = rendered[: limit - 3] + "..."
+    return rendered
+
+
 def classify_product(item: dict, *, transport: Optional[Transport] = None,
                      timeout: float = _DEFAULT_TIMEOUT, max_attempts: int = 2,
                      base_url: Optional[str] = None, model: Optional[str] = None,
-                     api_key: Optional[str] = None) -> Optional[ClassificationResult]:
+                     api_key: Optional[str] = None,
+                     log: Optional[Callable[..., None]] = None
+                     ) -> Optional[ClassificationResult]:
     """Classify one product, returning ``None`` on any failure.
 
     ``transport`` is injectable (tests pass a fake; CI makes zero network calls).
@@ -283,6 +294,12 @@ def classify_product(item: dict, *, transport: Optional[Transport] = None,
     configuration or the module env defaults. Any transport error, timeout, or
     invalid response yields ``None``; attempts are bounded by ``max_attempts`` and
     this function never raises to its caller.
+
+    ``log`` is an optional callable (the job threads its own logger in) that
+    receives exactly one diagnostic line when every attempt fails, naming the last
+    reason: ``error=<exc>`` for a transport failure, including a missing
+    credential, or ``reason=invalid_response`` for a response the strict validator
+    rejected. It is never called on success, so a healthy run stays quiet.
     """
     resolved_model = model if model is not None else EDITORIAL_PROVIDER_MODEL
 
@@ -299,12 +316,28 @@ def classify_product(item: dict, *, transport: Optional[Transport] = None,
     allowed_contexts = _allowed_contexts(item)
     payload = _build_payload(item, resolved_model, allowed_contexts=allowed_contexts)
 
-    for _ in range(max(0, int(max_attempts))):
+    attempts = max(0, int(max_attempts))
+    last_error = None
+    invalid = False
+    for _ in range(attempts):
         try:
             body = transport(payload)
-        except Exception:
+        except Exception as exc:
+            last_error = exc
+            invalid = False
             continue
         result = parse_provider_response(body, allowed_contexts=allowed_contexts)
         if result is not None:
             return result
+        last_error = None
+        invalid = True
+
+    if log is not None:
+        if last_error is not None:
+            detail = f"error={last_error!r}"
+        elif invalid:
+            detail = "reason=invalid_response"
+        else:
+            detail = "reason=no_attempt"
+        log(f"provider_failed title={_log_title(item)!r} attempts={attempts} {detail}")
     return None

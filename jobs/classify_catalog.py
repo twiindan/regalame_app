@@ -12,6 +12,7 @@ import sys
 import threading
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from functools import partial
 
 from sqlmodel import Session
 
@@ -92,6 +93,12 @@ def run(session, classify_fn=curation_provider.classify_product, *, dry_run=Fals
     max_seconds = max_seconds if max_seconds is not None else EDITORIAL_JOB_MAX_SECONDS
     commit_every = max(1, EDITORIAL_JOB_COMMIT_EVERY)
     concurrency = max(1, EDITORIAL_JOB_CONCURRENCY)
+
+    # The production provider (the default ``classify_fn``) returns ``None`` for
+    # every failure, so it needs the job's logger to name *why*. An injected fake
+    # keeps its own logging and is called as-is.
+    if classify_fn is curation_provider.classify_product:
+        classify_fn = partial(curation_provider.classify_product, log=log)
 
     log(f"classify: start pending={len(pending)} concurrency={concurrency} "
         f"rpm={EDITORIAL_JOB_RPM} commit_every={commit_every} "
