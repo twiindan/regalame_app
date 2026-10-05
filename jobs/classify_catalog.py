@@ -93,6 +93,11 @@ def run(session, classify_fn=curation_provider.classify_product, *, dry_run=Fals
     commit_every = max(1, EDITORIAL_JOB_COMMIT_EVERY)
     concurrency = max(1, EDITORIAL_JOB_CONCURRENCY)
 
+    log(f"classify: start pending={len(pending)} concurrency={concurrency} "
+        f"rpm={EDITORIAL_JOB_RPM} commit_every={commit_every} "
+        f"max_products={product_cap} max_seconds={max_seconds} "
+        f"model={EDITORIAL_PROVIDER_MODEL} policy={EDITORIAL_POLICY_VERSION}")
+
     if concurrency > 1:
         return _run_concurrent(
             session, classify_fn, pending, concurrency=concurrency,
@@ -165,6 +170,9 @@ def _run_sequential(session, classify_fn, pending, *, product_cap, cap_reason,
                 model_id=EDITORIAL_PROVIDER_MODEL, policy_version=EDITORIAL_POLICY_VERSION,
             )
             classified += 1
+            _log_product(log, processed, len(pending), product, result, started)
+        else:
+            _log_failure(log, processed, len(pending), product, started)
 
         if processed % commit_every == 0:
             session.commit()
@@ -180,6 +188,7 @@ def _run_sequential(session, classify_fn, pending, *, product_cap, cap_reason,
     if stopped is not None:
         log(f"stopped={stopped} processed={processed} classified={classified} "
             f"pending={len(pending) - processed} elapsed={_now() - started:.1f}")
+    _log_summary(log, processed, classified, len(pending), started)
     return 0
 
 
@@ -204,7 +213,7 @@ def _run_concurrent(session, classify_fn, pending, *, concurrency, product_cap, 
     index = 0
     in_flight = {}
 
-    def collect(product, result):
+    def collect(product, result, error=None):
         nonlocal classified, processed, batch, last_committed
         processed += 1
         if result is not None:
@@ -213,6 +222,9 @@ def _run_concurrent(session, classify_fn, pending, *, concurrency, product_cap, 
                 model_id=EDITORIAL_PROVIDER_MODEL, policy_version=EDITORIAL_POLICY_VERSION,
             )
             classified += 1
+            _log_product(log, processed, total, product, result, started)
+        else:
+            _log_failure(log, processed, total, product, started, error)
         if processed % commit_every == 0:
             session.commit()
             batch += 1
@@ -240,11 +252,13 @@ def _run_concurrent(session, classify_fn, pending, *, concurrency, product_cap, 
             done, _ = wait(set(in_flight), return_when=FIRST_COMPLETED)
             for future in done:
                 product = in_flight.pop(future)
+                error = None
                 try:
                     result = future.result()
-                except Exception:
+                except Exception as exc:
                     result = None
-                collect(product, result)
+                    error = exc
+                collect(product, result, error)
 
     if processed > last_committed:
         session.commit()
@@ -254,7 +268,37 @@ def _run_concurrent(session, classify_fn, pending, *, concurrency, product_cap, 
     if stopped is not None:
         log(f"stopped={stopped} processed={processed} classified={classified} "
             f"pending={total - processed} elapsed={_now() - started:.1f}")
+    _log_summary(log, processed, classified, total, started)
     return 0
+
+
+def _short(text, limit=80) -> str:
+    """A bounded, log-safe rendering of a product field."""
+    rendered = "" if text is None else str(text)
+    if len(rendered) > limit:
+        rendered = rendered[: limit - 3] + "..."
+    return rendered
+
+
+def _log_product(log, index, total, product, result, started) -> None:
+    """One activity line per classified product, so a run is observable live."""
+    context = result.context if result.context else "-"
+    log(f"product={index}/{total} title={_short(product.title)!r} state={result.state} "
+        f"context={context} reason={_short(result.reason)!r} elapsed={_now() - started:.1f}")
+
+
+def _log_failure(log, index, total, product, started, error=None) -> None:
+    """One line per failed product; it stays pending for a future run."""
+    suffix = f" error={error!r}" if error is not None else ""
+    log(f"product={index}/{total} title={_short(product.title)!r} result=failed"
+        f"{suffix} elapsed={_now() - started:.1f}")
+
+
+def _log_summary(log, processed, classified, total, started) -> None:
+    """Always emitted, so an operator sees totals even without a batch boundary."""
+    log(f"classify: done processed={processed} classified={classified} "
+        f"failed={processed - classified} pending={max(0, total - processed)} "
+        f"elapsed={_now() - started:.1f}")
 
 
 def _log_progress(log, batch, classified, total_pending, processed, started) -> None:

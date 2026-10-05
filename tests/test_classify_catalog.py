@@ -552,3 +552,89 @@ def test_main_uses_the_injected_session_and_returns_zero(session):
     code = job.main(["--dry-run"], session=session)
 
     assert code == 0
+
+
+# --------------------------------------------------------------------------- #
+# 4.7 — run logs: start config, per-product activity, failures, final summary
+# --------------------------------------------------------------------------- #
+
+
+def _lines(logs, needle):
+    return [line for line in logs if needle in line]
+
+
+def test_run_logs_a_start_line_with_the_run_configuration(session):
+    _product(session, asin="P1", title="Cafetera")
+    _product(session, asin="P2", title="Taza")
+
+    logs = []
+    job.run(session, classify_fn=_Recorder(), log=logs.append)
+
+    start = _lines(logs, "classify: start")
+    assert len(start) == 1
+    assert "pending=2" in start[0]
+    assert "concurrency=1" in start[0]
+    assert f"model={MODEL}" in start[0]
+
+
+def test_run_logs_one_activity_line_per_classified_product(session):
+    _product(session, asin="P1", title="Cafetera")
+
+    logs = []
+    job.run(session, classify_fn=_Recorder(default=_result(state="eligible")),
+            log=logs.append)
+
+    activity = _lines(logs, "product=1/1")
+    assert len(activity) == 1
+    assert "title='Cafetera'" in activity[0]
+    assert "state=eligible" in activity[0]
+
+
+def test_run_logs_a_failed_product_without_stopping_the_run(session):
+    bad = _product(session, asin="BAD", title="Bad")
+    good = _product(session, asin="GOOD", title="Good")
+
+    logs = []
+    job.run(session, classify_fn=_Recorder(results={"Bad": None}, default=_result()),
+            log=logs.append)
+
+    failures = _lines(logs, "result=failed")
+    assert len(failures) == 1
+    assert "title='Bad'" in failures[0]
+    assert _decision(session, good.id) is not None
+
+
+def test_run_logs_a_final_summary_with_the_failed_count(session):
+    _product(session, asin="BAD", title="Bad")
+    _product(session, asin="GOOD", title="Good")
+
+    logs = []
+    job.run(session, classify_fn=_Recorder(results={"Bad": None}, default=_result()),
+            log=logs.append)
+
+    summary = _lines(logs, "classify: done")
+    assert len(summary) == 1
+    assert "processed=2" in summary[0]
+    assert "classified=1" in summary[0]
+    assert "failed=1" in summary[0]
+
+
+def test_concurrent_failure_logs_the_underlying_error(session, monkeypatch):
+    monkeypatch.setattr(job, "EDITORIAL_JOB_CONCURRENCY", 2)
+    monkeypatch.setattr(job, "EDITORIAL_JOB_RPM", 0)
+    _product(session, asin="BOOM", title="Boom")
+    _product(session, asin="OK", title="Ok")
+
+    def classify(item):
+        if item["title"] == "Boom":
+            raise RuntimeError("provider exploded")
+        return _result()
+
+    logs = []
+    code = job.run(session, classify_fn=classify, log=logs.append)
+
+    assert code == 0
+    failures = _lines(logs, "result=failed")
+    assert len(failures) == 1
+    assert "title='Boom'" in failures[0]
+    assert "provider exploded" in failures[0]
