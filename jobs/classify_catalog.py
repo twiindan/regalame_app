@@ -23,10 +23,21 @@ from database import engine
 #: the resumability checkpoint, so a restarted run skips committed work.
 EDITORIAL_JOB_COMMIT_EVERY = int(os.getenv("EDITORIAL_JOB_COMMIT_EVERY", "25"))
 
+#: Sequential run bounds. Reaching any bound stops cleanly (exit 0) with the
+#: remaining products deferred to a future run.
+EDITORIAL_JOB_RPM = int(os.getenv("EDITORIAL_JOB_RPM", "60"))
+EDITORIAL_JOB_MAX_SECONDS = int(os.getenv("EDITORIAL_JOB_MAX_SECONDS", "3300"))
+EDITORIAL_JOB_MAX_PRODUCTS = int(os.getenv("EDITORIAL_JOB_MAX_PRODUCTS", "500"))
+
 
 def _now() -> float:
     """Monotonic clock seam (monkeypatched by the bounds tests)."""
     return time.monotonic()
+
+
+def _sleep(seconds: float) -> None:
+    """Sleep seam (monkeypatched by the bounds tests)."""
+    time.sleep(seconds)
 
 
 def _product_item(product) -> dict:
@@ -61,18 +72,37 @@ def run(session, classify_fn=curation_provider.classify_product, *, dry_run=Fals
         log(f"dry-run pending={len(pending)} elapsed={_now() - started:.1f}")
         return 0
 
+    if limit is not None:
+        product_cap, cap_reason = limit, "limit"
+    else:
+        product_cap, cap_reason = EDITORIAL_JOB_MAX_PRODUCTS, "max_products"
+    max_seconds = max_seconds if max_seconds is not None else EDITORIAL_JOB_MAX_SECONDS
+    min_interval = 60.0 / EDITORIAL_JOB_RPM if EDITORIAL_JOB_RPM > 0 else 0.0
+
     commit_every = max(1, EDITORIAL_JOB_COMMIT_EVERY)
     classified = 0
     processed = 0
     batch = 0
     last_committed = 0
+    last_start = None
     stopped = None
 
     for product in pending:
-        if limit is not None and processed >= limit:
-            stopped = "limit"
+        if product_cap is not None and processed >= product_cap:
+            stopped = cap_reason
             break
 
+        # Sequential (concurrency 1): space requests out to respect the RPM bound.
+        if last_start is not None and min_interval > 0:
+            wait = min_interval - (_now() - last_start)
+            if wait > 0:
+                _sleep(wait)
+
+        if _now() - started >= max_seconds:
+            stopped = "max_seconds"
+            break
+
+        last_start = _now()
         result = classify_fn(_product_item(product))
         processed += 1
         if result is not None:

@@ -6,9 +6,11 @@ provider calls and zero network calls: every test injects a recording fake
 ``classify_fn`` and drives an in-memory session.
 """
 
+import os
 import re
 from datetime import datetime
 
+import pytest
 from sqlmodel import select
 
 import curation
@@ -28,6 +30,15 @@ MODEL = curation_provider.EDITORIAL_PROVIDER_MODEL
 
 def silent(*args, **kwargs):
     pass
+
+
+@pytest.fixture(autouse=True)
+def _no_real_sleep(monkeypatch):
+    """Keep the 60 rpm production default from spending real seconds in tests.
+
+    The rate-bound test injects its own virtual ``_sleep`` and overrides this.
+    """
+    monkeypatch.setattr(job, "_sleep", lambda seconds: None)
 
 
 def _product(session, *, asin, title, category="Hogar y cocina", slug="hogar-y-cocina",
@@ -290,6 +301,120 @@ def test_progress_log_lines_report_each_batch(session, monkeypatch):
     last = re.search(r"batch=(\d+) classified=(\d+) pending=(\d+)", batches[1])
     assert first.groups() == ("1", "2", "1")
     assert last.groups() == ("2", "3", "0")
+
+
+# --------------------------------------------------------------------------- #
+# 4.5 — configured bounds: rate, wall time, per-run cap
+# --------------------------------------------------------------------------- #
+
+
+class _FakeClock:
+    """A virtual monotonic clock + sleep, shared by the job and the fake provider."""
+
+    def __init__(self, start=1000.0):
+        self.t = start
+
+    def now(self):
+        return self.t
+
+    def sleep(self, seconds):
+        self.t += max(0.0, seconds)
+
+
+def test_default_bounds_come_from_the_environment():
+    assert job.EDITORIAL_JOB_RPM == int(os.getenv("EDITORIAL_JOB_RPM", "60"))
+    assert job.EDITORIAL_JOB_MAX_SECONDS == int(os.getenv("EDITORIAL_JOB_MAX_SECONDS", "3300"))
+    assert job.EDITORIAL_JOB_MAX_PRODUCTS == int(os.getenv("EDITORIAL_JOB_MAX_PRODUCTS", "500"))
+    assert job.EDITORIAL_JOB_COMMIT_EVERY == int(os.getenv("EDITORIAL_JOB_COMMIT_EVERY", "25"))
+
+
+def test_request_rate_never_exceeds_the_configured_rpm(session, monkeypatch):
+    monkeypatch.setattr(job, "EDITORIAL_JOB_RPM", 60)  # one request per second
+    monkeypatch.setattr(job, "EDITORIAL_JOB_MAX_SECONDS", 3600)
+    clock = _FakeClock()
+    monkeypatch.setattr(job, "_now", clock.now)
+    monkeypatch.setattr(job, "_sleep", clock.sleep)
+    for index in range(3):
+        _product(session, asin=f"P{index}", title=f"T{index}")
+
+    starts = []
+
+    def classify(item):
+        starts.append(clock.now())
+        clock.t += 0.25  # 250 ms provider latency, below the 1 s interval
+        return _result()
+
+    code = job.run(session, classify_fn=classify, log=silent)
+
+    assert code == 0
+    gaps = [later - earlier for earlier, later in zip(starts, starts[1:])]
+    assert len(gaps) == 2
+    assert all(gap >= 1.0 - 1e-9 for gap in gaps)
+
+
+def test_the_run_stops_within_the_wall_time_bound(session, monkeypatch):
+    clock = _FakeClock()
+    monkeypatch.setattr(job, "_now", clock.now)
+    monkeypatch.setattr(job, "_sleep", clock.sleep)
+    monkeypatch.setattr(job, "EDITORIAL_JOB_RPM", 0)
+    for index in range(3):
+        _product(session, asin=f"P{index}", title=f"T{index}")
+
+    logs = []
+
+    def classify(item):
+        clock.t += 10.0  # each call burns 10 s of the wall-time budget
+        return _result()
+
+    code = job.run(session, classify_fn=classify, max_seconds=15, log=logs.append)
+
+    assert code == 0
+    assert any("stopped=max_seconds" in line for line in logs)
+    # Two calls fit in 15 s; the third is deferred to a future run.
+    assert len(session.exec(select(EditorialDecision)).all()) == 2
+    assert len(_pending(session)) == 1
+
+
+def test_the_per_run_product_cap_stops_cleanly(session, monkeypatch):
+    monkeypatch.setattr(job, "EDITORIAL_JOB_MAX_PRODUCTS", 2)
+    for index in range(3):
+        _product(session, asin=f"P{index}", title=f"T{index}")
+
+    logs = []
+    code = job.run(session, classify_fn=_Recorder(), log=logs.append)
+
+    assert code == 0
+    assert any("stopped=max_products" in line for line in logs)
+    assert len(session.exec(select(EditorialDecision)).all()) == 2
+    assert len(_pending(session)) == 1
+
+
+def test_an_explicit_limit_overrides_the_configured_product_cap(session, monkeypatch):
+    monkeypatch.setattr(job, "EDITORIAL_JOB_MAX_PRODUCTS", 5)
+    for index in range(3):
+        _product(session, asin=f"P{index}", title=f"T{index}")
+
+    job.run(session, classify_fn=_Recorder(), limit=1, log=silent)
+
+    assert len(session.exec(select(EditorialDecision)).all()) == 1
+
+
+# --------------------------------------------------------------------------- #
+# 4.5 — a failed product never stops the run with other work
+# --------------------------------------------------------------------------- #
+
+
+def test_the_job_continues_with_other_work_after_a_failure(session):
+    bad = _product(session, asin="BAD", title="Bad")
+    good = _product(session, asin="GOOD", title="Good")
+
+    recorder = _Recorder(results={"Bad": None}, default=_result(state="excluded", reason="no"))
+    code = job.run(session, classify_fn=recorder, log=silent)
+
+    assert code == 0
+    assert [call["title"] for call in recorder.calls] == ["Bad", "Good"]
+    assert _decision(session, bad.id) is None
+    assert _decision(session, good.id).state == "excluded"
 
 
 # --------------------------------------------------------------------------- #
