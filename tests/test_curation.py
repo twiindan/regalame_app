@@ -6,6 +6,7 @@ and the strictly-additive migration chain (down_revision ``9f1c7b2a4d3e``).
 import ast
 import importlib.util
 import inspect
+import os
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -15,7 +16,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 import curation
-from catalog import normalize_text
+from catalog import import_from_json, normalize_text
 from models import EditorialDecision, EditorialGateState, Product
 
 MIGRATIONS_DIR = Path(__file__).resolve().parents[1] / "alembic" / "versions"
@@ -269,6 +270,28 @@ def _make_product(session, asin, title, *, category="Hogar y cocina", slug="hoga
     return product
 
 
+def _seed_gate(session, *, gate_passed, coverage_ratio, policy_version, model_id="m",
+               unknown_ratio=0.0):
+    gate = EditorialGateState(
+        gate_passed=gate_passed,
+        coverage_ratio=coverage_ratio,
+        unknown_ratio=unknown_ratio,
+        policy_version=policy_version,
+        model_id=model_id,
+    )
+    session.add(gate)
+    session.commit()
+    session.refresh(gate)
+    return gate
+
+
+def _asins(session, predicate):
+    rows = session.exec(
+        select(Product).where(Product.is_active == True, predicate)  # noqa: E712
+    ).all()
+    return {product.asin for product in rows}
+
+
 # --------------------------------------------------------------------------- #
 # 2.1–2.2 Fingerprint rules
 # --------------------------------------------------------------------------- #
@@ -461,3 +484,281 @@ def test_effective_state_resolves_unknown_and_applies_manual_wins():
     assert curation.effective_state(
         EditorialDecision(product_id=1, state="excluded", manual_state="contextual")
     ) == "contextual"
+
+
+def test_import_from_json_leaves_editorial_decision_untouched(session, tmp_path):
+    product = _make_product(session, "B0CURATION", "Cafetera")
+    session.add(EditorialDecision(product_id=product.id, state="eligible",
+                                  input_fingerprint="fp"))
+    session.commit()
+
+    data_file = tmp_path / "bestsellers.json"
+    data_file.write_text(
+        '[{"url": "https://www.amazon.es/dp/B0CURATION", "title": "Cafetera nueva",'
+        ' "category": "Hogar", "price": "10,00 €", "image": "x.jpg"}]'
+    )
+    import_from_json(session, data_files={"bestsellers": str(data_file)})
+    session.expire_all()
+
+    refreshed = session.exec(select(Product).where(Product.asin == "B0CURATION")).one()
+    assert refreshed.title == "Cafetera nueva"  # the import did run
+
+    rows = session.exec(select(EditorialDecision)).all()
+    assert len(rows) == 1
+    assert rows[0].state == "eligible"
+    assert rows[0].input_fingerprint == "fp"
+
+
+def test_manual_override_survives_import_and_re_runs(session, tmp_path):
+    product = _make_product(session, "B0OVERRIDE", "Cafetera")
+    # The operator overrode the AI result to eligible.
+    session.add(
+        EditorialDecision(
+            product_id=product.id,
+            state="excluded",
+            manual_state="eligible",
+            manual_context="hogar-y-cocina",
+            manual_reason="operator",
+            manual_updated_at=datetime(2026, 1, 1),
+        )
+    )
+    session.commit()
+
+    # A catalog import re-runs and mutates the product, but must not touch the row.
+    data_file = tmp_path / "bestsellers.json"
+    data_file.write_text(
+        '[{"url": "https://www.amazon.es/dp/B0OVERRIDE", "title": "Cafetera nueva",'
+        ' "category": "Hogar", "price": "10,00 €", "image": "x.jpg"}]'
+    )
+    import_from_json(session, data_files={"bestsellers": str(data_file)})
+    session.expire_all()
+
+    refreshed = session.exec(select(Product).where(Product.asin == "B0OVERRIDE")).one()
+    assert refreshed.title == "Cafetera nueva"  # the import did run
+
+    # Re-running the classifier must not spend a provider call on the override.
+    assert curation.pending_products(session, policy_version="1", model_id="m") == []
+
+    decision = session.exec(
+        select(EditorialDecision).where(EditorialDecision.product_id == refreshed.id)
+    ).one()
+    assert decision.manual_state == "eligible"
+    assert decision.manual_context == "hogar-y-cocina"
+    assert decision.manual_reason == "operator"
+    assert decision.manual_updated_at == datetime(2026, 1, 1)
+    assert curation.effective_state(decision) == "eligible"
+
+
+# --------------------------------------------------------------------------- #
+# 2.5–2.6 Effective mode + enforce preconditions
+# --------------------------------------------------------------------------- #
+
+
+class _NoReadSession:
+    """Session stand-in that fails any DB access."""
+
+    def exec(self, *args, **kwargs):
+        raise AssertionError("the off path must perform zero DB reads")
+
+
+def test_effective_filter_mode_off_makes_no_db_read(monkeypatch):
+    monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "off")
+    assert curation.effective_filter_mode(_NoReadSession()) == "off"
+
+
+def test_effective_filter_mode_defaults_to_off(monkeypatch):
+    # The module reads os.getenv("EDITORIAL_FILTER_MODE", "off") at import.
+    assert curation.EDITORIAL_FILTER_MODE == os.getenv("EDITORIAL_FILTER_MODE", "off")
+
+
+def test_effective_filter_mode_enforce_without_a_gate_row_is_off(session, monkeypatch):
+    monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "enforce")
+    assert curation.effective_filter_mode(session) == "off"
+
+
+@pytest.mark.parametrize(
+    "gate_kwargs",
+    [
+        {"gate_passed": False, "coverage_ratio": 1.0, "policy_version": "1"},
+        {"gate_passed": True, "coverage_ratio": 0.97, "policy_version": "1"},
+        {"gate_passed": True, "coverage_ratio": 1.0, "policy_version": "0"},
+    ],
+    ids=["gate-failed", "incomplete-backfill", "stale-policy"],
+)
+def test_effective_filter_mode_preconditions_unmet_is_off(session, monkeypatch, gate_kwargs):
+    monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "enforce")
+    _seed_gate(session, **gate_kwargs)
+    assert curation.effective_filter_mode(session) == "off"
+
+
+def test_effective_filter_mode_enforce_when_all_preconditions_hold(session, monkeypatch):
+    monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "enforce")
+    _seed_gate(session, gate_passed=True, coverage_ratio=1.0, policy_version="1")
+    assert curation.effective_filter_mode(session) == "enforce"
+
+
+# --------------------------------------------------------------------------- #
+# 2.7–2.8 Visibility predicates
+# --------------------------------------------------------------------------- #
+
+
+def _seed_decision(session, product, state, context=None, *, manual=False):
+    decision = (
+        EditorialDecision(
+            product_id=product.id, manual_state=state, manual_context=context,
+            manual_updated_at=datetime(2026, 1, 1),
+        )
+        if manual
+        else EditorialDecision(product_id=product.id, state=state, context=context)
+    )
+    session.add(decision)
+    session.commit()
+    return decision
+
+
+def _seed_visibility_fixtures(session):
+    hogar = {"category": "Hogar y cocina", "slug": "hogar-y-cocina"}
+    electronica = {"category": "Electrónica", "slug": "electronica"}
+    fixtures = {}
+    fixtures["ELIG_H"] = _make_product(session, "ELIG_H", "Cafetera", **hogar)
+    fixtures["CTX_H"] = _make_product(session, "CTX_H", "Fundas de taza", **hogar)
+    fixtures["CTX_E_ON_H"] = _make_product(session, "CTX_E_ON_H", "Altavoz", **hogar)
+    fixtures["ELIG_E"] = _make_product(session, "ELIG_E", "Auriculares", **electronica)
+    fixtures["EXCL_H"] = _make_product(session, "EXCL_H", "Bebida alcoholica", **hogar)
+    fixtures["UNK_H"] = _make_product(session, "UNK_H", "Objeto raro", **hogar)
+    fixtures["NONE_H"] = _make_product(session, "NONE_H", "Sin clasificar", **hogar)
+
+    _seed_decision(session, fixtures["ELIG_H"], "eligible")
+    _seed_decision(session, fixtures["CTX_H"], "contextual", "hogar-y-cocina")
+    _seed_decision(session, fixtures["CTX_E_ON_H"], "contextual", "electronica")
+    _seed_decision(session, fixtures["ELIG_E"], "eligible")
+    _seed_decision(session, fixtures["EXCL_H"], "excluded")
+    _seed_decision(session, fixtures["UNK_H"], "unknown")
+    return fixtures
+
+
+def test_editorial_visibility_is_none_when_off(session, monkeypatch):
+    monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "off")
+    _seed_visibility_fixtures(session)
+    assert curation.editorial_visibility(session) is None
+
+
+def test_editorial_visibility_is_none_when_enforce_without_passing_gate(session, monkeypatch):
+    monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "enforce")
+    _seed_visibility_fixtures(session)
+    assert curation.editorial_visibility(session) is None
+
+
+def test_general_predicate_shows_only_eligible(session, monkeypatch):
+    monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "enforce")
+    _seed_gate(session, gate_passed=True, coverage_ratio=1.0, policy_version="1")
+    _seed_visibility_fixtures(session)
+
+    visibility = curation.editorial_visibility(session)
+    assert visibility is not None
+    assert _asins(session, visibility.general()) == {"ELIG_H", "ELIG_E"}
+
+
+def test_context_predicate_merges_eligible_category_and_contextual_match(session, monkeypatch):
+    monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "enforce")
+    _seed_gate(session, gate_passed=True, coverage_ratio=1.0, policy_version="1")
+    _seed_visibility_fixtures(session)
+
+    visibility = curation.editorial_visibility(session)
+    assert _asins(session, visibility.context_category("hogar-y-cocina")) == {"ELIG_H", "CTX_H"}
+    # A contextual product whose context differs from its own category is still
+    # found under its effective context (electronica), not its own slug.
+    assert _asins(session, visibility.context_category("electronica")) == {
+        "ELIG_E", "CTX_E_ON_H",
+    }
+
+
+def test_excluded_unknown_and_no_row_are_hidden_from_both_branches(session, monkeypatch):
+    monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "enforce")
+    _seed_gate(session, gate_passed=True, coverage_ratio=1.0, policy_version="1")
+    _seed_visibility_fixtures(session)
+
+    visibility = curation.editorial_visibility(session)
+    hidden = {"EXCL_H", "UNK_H", "NONE_H"}
+    assert _asins(session, visibility.general()).isdisjoint(hidden)
+    assert _asins(session, visibility.context_category("hogar-y-cocina")).isdisjoint(hidden)
+
+
+# --------------------------------------------------------------------------- #
+# 2.9 visible_category_slugs
+# --------------------------------------------------------------------------- #
+
+
+def test_general_predicate_honours_a_manual_override(session, monkeypatch):
+    monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "enforce")
+    _seed_gate(session, gate_passed=True, coverage_ratio=1.0, policy_version="1")
+
+    promoted = _make_product(session, "P1", "Bebida", category="Hogar", slug="hogar")
+    manual_only = _make_product(session, "P2", "Adorno", category="Adornos", slug="adornos")
+    # AI said excluded, the operator overrode it to eligible.
+    _seed_decision(session, promoted, "excluded")
+    promoted_decision = session.exec(
+        select(EditorialDecision).where(EditorialDecision.product_id == promoted.id)
+    ).one()
+    promoted_decision.manual_state = "eligible"
+    promoted_decision.manual_updated_at = datetime(2026, 1, 1)
+    session.add(promoted_decision)
+    # A manual-only row (no AI state) is contextual under "bebe".
+    _seed_decision(session, manual_only, "contextual", "bebe", manual=True)
+    session.commit()
+
+    visibility = curation.editorial_visibility(session)
+    assert _asins(session, visibility.general()) == {"P1"}
+    assert _asins(session, visibility.context_category("bebe")) == {"P2"}
+
+
+def test_visible_category_slugs_is_none_when_off(session, monkeypatch):
+    monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "off")
+    _make_product(session, "P1", "Cafetera", category="Hogar", slug="hogar")
+    assert curation.visible_category_slugs(session) is None
+
+
+def test_visible_category_slugs_unions_eligible_categories_and_effective_contexts(
+    session, monkeypatch
+):
+    monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "enforce")
+    _seed_gate(session, gate_passed=True, coverage_ratio=1.0, policy_version="1")
+
+    eligible_hogar = _make_product(session, "P1", "Cafetera", category="Hogar",
+                                   slug="hogar-y-cocina")
+    eligible_electronica = _make_product(session, "P2", "Auriculares",
+                                         category="Electrónica", slug="electronica")
+    contextual_libros = _make_product(session, "P3", "Novela", category="Libros",
+                                      slug="libros")
+    contextual_off_category = _make_product(session, "P4", "Moldes", category="Hogar",
+                                            slug="hogar-y-cocina")
+    excluded_juguetes = _make_product(session, "P5", "Pistola", category="Juguetes",
+                                      slug="juguetes")
+    inactive_eligible = _make_product(session, "P6", "Vinilo", category="Música",
+                                      slug="musica", active=False)
+
+    _seed_decision(session, eligible_hogar, "eligible")
+    _seed_decision(session, eligible_electronica, "eligible")
+    _seed_decision(session, contextual_libros, "contextual", "libros")
+    # Context differs from its own category: the UNION must keep the context slug.
+    _seed_decision(session, contextual_off_category, "contextual", "cocina-tematica")
+    _seed_decision(session, excluded_juguetes, "excluded")
+    _seed_decision(session, inactive_eligible, "eligible")
+
+    assert curation.visible_category_slugs(session) == {
+        "hogar-y-cocina", "electronica", "libros", "cocina-tematica",
+    }
+
+
+def test_visible_category_slugs_suppresses_a_category_with_no_visible_products(
+    session, monkeypatch
+):
+    monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "enforce")
+    _seed_gate(session, gate_passed=True, coverage_ratio=1.0, policy_version="1")
+
+    visible = _make_product(session, "P1", "Cafetera", category="Hogar", slug="hogar")
+    hidden = _make_product(session, "P2", "Pistola", category="Juguetes", slug="juguetes")
+    _seed_decision(session, visible, "eligible")
+    _seed_decision(session, hidden, "excluded")
+
+    assert curation.visible_category_slugs(session) == {"hogar"}

@@ -29,3 +29,6 @@ database.db
 
 # Pytest
 .pytest_cache/
+
+# SDD local cache (skill registry index); openspec/ IS tracked on purpose
+.atl/

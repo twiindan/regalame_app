@@ -1,8 +1,10 @@
 """Editorial curation policy and query-side logic.
 
-Pure functions plus SQL predicate builders: input fingerprints, pending-product
-selection, decision persistence, and the effective-state resolution. This module
-performs no I/O of its own.
+Pure functions plus SQL predicate builders: input fingerprints, the effective
+filter-mode resolution, the visibility predicates consumed by the catalog
+search path, pending-product selection, decision persistence, and the
+visible-category set. This module performs no I/O of its own; the only DB
+access is the single gate read on the ``enforce`` path.
 """
 
 import hashlib
@@ -10,10 +12,10 @@ import json
 import os
 from typing import Optional, Protocol, runtime_checkable
 
-from sqlalchemy import func
+from sqlalchemy import and_, func, or_
 from sqlmodel import Session, select
 
-from models import EditorialDecision, Product, utcnow_naive
+from models import EditorialDecision, EditorialGateState, Product, utcnow_naive
 
 # --------------------------------------------------------------------------- #
 # Policy constants
@@ -65,6 +67,27 @@ def compute_fingerprint(title_normalized: str, category: str, policy_version: st
         [title_normalized, category, policy_version, model_id], ensure_ascii=False
     )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def effective_filter_mode(session: Session) -> str:
+    """The effective filter mode: ``enforce`` only when configured AND gated.
+
+    Returns ``off`` unless ``EDITORIAL_FILTER_MODE == "enforce"`` and the single
+    gate row has ``gate_passed is True``, ``coverage_ratio == 1.0`` and the
+    current ``policy_version``. The ``off`` path performs zero DB reads.
+    """
+    if EDITORIAL_FILTER_MODE != "enforce":
+        return "off"
+
+    gate = session.exec(select(EditorialGateState).limit(1)).first()
+    if (
+        gate is None
+        or gate.gate_passed is not True
+        or gate.coverage_ratio != 1.0
+        or gate.policy_version != EDITORIAL_POLICY_VERSION
+    ):
+        return "off"
+    return "enforce"
 
 
 def _effective_state_column():
@@ -124,6 +147,69 @@ def pending_products(session: Session, *, policy_version: str, model_id: str,
             if limit is not None and len(pending) >= limit:
                 break
     return pending
+
+
+def _eligible_product_ids():
+    """Subquery of product ids whose effective state is ``eligible``."""
+    return select(EditorialDecision.product_id).where(
+        _effective_state_column() == "eligible"
+    )
+
+
+def _contextual_product_ids(slug: str):
+    """Subquery of product ids contextually visible under ``slug``."""
+    return select(EditorialDecision.product_id).where(
+        _effective_state_column() == "contextual",
+        _effective_context_column() == slug,
+    )
+
+
+class _EditorialVisibility:
+    """Predicate factory returned only when the effective mode is ``enforce``."""
+
+    def general(self):
+        """Matches only ``eligible`` products (no row ⇒ unknown ⇒ hidden)."""
+        return Product.id.in_(_eligible_product_ids())
+
+    def context_category(self, slug: str):
+        """Eligible products of ``slug`` OR contextual products matching ``slug``."""
+        return or_(
+            and_(Product.category_slug == slug, self.general()),
+            Product.id.in_(_contextual_product_ids(slug)),
+        )
+
+
+def editorial_visibility(session: Session) -> Optional[_EditorialVisibility]:
+    """The visibility predicate factory, or ``None`` when the mode is ``off``."""
+    if effective_filter_mode(session) != "enforce":
+        return None
+    return _EditorialVisibility()
+
+
+def visible_category_slugs(session: Session) -> Optional[set[str]]:
+    """Active category slugs with ≥1 eligible product UNION effective contexts.
+
+    ``None`` when the mode is ``off``. Under ``enforce`` the UNION (not a
+    GROUP BY over ``Product``) is required because a contextual product's
+    effective context may differ from its own category.
+    """
+    if effective_filter_mode(session) != "enforce":
+        return None
+
+    eligible_slugs = select(Product.category_slug).where(
+        Product.is_active == True,  # noqa: E712
+        Product.id.in_(_eligible_product_ids()),
+    )
+    contextual_slugs = (
+        select(_effective_context_column())
+        .join(Product, Product.id == EditorialDecision.product_id)
+        .where(
+            Product.is_active == True,  # noqa: E712
+            _effective_state_column() == "contextual",
+        )
+    )
+    rows = session.execute(eligible_slugs.union(contextual_slugs)).scalars().all()
+    return {slug for slug in rows if slug}
 
 
 def apply_decision(session: Session, product: Product, result: DecisionResult, *,
