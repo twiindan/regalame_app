@@ -33,25 +33,25 @@ it is not site-wide performance evidence and cannot support ranking guarantees.
 - UI copy stays neutral Spanish; technical documentation stays English; Jinja2/HTMX only.
 
 ## Tasks and acceptance
-- [ ] **T1 — Honest wishlist and organizer landings.** Update `templates/index.html`,
+- [x] **T1 — Honest wishlist and organizer landings.** Update `templates/index.html`,
   add the public route in `main.py` and new template, and add scoped contextual links.
   Add `tests/test_seo_landings.py` covering distinct titles/descriptions/H1s, truthful
   capability copy, anonymous/signed-in organizer access, homepage redirect/forms,
   reciprocal links, and presence/absence of the blog link by slug.
-  Implementation and functional checks complete; delivery checkbox remains open pending work-unit commit.
-- [ ] **T2 — Explicit page identity and trustworthy shared metadata.** Add opt-in absolute
+  Implementation, functional checks and local work-unit commit complete; PR/integration remain pending.
+- [x] **T2 — Explicit page identity and trustworthy shared metadata.** Add opt-in absolute
   self-canonical context for the two landings only; align their canonical, `og:url`
   and `twitter:url` using normalized `DOMAIN_URL`, without query/session fragments.
   Update `templates/base.html` to remove unsupported global aggregateRating and AI
   assertions; retain unrelated page identity behavior without blanket canonicals.
   Add `/amigo-invisible` to `main.py:91–145` sitemap; test unique inclusion, configured
   domain/trailing slash, JSON-LD validity and unrelated page metadata regressions.
-  Implementation and functional checks complete; delivery checkbox remains open pending work-unit commit.
+  Implementation, functional checks and local work-unit commit complete; PR/integration remain pending.
 
 - [x] T1/T2 implementation verified with observed strict TDD evidence below.
 - [x] Functional verification complete; parent repeated the exact safe-prefix focused command: **29 passed in 0.57s**.
 - [x] Native review capture and acknowledgment complete for the bound snapshot below.
-- [ ] Task delivery/work-unit commit pending; no commit identity exists for this change.
+- [x] Local task delivery/work-unit commit complete; exact identity below. PR/push/integration remain pending.
 
 ## Verification and evidence
 - Strict TDD source: `openspec/config.yaml:11` (`strict_tdd: true`) and `:49` (`apply.tdd: true`).
@@ -95,4 +95,11 @@ T1 and T2 may form one coherent work unit with both observed checks, not artific
 Delivery strategy: **ask-on-risk**; 400 lines is advisory per task, not a cap or reason to minify/omit tests.
 If actual authored changes exceed 400, report the exact count for the parent delivery decision before commit.
 Rollback boundary: these landing routes/templates/links, metadata/sitemap edits and paired tests/snapshots only.
-Next: create the authorized local work-unit commit; PR/push remain pending exact destination and existing GitHub CLI session authorization. Deployment requires separate authorization.
+Next: PR/push await exact destination and existing GitHub CLI session authorization. Deployment requires separate authorization.
+
+## Local work-unit delivery
+- Commit: `ff2429e23d9362b50d9208a1427a48decb2d1d9e` — `feat(seo): add dedicated wishlist and secret santa landings`.
+- One coherent T1/T2 slice on `feature/seo-dual-landings`, from base `438c97c574fa62d34d04c85683fcc1ebb8e1221f`; no other feature commits included.
+- Fresh pre-commit safe-prefix checks: `P -m pytest -q tests/test_seo_landings.py` **29 passed in 0.55s**; `P -m pytest -q --ignore=tests/test_e2e.py` **365 passed in 8.72s**; worktree/cached diff checks clean.
+- Commit manifest: 16 intended paths, **357 authored lines** (331 additions, 26 deletions) plus **114 generated lines**; **471 total**. Post-commit worktree was clean.
+- This passive progress record keeps the work-unit identity and observed checks with the feature. It changes no source behavior; no amend or remote operation was performed.
