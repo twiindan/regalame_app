@@ -6,7 +6,10 @@
     
     <!-- SEO Blocks -->
     <title>{% block title %}Regálame - Tu Lista de Deseos y Amigo Invisible{% endblock %}</title>
-    <meta name="description" content="{% block description %}La forma más fácil de organizar tu Amigo Invisible, crear listas de regalos con IA y acertar siempre.{% endblock %}">
+    <meta name="description" content="{% block description %}Crea y comparte listas de regalos con amigos y familia. Organiza grupos de amigo invisible y consulta los deseos de los participantes.{% endblock %}">
+{% if landing_canonical_url %}
+    <link rel="canonical" href="{{ landing_canonical_url }}">
+{% endif %}
     
     <!-- Schema.org Structured Data -->
     <script type="application/ld+json">
@@ -21,25 +24,20 @@
         "price": "0",
         "priceCurrency": "EUR"
       },
-      "description": "Organiza tu Amigo Invisible y crea listas de regalos con IA. Chat anónimo y sugerencias de Amazon integradas.",
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.8",
-        "ratingCount": "120"
-      }
+      "description": "Crea y comparte listas de regalos con amigos y familia. Organiza grupos de amigo invisible y consulta los deseos de los participantes."
     }
     </script>
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://regalame.app/">
+    <meta property="og:url" content="{{ landing_canonical_url or 'https://regalame.app/' }}">
     <meta property="og:title" content="{% block og_title %}{{ self.title() }}{% endblock %}">
     <meta property="og:description" content="{% block og_description %}{{ self.description() }}{% endblock %}">
     <meta property="og:image" content="https://regalame.app/static/og-image-default.jpg">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://regalame.app/">
+    <meta property="twitter:url" content="{{ landing_canonical_url or 'https://regalame.app/' }}">
     <meta property="twitter:title" content="{% block twitter_title %}{{ self.title() }}{% endblock %}">
     <meta property="twitter:description" content="{% block twitter_description %}{{ self.description() }}{% endblock %}">
     <meta property="twitter:image" content="https://regalame.app/static/og-image-default.jpg">
