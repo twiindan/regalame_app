@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
-{% block title %}Organizador de Amigo Invisible Online Gratis | Regálame{% endblock %}
-{% block description %}La mejor app para sortear el Amigo Invisible por WhatsApp o email. Crea grupos, listas de deseos y sugerencias de regalos automáticas.{% endblock %}
+{% block title %}Crea y comparte tu lista de regalos | Regálame{% endblock %}
+{% block description %}Crea tu lista de regalos y compártela con amigos y familia. Guarda tus deseos para cumpleaños, Navidad o un intercambio de amigo invisible.{% endblock %}
 
 {% block content %}
 <div class="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] gap-12 px-4">
@@ -9,13 +9,13 @@
     <!-- Hero Text -->
     <div class="text-center max-w-2xl animate-fade-in-up">
         <h1 class="text-5xl md:text-7xl font-bold mb-6 tracking-tight leading-tight">
-            Crea y Comparte tu <br>
+            Crea y comparte tu <br>
             <span class="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400">
-                Lista de Regalos Definitiva
+                lista de regalos
             </span>
         </h1>
         <p class="text-xl text-gray-300">
-            Deja de recibir calcetines. Crea tu lista de deseos, compártela con amigos y familia, y organiza intercambios o cumpleaños en segundos.
+            Reúne tus deseos en una lista y comparte tu enlace con amigos y familia para darles ideas de qué regalarte.
         </p>
     </div>
 
@@ -93,8 +93,8 @@
             <div class="bg-pink-500/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-pink-400">
                 <i class="ph-fill ph-list-plus text-3xl"></i>
             </div>
-            <h3 class="text-xl font-bold mb-2">Listas Universales</h3>
-            <p class="text-gray-400 text-sm">Añade productos de cualquier tienda. Solo pega el enlace y nosotros hacemos el resto.</p>
+            <h3 class="text-xl font-bold mb-2">Tus deseos en un lugar</h3>
+            <p class="text-gray-400 text-sm">Escribe una idea de regalo o añade productos del catálogo a tu lista.</p>
         </div>
         
         <!-- Feature 2 -->
@@ -102,8 +102,8 @@
             <div class="bg-purple-500/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-purple-400">
                 <i class="ph-fill ph-chat-centered-text text-3xl"></i>
             </div>
-            <h3 class="text-xl font-bold mb-2">Preguntas Anónimas</h3>
-            <p class="text-gray-400 text-sm">¿Dudas con la talla? Pregunta al destinatario sin desvelar la sorpresa.</p>
+            <h3 class="text-xl font-bold mb-2">Regalos reservados</h3>
+            <p class="text-gray-400 text-sm">Quien quiera reservar un deseo debe iniciar sesión. Las reservas ayudan a coordinar los regalos.</p>
         </div>
 
         <!-- Feature 3 -->
@@ -111,9 +111,14 @@
             <div class="bg-indigo-500/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-indigo-400">
                 <i class="ph-fill ph-share-network text-3xl"></i>
             </div>
-            <h3 class="text-xl font-bold mb-2">Sin Descargas</h3>
-            <p class="text-gray-400 text-sm">Comparte un enlace y listo. Tus amigos y familia no necesitan instalar nada.</p>
+            <h3 class="text-xl font-bold mb-2">Comparte tu lista</h3>
+            <p class="text-gray-400 text-sm">Tu lista pública se puede consultar sin cuenta y desde el navegador, sin instalar una aplicación.</p>
         </div>
     </div>
+    <section class="glass-panel rounded-2xl p-8 max-w-2xl text-center">
+        <h2 class="text-2xl font-bold mb-4">Listas para Navidad y amigo invisible</h2>
+        <p class="text-gray-300 mb-4">Comparte tus deseos para Navidad. Si además organizas un intercambio, crea un grupo e invita a los participantes.</p>
+        <a href="/amigo-invisible" class="text-pink-300 hover:text-white underline">Organizar un amigo invisible</a>
+    </section>
 </div>
 {% endblock %}

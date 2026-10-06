@@ -79,7 +79,7 @@ def require_user(request: Request, user: Optional[User] = Depends(get_current_us
 
 @app.get("/robots.txt", response_class=PlainTextResponse)
 async def robots_txt():
-    domain = os.getenv("DOMAIN_URL", "https://regalame.app")
+    domain = os.getenv("DOMAIN_URL", "https://regalame.app").rstrip("/")
     return f"""User-agent: *
 Allow: /
 Disallow: /private/
@@ -90,7 +90,7 @@ Sitemap: {domain}/sitemap.xml"""
 
 @app.get("/sitemap.xml", response_class=HTMLResponse)
 async def sitemap_xml(session: Session = Depends(get_session)):
-    domain = os.getenv("DOMAIN_URL", "https://regalame.app")
+    domain = os.getenv("DOMAIN_URL", "https://regalame.app").rstrip("/")
     
     # Obtener usuarios recientes (limitado a 1000 para MVP)
     users = session.exec(select(User).limit(1000)).all()
@@ -104,6 +104,14 @@ async def sitemap_xml(session: Session = Depends(get_session)):
         <priority>1.0</priority>
     </url>
     """)
+
+    urls.append(f"""
+    <url>
+        <loc>{domain}/amigo-invisible</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.9</priority>
+    </url>
+""")
     
     # Perfiles públicos
     for user in users:
@@ -150,7 +158,17 @@ async def sitemap_xml(session: Session = Depends(get_session)):
 async def index(request: Request, user: Optional[User] = Depends(get_current_user)):
     if user:
         return RedirectResponse(url="/dashboard", status_code=303)
-    return templates.TemplateResponse(request, "index.html", {"user": user})
+    return templates.TemplateResponse(request, "index.html", {
+        "user": user,
+        "landing_canonical_url": os.getenv("DOMAIN_URL", "https://regalame.app").rstrip("/") + "/",
+    })
+
+@app.get("/amigo-invisible", response_class=HTMLResponse)
+async def amigo_invisible(request: Request, user: Optional[User] = Depends(get_current_user)):
+    return templates.TemplateResponse(request, "amigo_invisible.html", {
+        "user": user,
+        "landing_canonical_url": os.getenv("DOMAIN_URL", "https://regalame.app").rstrip("/") + "/amigo-invisible",
+    })
 
 @app.post("/register", response_class=HTMLResponse)
 async def register(

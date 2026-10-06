@@ -26,6 +26,13 @@
         </p>
     </div>
 
+{% if post.slug == 'regalos-amigo-invisible-10-euros' %}
+    <aside class="glass-panel rounded-2xl p-6 mb-8 text-center">
+        <p class="text-gray-300 mb-2">¿También necesitas organizar el intercambio de Navidad?</p>
+        <a href="/amigo-invisible" class="text-pink-300 hover:text-white underline">Organizar un amigo invisible online</a>
+    </aside>
+{% endif %}
+
     <!-- Products Grid -->
     {% if items %}
     <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-fade-in-up">
