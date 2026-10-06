@@ -116,8 +116,10 @@ Command `python -m jobs.evaluate_curation`, triggered manually.
    `EDITORIAL_PROVIDER_API_KEY` (or the shared `NAN_API_KEY`), and optionally
    `EDITORIAL_PROVIDER_BASE_URL`, `EDITORIAL_PROVIDER_MODEL`, the
    `EDITORIAL_JOB_*` bounds and `EDITORIAL_PROVIDER_REASONING_EFFORT`. For
-   production throughput set `EDITORIAL_JOB_CONCURRENCY=4` (leave the fifth
-   slot of NaN's concurrent allowance free); leave
+   production throughput set `EDITORIAL_JOB_CONCURRENCY=3` (leave two slots of
+   NaN's concurrent allowance free) and `EDITORIAL_JOB_MAX_PRODUCTS=1000` so a
+   run is bounded by `EDITORIAL_JOB_MAX_SECONDS` (~55 min) rather than the
+   product cap; leave
    `EDITORIAL_PROVIDER_REASONING_EFFORT` empty unless the evaluation gate can
    tolerate the higher invalid-decision rate documented above.
 4. Useful flags: `--dry-run` (select and report only; zero provider calls, zero
