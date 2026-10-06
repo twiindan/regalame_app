@@ -158,7 +158,7 @@ patrón que el refresco del catálogo: `Restart policy: Never` y el Cron Schedul
 | `EDITORIAL_PROVIDER_REASONING_EFFORT` | *(vacío = se omite)* | Esfuerzo de razonamiento OpenAI-compatible. Por defecto se omite: el sondeo real mostró que `minimal` es ~8x más rápido pero devuelve ~2x más decisiones inválidas (el modelo inventa un `context` que no es el `category_slug` del producto), y una decisión inválida no se cachea, así que la cobertura nunca llega a 1.0. `minimal`/`low` quedan como opt-in. |
 | `EDITORIAL_JOB_COMMIT_EVERY` | `25` | Commit de decisiones cada N productos. |
 | `EDITORIAL_JOB_RPM` | `60` | Máximo de requests por minuto; espacia los **inicios** también cuando hay llamadas concurrentes. `0` desactiva el espaciado. |
-| `EDITORIAL_JOB_CONCURRENCY` | `1` | Llamadas al proveedor en vuelo a la vez. `1` = secuencial (comportamiento previo). Producción: `4`, dejando libre 1 de los 5 slots concurrentes de NaN. Las llamadas corren en hilos, pero **todas** las lecturas/escrituras/commits de DB siguen en el hilo principal (`Session` de SQLModel no es thread-safe). |
+| `EDITORIAL_JOB_CONCURRENCY` | `1` | Llamadas al proveedor en vuelo a la vez. `1` = secuencial (comportamiento previo). Producción: `3`, dejando libres 2 de los 5 slots concurrentes de NaN. Las llamadas corren en hilos, pero **todas** las lecturas/escrituras/commits de DB siguen en el hilo principal (`Session` de SQLModel no es thread-safe). |
 | `EDITORIAL_JOB_MAX_SECONDS` | `3300` | Tope de tiempo por corrida (55 min). |
 | `EDITORIAL_JOB_MAX_PRODUCTS` | `500` | Tope de productos por corrida. |
 

@@ -332,7 +332,7 @@ def test_fingerprint_is_sensitive_to_each_single_input(index):
 
 def test_editorial_states_and_policy_constants():
     assert curation.EDITORIAL_STATES == ("eligible", "contextual", "excluded", "unknown")
-    assert curation.EDITORIAL_POLICY_VERSION == "1"
+    assert curation.EDITORIAL_POLICY_VERSION == "2"
     assert isinstance(curation.EDITORIAL_CONTEXTS, frozenset)
 
 
@@ -593,7 +593,8 @@ def test_effective_filter_mode_preconditions_unmet_is_off(session, monkeypatch, 
 
 def test_effective_filter_mode_enforce_when_all_preconditions_hold(session, monkeypatch):
     monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "enforce")
-    _seed_gate(session, gate_passed=True, coverage_ratio=1.0, policy_version="1")
+    _seed_gate(session, gate_passed=True, coverage_ratio=1.0,
+               policy_version=curation.EDITORIAL_POLICY_VERSION)
     assert curation.effective_filter_mode(session) == "enforce"
 
 
@@ -651,7 +652,8 @@ def test_editorial_visibility_is_none_when_enforce_without_passing_gate(session,
 
 def test_general_predicate_shows_only_eligible(session, monkeypatch):
     monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "enforce")
-    _seed_gate(session, gate_passed=True, coverage_ratio=1.0, policy_version="1")
+    _seed_gate(session, gate_passed=True, coverage_ratio=1.0,
+               policy_version=curation.EDITORIAL_POLICY_VERSION)
     _seed_visibility_fixtures(session)
 
     visibility = curation.editorial_visibility(session)
@@ -661,7 +663,8 @@ def test_general_predicate_shows_only_eligible(session, monkeypatch):
 
 def test_context_predicate_merges_eligible_category_and_contextual_match(session, monkeypatch):
     monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "enforce")
-    _seed_gate(session, gate_passed=True, coverage_ratio=1.0, policy_version="1")
+    _seed_gate(session, gate_passed=True, coverage_ratio=1.0,
+               policy_version=curation.EDITORIAL_POLICY_VERSION)
     _seed_visibility_fixtures(session)
 
     visibility = curation.editorial_visibility(session)
@@ -675,7 +678,8 @@ def test_context_predicate_merges_eligible_category_and_contextual_match(session
 
 def test_excluded_unknown_and_no_row_are_hidden_from_both_branches(session, monkeypatch):
     monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "enforce")
-    _seed_gate(session, gate_passed=True, coverage_ratio=1.0, policy_version="1")
+    _seed_gate(session, gate_passed=True, coverage_ratio=1.0,
+               policy_version=curation.EDITORIAL_POLICY_VERSION)
     _seed_visibility_fixtures(session)
 
     visibility = curation.editorial_visibility(session)
@@ -691,7 +695,8 @@ def test_excluded_unknown_and_no_row_are_hidden_from_both_branches(session, monk
 
 def test_general_predicate_honours_a_manual_override(session, monkeypatch):
     monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "enforce")
-    _seed_gate(session, gate_passed=True, coverage_ratio=1.0, policy_version="1")
+    _seed_gate(session, gate_passed=True, coverage_ratio=1.0,
+               policy_version=curation.EDITORIAL_POLICY_VERSION)
 
     promoted = _make_product(session, "P1", "Bebida", category="Hogar", slug="hogar")
     manual_only = _make_product(session, "P2", "Adorno", category="Adornos", slug="adornos")
@@ -722,7 +727,8 @@ def test_visible_category_slugs_unions_eligible_categories_and_effective_context
     session, monkeypatch
 ):
     monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "enforce")
-    _seed_gate(session, gate_passed=True, coverage_ratio=1.0, policy_version="1")
+    _seed_gate(session, gate_passed=True, coverage_ratio=1.0,
+               policy_version=curation.EDITORIAL_POLICY_VERSION)
 
     eligible_hogar = _make_product(session, "P1", "Cafetera", category="Hogar",
                                    slug="hogar-y-cocina")
@@ -754,7 +760,8 @@ def test_visible_category_slugs_suppresses_a_category_with_no_visible_products(
     session, monkeypatch
 ):
     monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "enforce")
-    _seed_gate(session, gate_passed=True, coverage_ratio=1.0, policy_version="1")
+    _seed_gate(session, gate_passed=True, coverage_ratio=1.0,
+               policy_version=curation.EDITORIAL_POLICY_VERSION)
 
     visible = _make_product(session, "P1", "Cafetera", category="Hogar", slug="hogar")
     hidden = _make_product(session, "P2", "Pistola", category="Juguetes", slug="juguetes")
