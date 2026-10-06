@@ -86,17 +86,48 @@ DECISION_JSON_SCHEMA = {
 
 #: System prompt describing the editorial policy. A constant, never interpolated
 #: with product or user data (the product's facts travel in the user message).
+#: v2 (see ``EDITORIAL_POLICY_VERSION``): ``eligible`` is the default for any
+#: plausible gift, ``excluded`` names routine replenishment/consumables, parts,
+#: supplies and software explicitly, and ``contextual`` is reserved for the
+#: narrow niche-use cases (the prior prompt let the model over-select
+#: ``contextual`` and under-detect ``excluded``).
 POLICY_PROMPT = (
-    "You classify Amazon product titles for a gift-ideas catalogue. "
-    "Reply with a single strict JSON object and nothing else, using exactly these keys: "
-    "state (one of eligible, contextual, excluded, unknown), "
-    "context (a category slug when state is contextual, otherwise null), and "
-    "reason (a short non-empty explanation). "
-    "eligible means a suitable general gift idea; "
-    "contextual means suitable only within a specific category; "
-    "excluded means not suitable as a gift idea; "
-    "unknown means gift suitability cannot be determined from the title and category. "
-    "Base the decision only on the title and category provided."
+    "You classify Amazon product titles for a gift-ideas catalogue. Reply with a single strict JSON object and "
+    "nothing else, using exactly these keys: state (one of eligible, contextual, excluded, unknown), context (a "
+    "category slug when state is contextual, otherwise null), and reason (a short non-empty explanation). Choose "
+    "eligible whenever the item is a plausible gift for an ordinary person: a specific, identifiable product that "
+    "is not routine replenishment. Examples: a phone, tablet or e-reader, headphones, a streaming stick, a "
+    "smartwatch, a camera, a videogame or console, a board game, a toy, LEGO, a book, a film or album with a "
+    "recognisable title, a gift card, voucher or store credit, clothing or shoes, jewellery, a bag, a cosmetic or "
+    "skincare product, a hobby tool or gadget, a home gadget such as a lamp, an LED strip or a thermometer, an "
+    "emergency or safety gadget such as a warning beacon or a torch, a USB adapter or other tech accessory, "
+    "fitness equipment, a personalised or handmade keepsake, a decorative item. Choose excluded for routine "
+    "replenishment and consumables, replacement parts, and professional or industrial supplies. Examples: nappies "
+    "and baby wipes; pet food, cat litter and litter refills; groceries, drinks, coffee beans and coffee "
+    "capsules; water, coffee-machine and vacuum filters, cartridges and descalers; dishwasher, washing-machine "
+    "and dryer accessories, covers and kits; covers or fundas for clothes airers, drying racks and heated dryers "
+    "(cubre-tendedero); large built-in appliances and fixtures such as extractor hoods; shower heads, fittings "
+    "and other bathroom fixtures; lights designed to be mounted inside a fixture, such as under-cabinet, cupboard "
+    "or ceiling lights, even when rechargeable (a freestanding or decorative lamp or an LED strip is eligible "
+    "instead); flooring, tiles, wall coverings, adhesives and other building or renovation materials; toothbrush "
+    "heads and replacement blades; oral irrigators or water flossers, electric toothbrushes and other "
+    "personal-hygiene appliances with their refills; sewing, corset-making, haberdashery and other garment-making "
+    "materials and kits; printer ink, printer paper, batteries and light bulbs; shampoo and personal-care "
+    "refills; food supplements; cleaning, pest-control and disinfecting chemicals; guitar strings, glue, "
+    "3D-printer filament and similar workshop refills; disposable nitrile gloves and other professional or "
+    "industrial supplies; software, antivirus, operating systems and digital subscriptions; software "
+    "applications, add-ons and digital subscriptions, including screen-mirroring, screen-duplication, casting, downloader "
+    "and installer apps (a gift card or store credit for a store, game or app is eligible instead). Also exclude "
+    "an item whose title is too vague or fragmentary to identify a concrete gift: a single word, a brand name "
+    "alone, a short phrase, a slogan or a lyric. When the title is only a mood, a dedication or a fragment and "
+    "names no product, brand or format, choose excluded, never eligible and never unknown. Choose contextual ONLY "
+    "when the item is meaningful to someone already engaged in a specific activity or occasion and is pointless "
+    "as a general gift, for example snow chains, a chainsaw or other powered garden tool, a blood-pressure "
+    "monitor, a clothes-lint remover, a made-to-measure age or anniversary number, or a single mobile-account "
+    "top-up. Most items are eligible or excluded; contextual is a narrow exception. Belonging to a category is "
+    "NOT by itself a reason to choose contextual: a category alone never makes an item contextual, and "
+    "appliances, home fixtures and tech accessories are never contextual. Choose unknown only when the title and "
+    "category genuinely cannot decide. Base the decision only on the title and category provided."
 )
 
 

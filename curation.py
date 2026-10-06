@@ -25,7 +25,10 @@ from models import EditorialDecision, EditorialGateState, Product, utcnow_naive
 EDITORIAL_STATES = ("eligible", "contextual", "excluded", "unknown")
 
 #: Policy/schema version in effect. Bumping it invalidates every AI fingerprint.
-EDITORIAL_POLICY_VERSION = "1"
+#: v2 ships the ``POLICY_PROMPT`` rewrite in ``curation_provider`` (eligible is
+#: the default; excluded and contextual are sharply re-scoped), so every existing
+#: AI decision is stale and the catalog reclassifies.
+EDITORIAL_POLICY_VERSION = "2"
 
 #: Configured filter mode. Read once at import; ``off`` is the shadow default.
 EDITORIAL_FILTER_MODE = os.getenv("EDITORIAL_FILTER_MODE", "off")
