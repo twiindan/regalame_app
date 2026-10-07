@@ -143,6 +143,31 @@ def test_default_social_image_is_a_real_asset_emitted_with_dimensions(client):
     assert soup.find("meta", property="twitter:image:alt")["content"]
 
 
+def test_public_origin_helpers_use_the_configured_domain(monkeypatch):
+    from main import public_origin, social_url
+
+    monkeypatch.setenv("DOMAIN_URL", "https://landing.example/")
+    assert public_origin() == "https://landing.example"
+    assert social_url("/blog") == "https://landing.example/blog"
+    assert social_url("https://other.example/post") == "https://other.example/post"
+    assert social_url(None) == "https://landing.example/"
+
+
+def test_default_social_image_uses_the_configured_origin(client, monkeypatch):
+    monkeypatch.setenv("DOMAIN_URL", "https://landing.example/")
+    soup = page(client, "/")
+    assert soup.find("meta", property="og:image")["content"] == (
+        "https://landing.example/static/og-image-default.jpg"
+    )
+
+
+def test_identity_tags_have_no_hardcoded_default_origin(client, monkeypatch):
+    monkeypatch.setenv("DOMAIN_URL", "https://landing.example/")
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "regalame.app" not in response.text
+
+
 @pytest.mark.parametrize("domain", ["https://regalame.app", "https://landing.example/"])
 def test_organizer_sitemap_is_unique_and_robots_allow_public_landings(client, monkeypatch, domain):
     monkeypatch.setenv("DOMAIN_URL", domain)
