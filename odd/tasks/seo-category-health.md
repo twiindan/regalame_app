@@ -113,11 +113,23 @@ Revert the T1 commit on `feature/seo-category-health`; delete the branch. `templ
 
 - Assess: `risk: medium` (executable change in `main.py`), 5 paths, 131 lines.
 - START granted by user; one lens `review-reliability`; outcome **approved**; acknowledgement burned (`gentle-ai.review-acknowledged/v1`, `authority: burned`).
-- Non-blocking advisory findings (separate later work; do not reopen this candidate):
-  - R3-1 WARNING `main.py:246` — `int(value)` is lenient (`?page=%202%20`, `?page=1_0`, `?page=+2`, non-ASCII digits parse), so some non-canonical page URLs return 200 with a normalized canonical instead of 404.
+- Non-blocking advisory findings from the T1 review:
+  - R3-1 WARNING `main.py:246` — `int(value)` is lenient (`?page=%202%20`, `?page=1_0`, `?page=+2`, non-ASCII digits parse), so some non-canonical page URLs return 200 with a normalized canonical instead of 404. **Addressed in T2.**
   - R3-2 SUGGESTION `main.py:463-465` — explicit `?page=1` canonical not asserted by a test.
   - R3-3 SUGGESTION `main.py:453-457` — HTMX invalid requests get a full-document 404 (matching HTMX no-swap-on-4xx default) rather than a fragment.
 
+### T2 — Harden page parsing (fixes R3-1)
+
+- [x] **T2**: `_parse_page_number` now accepts only ASCII digits (`[0-9]+`). Committed as `fc6a8ef`.
+
+Verification:
+
+- RED: 12 failed / 6 passed (`-k "parse_page_number or lenient_integer or empty_returns_404"`), including in-range representatives (`" 1 "`, `"+1"`, `"0_1"`, fullwidth `１`) that returned 200 under the old lenient `int()`.
+- GREEN focused: `venv/bin/python -m pytest -q tests/test_catalog_routes.py` → **46 passed**; regression `--ignore=tests/test_e2e.py` → **361 passed**.
+- Native review (base `96db766`): `medium`, 3 paths, 58 lines; lens `review-reliability`; **approved**; acknowledgement burned.
+- New non-blocking advisory finding from the T2 review:
+  - R3-001 WARNING `main.py:248` — removing the base `try/except` made the helper non-total: a `page` value of >4300 ASCII digits passes `isascii()/isdigit()` and then `int(value, 10)` raises `ValueError` (CPython 3.11+ `int_max_str_digits`), turning a former deterministic 404 into an unhandled error. Follow-up candidate: keep a `try/except ValueError` or bound the digit length. **Not fixed in T2** (must not reopen the approved candidate).
+
 ## Next step
 
-T1 is implemented, verified, and reviewed (approved/burned). Remaining is user-owned delivery: push and PR are NOT authorized and were not performed. Optional follow-ups: address R3-1 stricter parsing; restore `stash@{0}` when returning to search-console; roadmap item 2 next. `feature/seo-dual-landings` (2 commits) remains unmerged into `main`.
+T1 and T2 are implemented, verified, and reviewed (approved/burned). Remaining is user-owned delivery: push and PR are NOT authorized and were not performed. Open follow-ups: R3-001 long-digit `ValueError` (regression introduced by T2), R3-2, R3-3; restore `stash@{0}` when returning to search-console; roadmap item 2 next. `feature/seo-dual-landings` (2 commits) remains unmerged into `main`.
