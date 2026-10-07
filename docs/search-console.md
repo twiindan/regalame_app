@@ -59,9 +59,20 @@ the CLI rejects any property other than the exact one above.
 ## Interpret the export correctly
 
 The date range is **90 inclusive calendar days ending yesterday in America/Los_Angeles**.
-Every request uses dimensions `query` and `page`, type `web`, and `dataState=final`.
-Pagination advances `startRow` with `rowLimit=25000` and stops on a short/empty page.
-The JSON includes rows, the exact property, dates, settings, timezone, and limitations.
+The export is a combined full-property baseline with five independent sections:
+
+- `totals` — site-wide totals, no dimensions.
+- `byDate` — dimension `date`.
+- `topPages` — dimension `page`.
+- `topQueries` — dimension `query`.
+- `queryPage` — dimensions `query` and `page`.
+
+Each section is its own query, issued in that order, and all of them share the same
+`startDate`, `endDate`, `type=web`, and `dataState=final`, so the sections are
+directly comparable. Every section paginates independently: it advances `startRow`
+with `rowLimit=25000` and stops on a short/empty page. The JSON records the section
+dimensions under `section_dimensions`, the rows under `sections`, plus the exact
+property, dates, settings, timezone, and limitations.
 
 Search Analytics returns **top rows, not guaranteed exhaustive data**. Anonymized
 queries are omitted for privacy, and recent final days can be absent due to reporting

@@ -179,38 +179,61 @@ def test_official_library_pkce_and_state_without_network():
         flow.fetch_token(authorization_response="https://127.0.0.1/?state=wrong&code=synthetic")
 
 
-@pytest.mark.parametrize("pages", [[[]], [[{"keys": ["synthetic", "page"]}], []]])
-def test_final_query_pagination_and_metadata(sc, pages):
+def test_baseline_report_shape_and_section_order(sc):
     session = Mock()
-    session.post.side_effect = [Mock(status_code=200, json=Mock(return_value={"rows": rows}))
-                                for rows in pages]
-    export = sc.query_export(session, now=datetime(2026, 1, 1, 3, tzinfo=timezone.utc), row_limit=1)
+    session.post.return_value = Mock(status_code=200, json=Mock(return_value={"rows": []}))
+    export = sc.query_baseline(session, now=datetime(2026, 1, 1, 3, tzinfo=timezone.utc), row_limit=25000)
+    assert session.post.call_count == len(sc.SECTIONS)
+    for call, (name, dimensions) in zip(session.post.call_args_list, sc.SECTIONS):
+        assert call.args == (sc.QUERY_URL,)
+        assert call.kwargs == {
+            "json": {"startDate": "2025-10-02", "endDate": "2025-12-30", "dimensions": dimensions,
+                     "type": "web", "dataState": "final", "rowLimit": 25000, "startRow": 0},
+            "timeout": 30, "allow_redirects": False,
+        }
     assert export["property"] == "sc-domain:regalame.app"
-    assert export["rows"] == [row for rows in pages for row in rows]
-    assert export["timezone"] == "America/Los_Angeles"
-    assert "privacy" in export["limitations"]
-    for index, call in enumerate(session.post.call_args_list):
-        assert call.args == ("https://www.googleapis.com/webmasters/v3/sites/sc-domain%3Aregalame.app/searchAnalytics/query",)
-        assert call.kwargs == {"json": {"startDate": "2025-10-02", "endDate": "2025-12-30",
-                                       "dimensions": ["query", "page"], "type": "web",
-                                       "dataState": "final", "rowLimit": 1, "startRow": index},
-                               "timeout": 30, "allow_redirects": False}
     assert export["startDate"] == "2025-10-02"
     assert export["endDate"] == "2025-12-30"
-    assert export["dimensions"] == ["query", "page"]
+    assert export["type"] == "web"
     assert export["dataState"] == "final"
+    assert export["timezone"] == "America/Los_Angeles"
+    assert "privacy" in export["limitations"]
+    assert export["section_dimensions"] == {name: list(dimensions) for name, dimensions in sc.SECTIONS}
+    assert export["sections"] == {name: [] for name, _ in sc.SECTIONS}
+    assert "rows" not in export
 
 
-@pytest.mark.parametrize("fault", ["http", "network", "json"])
+def test_baseline_section_pagination_advances_start_row(sc):
+    session = Mock()
+    totals_full = Mock(status_code=200, json=Mock(return_value={"rows": [{"key": "totals"}]}))
+    totals_short = Mock(status_code=200, json=Mock(return_value={"rows": []}))
+    empties = [Mock(status_code=200, json=Mock(return_value={"rows": []})) for _ in range(4)]
+    session.post.side_effect = [totals_full, totals_short, *empties]
+    export = sc.query_baseline(session, now=datetime(2026, 1, 1, 3, tzinfo=timezone.utc), row_limit=1)
+    assert export["sections"]["totals"] == [{"key": "totals"}]
+    # Empty first pages stop immediately: one request for byDate plus the last three sections.
+    assert session.post.call_count == 6
+    first, second, *remaining = session.post.call_args_list
+    assert first.kwargs["json"]["startRow"] == 0
+    assert second.kwargs["json"]["startRow"] == 1
+    assert first.kwargs["json"]["dimensions"] == []
+    assert {key: value for key, value in second.kwargs["json"].items() if key != "startRow"} == \
+           {key: value for key, value in first.kwargs["json"].items() if key != "startRow"}
+    assert all(call.kwargs["json"]["startRow"] == 0 for call in remaining)
+
+
+@pytest.mark.parametrize("fault", ["http", "network", "json", "shape"])
 def test_api_errors_are_sanitized(sc, fault):
     session = Mock()
     if fault == "network":
         session.post.side_effect = RuntimeError("synthetic secret")
+    elif fault == "shape":
+        session.post.return_value = Mock(status_code=200, json=Mock(return_value={"rows": {}}))
     else:
         session.post.return_value = Mock(status_code=403 if fault == "http" else 200)
         session.post.return_value.json.side_effect = ValueError("synthetic secret")
     with pytest.raises(sc.SafeError, match="Search Console request failed") as caught:
-        sc.query_export(session)
+        sc.query_baseline(session)
     assert "synthetic secret" not in str(caught.value)
     assert session.post.call_count == 1
 
@@ -235,7 +258,10 @@ def test_cli_fake_boundaries_repeat_run(sc, oauth, monkeypatch, capsys):
     assert options["auth_request"].keywords["allow_redirects"] is False
     assert session.close.call_count == 2
     assert session.trust_env is False
-    assert json.loads(output.read_text())["rows"] == []
+    saved = json.loads(output.read_text())
+    assert saved["sections"] == {name: [] for name, _ in sc.SECTIONS}
+    assert saved["section_dimensions"] == {name: list(dimensions) for name, dimensions in sc.SECTIONS}
+    assert "rows" not in saved
     assert output.stat().st_mode & 0o777 == 0o600
     captured = capsys.readouterr()
     assert captured.out == "Private export saved.\n" * 2

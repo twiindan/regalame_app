@@ -167,15 +167,16 @@ def load_credentials(client, token, reauthorize=False):
         logging.disable(previous_logging)
 
 
-def query_export(session, now=None, row_limit=25000):
-    start, end = reporting_window(now)
-    settings = {
-        "startDate": start,
-        "endDate": end,
-        "dimensions": ["query", "page"],
-        "type": "web",
-        "dataState": "final",
-    }
+SECTIONS = (
+    ("totals", []),
+    ("byDate", ["date"]),
+    ("topPages", ["page"]),
+    ("topQueries", ["query"]),
+    ("queryPage", ["query", "page"]),
+)
+
+
+def _fetch_section(session, settings, row_limit):
     rows = []
     while True:
         try:
@@ -189,16 +190,32 @@ def query_export(session, now=None, row_limit=25000):
             if not isinstance(page, list):
                 raise ValueError()
         except Exception:
-            raise SafeError("Search Console request failed; check property access and session authorization.") from None
+            raise SafeError(
+                "Search Console request failed; check property access and session authorization."
+            ) from None
         rows.extend(page)
         if len(page) < row_limit:
             break
+    return rows
+
+
+def query_baseline(session, now=None, row_limit=25000):
+    start, end = reporting_window(now)
+    base = {"startDate": start, "endDate": end, "type": "web", "dataState": "final"}
+    sections = {
+        name: _fetch_section(session, {**base, "dimensions": dimensions}, row_limit)
+        for name, dimensions in SECTIONS
+    }
     return {
         "property": PROPERTY,
-        **settings,
+        "startDate": start,
+        "endDate": end,
+        "type": "web",
+        "dataState": "final",
         "timezone": "America/Los_Angeles",
         "limitations": LIMITATIONS,
-        "rows": rows,
+        "section_dimensions": {name: list(dimensions) for name, dimensions in SECTIONS},
+        "sections": sections,
     }
 
 
@@ -228,7 +245,7 @@ def main(argv=None):
             )
             session.trust_env = False
             try:
-                export = query_export(session)
+                export = query_baseline(session)
                 write_private(args.token, json.loads(credentials.to_json()))
                 write_private(args.output, export)
             finally:
