@@ -128,8 +128,20 @@ Verification:
 - GREEN focused: `venv/bin/python -m pytest -q tests/test_catalog_routes.py` → **46 passed**; regression `--ignore=tests/test_e2e.py` → **361 passed**.
 - Native review (base `96db766`): `medium`, 3 paths, 58 lines; lens `review-reliability`; **approved**; acknowledgement burned.
 - New non-blocking advisory finding from the T2 review:
-  - R3-001 WARNING `main.py:248` — removing the base `try/except` made the helper non-total: a `page` value of >4300 ASCII digits passes `isascii()/isdigit()` and then `int(value, 10)` raises `ValueError` (CPython 3.11+ `int_max_str_digits`), turning a former deterministic 404 into an unhandled error. Follow-up candidate: keep a `try/except ValueError` or bound the digit length. **Not fixed in T2** (must not reopen the approved candidate).
+  - R3-001 WARNING `main.py:248` — removing the base `try/except` made the helper non-total: a `page` value of >4300 ASCII digits passes `isascii()/isdigit()` and then `int(value, 10)` raises `ValueError` (CPython 3.11+ `int_max_str_digits`), turning a former deterministic 404 into an unhandled error. **Addressed in T3.**
+
+### T3 — Restore parser totality (fixes R3-001)
+
+- [x] **T3**: `int(value, 10)` is wrapped in `try/except ValueError` → `None`, so an over-long digit string is invalid rather than raising. Committed as `ef1e4a0`.
+
+Verification:
+
+- RED: `-k over_long` → **2 failed** (unhandled `ValueError: Exceeds the limit (4300 digits)` from the helper and the route).
+- GREEN focused: `venv/bin/python -m pytest -q tests/test_catalog_routes.py` → **48 passed**; regression `--ignore=tests/test_e2e.py` → **363 passed**.
+- Native review (base `286d6b2`): `medium`, 2 paths, 24 lines; lens `review-reliability`; **approved**; acknowledgement burned. Transport note: the OpenCode reviewer result needed a retry after an initial `opencode_reviewer_result_refused`; the slot was reoffered by STATUS and the second relaunch captured.
+- New non-blocking advisory finding from the T3 review:
+  - R3-over-long-digit-test-version-dependent WARNING `tests/test_catalog_routes.py:122-126` — the unit assertion hard-codes the CPython 3.11+ digit cap; on an interpreter without it (or with the cap raised ≥5000) `int()` succeeds and the helper returns a large int, so the `is None` assertion would fail. The route-level test stays correct across interpreters. Candidate follow-up: make the assertion cap-independent (assert "no error escapes" / use a monkeypatched cap) or drop the unit test in favour of the route test.
 
 ## Next step
 
-T1 and T2 are implemented, verified, and reviewed (approved/burned). Remaining is user-owned delivery: push and PR are NOT authorized and were not performed. Open follow-ups: R3-001 long-digit `ValueError` (regression introduced by T2), R3-2, R3-3; restore `stash@{0}` when returning to search-console; roadmap item 2 next. `feature/seo-dual-landings` (2 commits) remains unmerged into `main`.
+T1–T3 are implemented, verified, and reviewed (approved/burned). Remaining is user-owned delivery: push and PR are NOT authorized and were not performed. Open follow-ups: R3-over-long-digit-test-version-dependent, R3-2, R3-3; restore `stash@{0}` when returning to search-console; roadmap item 2 next. `feature/seo-dual-landings` (2 commits) remains unmerged into `main`.
