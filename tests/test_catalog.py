@@ -491,6 +491,32 @@ def test_get_blog_posts_with_covers_does_not_mutate_shared_posts(session, catalo
     assert all(p.get("hero_image") is None for p in BLOG_POSTS)
 
 
+def test_get_blog_posts_with_covers_uses_distinct_images_for_overlapping_criteria(session):
+    from services import get_blog_posts_with_covers
+
+    cheap = Product(
+        asin="C1", title="Regalo barato", title_normalized=normalize_text("Regalo barato"),
+        image_url="img-cheap-1.jpg", url="https://www.amazon.es/dp/C1", price_numeric=5.0,
+        price_raw="5,00 €", category="Alimentación y bebidas",
+        category_slug="alimentacion-y-bebidas", scraped_at=datetime(2026, 1, 1),
+    )
+    mid = Product(
+        asin="C2", title="Regalo medio", title_normalized=normalize_text("Regalo medio"),
+        image_url="img-cheap-2.jpg", url="https://www.amazon.es/dp/C2", price_numeric=15.0,
+        price_raw="15,00 €", category="Alimentación y bebidas",
+        category_slug="alimentacion-y-bebidas", scraped_at=datetime(2026, 1, 1),
+    )
+    session.add_all([cheap, mid])
+    session.commit()
+
+    posts = {p["slug"]: p for p in get_blog_posts_with_covers(session)}
+
+    # Both price buckets overlap on the cheapest product; the second card must
+    # advance to another product instead of repeating the first cover.
+    assert posts["regalos-amigo-invisible-10-euros"]["hero_image"] == "img-cheap-1.jpg"
+    assert posts["regalos-baratos-menos-20-euros"]["hero_image"] == "img-cheap-2.jpg"
+
+
 def test_search_treats_percent_as_literal(session, catalog_seed):
     # "a%" survives the 2-char guard; unescaped it would match every title containing "a"
     assert search_products(session, CatalogQuery(q="a%")).total == 0

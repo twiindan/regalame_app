@@ -225,11 +225,18 @@ def get_blog_posts_with_covers(session: Session):
     Retorna las entradas de BLOG_POSTS enriquecidas con una imagen de portada,
     resuelta desde el primer producto visible que cumple los criterios del post.
     No muta BLOG_POSTS: devuelve copias.
+
+    Covers are de-duplicated across cards: when a post's first visible product
+    reuses an image already shown by an earlier post (overlapping criteria), the
+    card advances to the next visible product with an unused image. When every
+    candidate image is already used, it falls back to the first product's image.
     """
     posts = []
+    used_images: set[str] = set()
     for post in BLOG_POSTS:
         if post.get("hero_image"):
-            posts.append(post)
+            posts.append({**post})
+            used_images.add(post["hero_image"])
             continue
         criteria = post.get("criteria", {})
         category_slug = slugify(criteria["category"]) if "category" in criteria else None
@@ -237,8 +244,16 @@ def get_blog_posts_with_covers(session: Session):
             category_slug=category_slug,
             max_price=criteria.get("max_price"),
             page=1,
-            per_page=1,
+            per_page=MAX_PER_PAGE,
         ))
-        cover = result.items[0].image_url if result.items else None
+        cover = next(
+            (item.image_url for item in result.items
+             if item.image_url and item.image_url not in used_images),
+            None,
+        )
+        if cover is None and result.items:
+            cover = result.items[0].image_url
+        if cover:
+            used_images.add(cover)
         posts.append({**post, "hero_image": cover})
     return posts
