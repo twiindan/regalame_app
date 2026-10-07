@@ -278,8 +278,8 @@ def _catalog_context(
     page: str = "1",
     always_indexable: bool = False,
     force_noindex: bool = False,
-    has_query_params: bool = False,
     editorial_context: Optional[str] = None,
+    has_query_params: bool = False,
 ):
     requested_page = _to_int(page, 1)
     query = CatalogQuery(
