@@ -140,8 +140,26 @@ Verification:
 - GREEN focused: `venv/bin/python -m pytest -q tests/test_catalog_routes.py` → **48 passed**; regression `--ignore=tests/test_e2e.py` → **363 passed**.
 - Native review (base `286d6b2`): `medium`, 2 paths, 24 lines; lens `review-reliability`; **approved**; acknowledgement burned. Transport note: the OpenCode reviewer result needed a retry after an initial `opencode_reviewer_result_refused`; the slot was reoffered by STATUS and the second relaunch captured.
 - New non-blocking advisory finding from the T3 review:
-  - R3-over-long-digit-test-version-dependent WARNING `tests/test_catalog_routes.py:122-126` — the unit assertion hard-codes the CPython 3.11+ digit cap; on an interpreter without it (or with the cap raised ≥5000) `int()` succeeds and the helper returns a large int, so the `is None` assertion would fail. The route-level test stays correct across interpreters. Candidate follow-up: make the assertion cap-independent (assert "no error escapes" / use a monkeypatched cap) or drop the unit test in favour of the route test.
+  - R3-over-long-digit-test-version-dependent WARNING `tests/test_catalog_routes.py:122-126` — the unit assertion hard-codes the CPython 3.11+ digit cap; on an interpreter without it (or with the cap raised ≥5000) `int()` succeeds and the helper returns a large int, so the `is None` assertion would fail. The route-level test stays correct across interpreters. **Addressed in T4.**
+
+### T4 — Close remaining test-quality findings (test-only)
+
+- [x] **T4**: Closed R3-over-long-digit-test-version-dependent, R3-2 and R3-3 in `tests/test_catalog_routes.py`. Committed as `4f5ff98`.
+
+Verification:
+
+- Tests only; `main.py` untouched. Focused **49 passed**; regression `--ignore=tests/test_e2e.py` → **364 passed**.
+- R3-over-long-digit-test-version-dependent: the unit test now forces `sys.set_int_max_str_digits(640)` inside `try/finally` with a skip guard, so it no longer depends on the interpreter's default cap.
+- R3-2: added `test_ideas_explicit_page_one_canonical_is_clean` (explicit `?page=1` → clean canonical).
+- R3-3: `test_ideas_htmx_unknown_slug_returns_404` now asserts the intentional full-document 404 (htmx 1.9.10 has no 4xx swap configured), documenting the choice.
+- Native review (base `bac3f4c`): `medium`, 1 path, 29 lines; lens `review-reliability`; **approved**; acknowledgement burned.
+- New non-blocking advisory finding from the T4 review:
+  - R3-1 SUGGESTION `tests/test_catalog_routes.py:137` — the over-long test mutates the process-global `sys.int_max_str_digits` for a short window; restored in `finally`, so sequential pytest is unaffected. Minor test-isolation note only.
+
+## Isolation note (2026-10-07)
+
+The main checkout `/Users/toni.robres/Pycharmprojects/regalame_gemini3` was switched by the user to `feature/blog-cover-images` with uncommitted work, so T4 ran in an isolated worktree `/Users/toni.robres/Pycharmprojects/regalame_gemini3-worktrees/seo-category-health` on `feature/seo-category-health`. Tests used the main checkout's venv interpreter (`/Users/toni.robres/Pycharmprojects/regalame_gemini3/venv/bin/python`). The main checkout was not modified.
 
 ## Next step
 
-T1–T3 are implemented, verified, and reviewed (approved/burned). Remaining is user-owned delivery: push and PR are NOT authorized and were not performed. Open follow-ups: R3-over-long-digit-test-version-dependent, R3-2, R3-3; restore `stash@{0}` when returning to search-console; roadmap item 2 next. `feature/seo-dual-landings` (2 commits) remains unmerged into `main`.
+T1–T4 are implemented, verified, and reviewed (approved/burned). Remaining is user-owned delivery: push and PR are NOT authorized and were not performed. Branch now has commits `fdf7b6e`, `96db766`, `fc6a8ef`, `286d6b2`, `ef1e4a0`, `bac3f4c`, `4f5ff98` (the last two created in the worktree). Remaining open items: restore `stash@{0}` when returning to search-console; roadmap item 2 next. `feature/seo-dual-landings` (2 commits) remains unmerged into `main`.
