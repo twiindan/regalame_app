@@ -278,3 +278,28 @@ esta ruta, las reglas generales de las secciones 8, 9 y 11.
   responde `404` en lugar de renderizar una página vacía.
 - El resto de rutas (`/catalog`, `/bestsellers`, `/trends`, `/most-desired`) conservan el recorte
   de página y el estado vacío descritos en las secciones 8 y 11.
+
+## 18. Enmienda 2026-10-07: política de indexación de rutas legacy con query string
+
+Decisión del usuario (2026-10-07): las rutas legacy (`/bestsellers`, `/trends`, `/most-desired`)
+siguen respondiendo `200` y son **indexables solo en su URL limpia**, sin query string. Cualquier
+query string en esas rutas pasa a renderizar `noindex, follow`, porque hoy no emiten `canonical` y
+sus variantes con parámetros son duplicados indexables.
+
+| Caso | Comportamiento |
+|---|---|
+| `/bestsellers`, `/trends`, `/most-desired` sin query string | `200`; indexable (sin `meta robots`) |
+| Cualquier query string en esas rutas (`?source=…`, `?q=&sort=relevance&source=…`, etc.) | `200`; `noindex, follow` |
+
+- `source` **no** es un parámetro de query enlazado en estas rutas: su valor es fijo por ruta
+  (`trends`, `desired`, `bestsellers`). Un `?source=` aportado por el visitante no alimenta las
+  condiciones de filtro; solo genera un duplicado y por eso se clasifica como `noindex` en lugar
+  de incorporarse a los filtros.
+- `/catalog` conserva su `noindex, follow` incondicional (cualquier parámetro, incluido
+  `?source=`), sin cambios.
+- `/ideas/{slug}` no se ve afectada: la página 1 sigue indexable y `?page=N` sigue indexable según
+  la sección 17.
+- La regla vive en `_catalog_context(...)` mediante el nuevo parámetro `has_query_params`, que solo
+  pasan las tres rutas legacy. `/catalog` (`force_noindex=True`) y `/ideas/{slug}`
+  (`always_indexable=True`) mantienen su política intacta.
+

@@ -291,6 +291,7 @@ def _catalog_context(
     page: str = "1",
     always_indexable: bool = False,
     force_noindex: bool = False,
+    has_query_params: bool = False,
     editorial_context: Optional[str] = None,
 ):
     requested_page = _to_int(page, 1)
@@ -350,7 +351,8 @@ def _catalog_context(
     has_price_filter = bool(min_value) or bool(max_value)
     noindex = force_noindex or (
         not always_indexable and (
-            bool(q) or (sort != "relevance") or requested_page > 1 or has_price_filter
+            has_query_params or bool(q) or (sort != "relevance")
+            or requested_page > 1 or has_price_filter
         )
     )
 
@@ -407,7 +409,8 @@ async def trends_page(
 ):
     context = _catalog_context(session, user, base_path="/trends",
                                title="Tendencias del Momento", source="trends",
-                               q=q, category=category, min_value=min, max_value=max, sort=sort, page=page)
+                               q=q, category=category, min_value=min, max_value=max, sort=sort, page=page,
+                               has_query_params=bool(request.query_params))
     if request.headers.get("HX-Request"):
         return templates.TemplateResponse(request, "partials/catalog_results.html", context)
     return templates.TemplateResponse(request, "catalog.html", context)
@@ -423,7 +426,8 @@ async def most_desired_page(
 ):
     context = _catalog_context(session, user, base_path="/most-desired",
                                title="Los Más Deseados", source="desired",
-                               q=q, category=category, min_value=min, max_value=max, sort=sort, page=page)
+                               q=q, category=category, min_value=min, max_value=max, sort=sort, page=page,
+                               has_query_params=bool(request.query_params))
     if request.headers.get("HX-Request"):
         return templates.TemplateResponse(request, "partials/catalog_results.html", context)
     return templates.TemplateResponse(request, "catalog.html", context)
@@ -439,7 +443,8 @@ async def bestsellers_page(
 ):
     context = _catalog_context(session, user, base_path="/bestsellers",
                                title="Top Ventas & Ideas", source="bestsellers",
-                               q=q, category=category, min_value=min, max_value=max, sort=sort, page=page)
+                               q=q, category=category, min_value=min, max_value=max, sort=sort, page=page,
+                               has_query_params=bool(request.query_params))
     if request.headers.get("HX-Request"):
         return templates.TemplateResponse(request, "partials/catalog_results.html", context)
     return templates.TemplateResponse(request, "catalog.html", context)
