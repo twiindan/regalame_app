@@ -1,5 +1,6 @@
 import random
 import os
+import logging
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 import requests
 from bs4 import BeautifulSoup
@@ -7,6 +8,13 @@ from sqlmodel import Session, select
 from models import GroupMember, GroupExclusion
 from blog_config import BLOG_POSTS
 from catalog import CatalogQuery, MAX_PER_PAGE, search_products, slugify
+
+logger = logging.getLogger(__name__)
+
+# The placeholder affiliate tag keeps working without configuration but is not
+# a real monetization value. Warn once per process so the misconfiguration is
+# visible without spamming every link generation.
+_amazon_tag_warned = False
 
 # --- SCRAPING & UTILS (EXISTENTE) ---
 
@@ -82,7 +90,16 @@ def generate_amazon_link(query_or_url: str):
     - Si es una query de texto: crea link de búsqueda.
     - Si es una URL de Amazon: inyecta el tag de afiliado.
     """
-    tag = os.getenv("AMAZON_TAG", "tu_tag_defecto-21")
+    global _amazon_tag_warned
+    tag = os.getenv("AMAZON_TAG")
+    if not tag:
+        if not _amazon_tag_warned:
+            logger.warning(
+                "AMAZON_TAG is not set; affiliate links fall back to the "
+                "'tu_tag_defecto-21' placeholder tag."
+            )
+            _amazon_tag_warned = True
+        tag = "tu_tag_defecto-21"
     
     # Caso 1: Es una URL de Amazon
     if "amazon" in query_or_url and ("http://" in query_or_url or "https://" in query_or_url):

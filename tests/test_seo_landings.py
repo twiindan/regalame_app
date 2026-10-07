@@ -184,3 +184,48 @@ def test_organizer_sitemap_is_unique_and_robots_allow_public_landings(client, mo
     assert "Disallow: /amigo-invisible" not in robots.text
     assert f"Sitemap: {domain.rstrip('/')}/sitemap.xml" in robots.text
     assert client.get("/amigo-invisible/desconocido").status_code == 404
+
+
+def _affiliate_anchors(soup):
+    return [a for a in soup.find_all("a", href=True) if "amazon." in a["href"]]
+
+
+def _assert_sponsored(anchor):
+    rel = set(anchor.get("rel") or [])
+    assert {"sponsored", "nofollow", "noopener"}.issubset(rel), anchor
+
+
+def test_catalog_affiliate_links_are_sponsored(client, catalog_seed):
+    anchors = _affiliate_anchors(page(client, "/bestsellers"))
+    assert anchors
+    for anchor in anchors:
+        _assert_sponsored(anchor)
+
+
+def test_blog_affiliate_links_are_sponsored(client, catalog_seed):
+    anchors = _affiliate_anchors(page(client, "/blog/regalos-amigo-invisible-10-euros"))
+    assert anchors
+    for anchor in anchors:
+        _assert_sponsored(anchor)
+
+
+def test_dashboard_affiliate_links_are_sponsored(auth_client, catalog_seed):
+    response = auth_client.get("/dashboard")
+    assert response.status_code == 200
+    anchors = _affiliate_anchors(BeautifulSoup(response.text, "html.parser"))
+    assert anchors
+    for anchor in anchors:
+        _assert_sponsored(anchor)
+
+
+def test_wish_store_link_is_sponsored(auth_client, session, test_user):
+    from models import Wish
+
+    session.add(Wish(user_id=test_user.id, title="Regalo test",
+                     url="https://www.amazon.es/dp/ZZTOP?tag=test-21"))
+    session.commit()
+
+    soup = BeautifulSoup(auth_client.get("/dashboard").text, "html.parser")
+    anchor = soup.find("a", href=lambda href: href and "ZZTOP" in href)
+    assert anchor is not None
+    _assert_sponsored(anchor)
