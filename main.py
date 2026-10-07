@@ -85,6 +85,7 @@ Allow: /
 Disallow: /private/
 Disallow: /admin/
 Disallow: /group/
+Disallow: /join/
 
 Sitemap: {domain}/sitemap.xml"""
 
