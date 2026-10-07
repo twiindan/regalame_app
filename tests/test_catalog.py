@@ -517,6 +517,26 @@ def test_get_blog_posts_with_covers_uses_distinct_images_for_overlapping_criteri
     assert posts["regalos-baratos-menos-20-euros"]["hero_image"] == "img-cheap-2.jpg"
 
 
+def test_get_blog_posts_with_covers_falls_back_when_no_unused_image(session):
+    from services import get_blog_posts_with_covers
+
+    only = Product(
+        asin="D1", title="Único regalo", title_normalized=normalize_text("Único regalo"),
+        image_url="img-only.jpg", url="https://www.amazon.es/dp/D1", price_numeric=5.0,
+        price_raw="5,00 €", category="Alimentación y bebidas",
+        category_slug="alimentacion-y-bebidas", scraped_at=datetime(2026, 1, 1),
+    )
+    session.add(only)
+    session.commit()
+
+    posts = {p["slug"]: p for p in get_blog_posts_with_covers(session)}
+
+    # Both price buckets match only this product: the second card has no unused
+    # image, so it falls back to the first visible image instead of raising.
+    assert posts["regalos-amigo-invisible-10-euros"]["hero_image"] == "img-only.jpg"
+    assert posts["regalos-baratos-menos-20-euros"]["hero_image"] == "img-only.jpg"
+
+
 def test_search_treats_percent_as_literal(session, catalog_seed):
     # "a%" survives the 2-char guard; unescaped it would match every title containing "a"
     assert search_products(session, CatalogQuery(q="a%")).total == 0

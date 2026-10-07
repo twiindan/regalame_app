@@ -89,3 +89,8 @@ venv/bin/python -m pytest -q --ignore=tests/test_e2e.py
 - Foreground checks: `tests/test_catalog.py tests/test_editorial_filtering.py` → 88 passed;
   full suite (`--ignore=tests/test_e2e.py`) → 399 passed. Real local catalog: 11 resolved covers,
   0 duplicates; first two cards now resolve to different images.
+- Native review `review-e7ec250290c37411` (lens `review-reliability`): **APPROVED**, receipt burned.
+- Follow-up (this commit): added `test_get_blog_posts_with_covers_falls_back_when_no_unused_image`
+  to close advisory finding **R3-1** (the exhausted-candidates fallback had no test). Remaining
+  advisory, not addressed: **R3-2** (dedupe scans one page, `per_page=MAX_PER_PAGE`; theoretical at
+  11 posts) and **R3-3** (curated `hero_image` not deduped against auto covers; pre-existing).
