@@ -270,6 +270,7 @@ esta ruta, las reglas generales de las secciones 8, 9 y 11.
 | `?page=N` con `N > 1` en rango | `200`; `canonical` autorreferente `/ideas/{slug}?page=N` |
 | `/ideas/{slug}` página 1 | `200`; `canonical` `/ideas/{slug}` |
 
+- «`?page` no entero» significa **solo dígitos ASCII** (`[0-9]+`): espacios, signos (`+`/`-`), separadores `_` y dígitos no-ASCII se rechazan con `404`.
 - En las páginas `200` se conservan `rel="prev"` y `rel="next"` de la paginación.
 - La respuesta `404` usa `templates/404.html`, con `meta robots="noindex"`, y no emite `canonical`.
 - Las peticiones HTMX a una URL inválida también reciben `404`.

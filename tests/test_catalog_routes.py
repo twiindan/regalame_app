@@ -1,3 +1,8 @@
+import pytest
+
+from main import _parse_page_number
+
+
 def test_catalog_page_returns_200(client, catalog_seed):
     response = client.get("/catalog")
     assert response.status_code == 200
@@ -93,6 +98,47 @@ def test_ideas_page_zero_returns_404(client, catalog_seed):
 
 def test_ideas_page_non_integer_returns_404(client, catalog_seed):
     response = client.get("/ideas/alimentacion-y-bebidas?page=abc")
+    assert response.status_code == 404
+
+
+@pytest.mark.parametrize(
+    "raw_value",
+    [
+        " 2 ",     # surrounding whitespace
+        "+2",      # leading sign
+        "1_0",     # PEP-515 underscore separator
+        "\uff12",  # fullwidth digit 2 (non-ASCII)
+        " 1 ",     # in-range whitespace representative
+        "+1",      # in-range sign representative
+        "0_1",     # in-range underscore representative
+        "\uff11",  # in-range fullwidth digit 1 (non-ASCII)
+        "",        # empty string
+    ],
+)
+def test_parse_page_number_rejects_lenient_integer_forms(raw_value):
+    assert _parse_page_number(raw_value) is None
+
+
+@pytest.mark.parametrize(
+    "raw_page",
+    [
+        "%202%20",    # 2 (surrounding whitespace) — reported by review
+        "%2B2",       # 2 (leading sign) — reported by review
+        "1_0",        # 10 (PEP-515 underscore) — reported by review
+        "%EF%BC%92",  # 2 (fullwidth digit, non-ASCII) — reported by review
+        "%201%20",    # 1 (surrounding whitespace) — in range, isolates the parser
+        "%2B1",       # 1 (leading sign) — in range, isolates the parser
+        "0_1",        # 1 (underscore separator) — in range, isolates the parser
+        "%EF%BC%91",  # 1 (fullwidth digit, non-ASCII) — in range, isolates the parser
+    ],
+)
+def test_ideas_page_lenient_integer_forms_return_404(client, catalog_seed, raw_page):
+    response = client.get(f"/ideas/alimentacion-y-bebidas?page={raw_page}")
+    assert response.status_code == 404
+
+
+def test_ideas_page_empty_returns_404(client, catalog_seed):
+    response = client.get("/ideas/alimentacion-y-bebidas?page=")
     assert response.status_code == 404
 
 

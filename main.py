@@ -237,15 +237,16 @@ def _to_int(value, default=1):
 
 
 def _parse_page_number(value):
-    """Strictly parse a ``page`` query string; return ``None`` when not an integer.
+    """Strictly parse a ``page`` query string; return ``None`` unless it is ASCII digits.
 
+    Only ``[0-9]+`` is accepted, so whitespace, signs, underscore separators and
+    non-ASCII digits are rejected instead of being normalized by ``int``.
     Unlike ``_to_int``, this never falls back to a default: the SEO routes need
     to tell "missing/invalid" apart from a real page number so they can 404.
     """
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
+    if isinstance(value, str) and value.isascii() and value.isdigit():
+        return int(value, 10)
+    return None
 
 
 def _catalog_context(
