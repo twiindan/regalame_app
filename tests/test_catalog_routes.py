@@ -64,9 +64,36 @@ def test_ideas_slug_has_canonical(client, catalog_seed):
     assert 'rel="canonical"' in response.text
 
 
-def test_ideas_unknown_slug_is_empty_not_redirect(client, catalog_seed):
+def test_ideas_unknown_slug_returns_404(client, catalog_seed):
     response = client.get("/ideas/inexistente")
-    assert response.status_code == 200
+    assert response.status_code == 404
+
+
+def test_ideas_unknown_slug_has_no_canonical(client, catalog_seed):
+    response = client.get("/ideas/inexistente")
+    assert response.status_code == 404
+    assert 'rel="canonical"' not in response.text
+
+
+def test_ideas_unknown_slug_404_is_noindex(client, catalog_seed):
+    response = client.get("/ideas/inexistente")
+    assert response.status_code == 404
+    assert '<meta name="robots" content="noindex">' in response.text
+
+
+def test_ideas_page_overflow_returns_404(client, catalog_seed):
+    response = client.get("/ideas/alimentacion-y-bebidas?page=99")
+    assert response.status_code == 404
+
+
+def test_ideas_page_zero_returns_404(client, catalog_seed):
+    response = client.get("/ideas/alimentacion-y-bebidas?page=0")
+    assert response.status_code == 404
+
+
+def test_ideas_page_non_integer_returns_404(client, catalog_seed):
+    response = client.get("/ideas/alimentacion-y-bebidas?page=abc")
+    assert response.status_code == 404
 
 
 def test_sitemap_lists_categories(client, catalog_seed):
@@ -110,7 +137,7 @@ def test_ideas_slug_canonical_and_pagination_links(client, session):
     assert 'rel="next"' in page1.text
 
     page2 = client.get("/ideas/electronica?page=2")
-    assert '<link rel="canonical" href="/ideas/electronica">' in page2.text
+    assert '<link rel="canonical" href="/ideas/electronica?page=2">' in page2.text
     assert 'rel="prev"' in page2.text
 
 
@@ -133,6 +160,11 @@ def test_ideas_htmx_returns_partial_only(client, catalog_seed):
     assert response.status_code == 200
     assert "catalog-results" in response.text
     assert "<html" not in response.text
+
+
+def test_ideas_htmx_unknown_slug_returns_404(client, catalog_seed):
+    response = client.get("/ideas/inexistente", headers={"HX-Request": "true"})
+    assert response.status_code == 404
 
 
 def test_legacy_routes_noindex_with_price_filters(client, catalog_seed):

@@ -161,7 +161,9 @@ Reglas:
   - `newest`: por `scraped_at DESC`.
 - Paginación: `per_page` por defecto 24, tope 60. `total` se calcula con un `COUNT` sobre los mismos
   filtros.
-- `page` se ajusta al rango válido: fuera de rango se limita a la última página disponible.
+- `page` se ajusta al rango válido en las rutas de catálogo (`/catalog`, `/bestsellers`,
+  `/trends`, `/most-desired`): fuera de rango se limita a la última página disponible. En
+  `/ideas/{slug}` una página fuera de rango responde `404` (enmienda 2026-10-07, sección 17).
 
 ## 9. Rutas, URLs y SEO
 
@@ -176,8 +178,8 @@ Reglas SEO:
 
 1. Las páginas con parámetros `q`, `sort` o `page` se marcan `noindex, follow` para evitar
    contenido duplicado por combinaciones infinitas de filtros.
-2. `/ideas/{slug}` se indexa, con `canonical` hacia la URL limpia y `rel="prev"` / `rel="next"`
-   en la paginación.
+2. `/ideas/{slug}` se indexa, con `canonical` autorreferente (página 1: `/ideas/{slug}`; página N:
+   `/ideas/{slug}?page=N`) y `rel="prev"` / `rel="next"` en la paginación.
 3. Sin JavaScript todo funciona: buscador y filtros son un `<form method="GET">`. HTMX es una
    mejora progresiva, no un requisito. Un crawler recibe productos reales en el HTML.
 4. El sitemap mantiene las categorías y no incluye `/catalog`.
@@ -202,9 +204,11 @@ y el botón "atrás" funcione.
 |---|---|
 | `q` vacío | Lista normal filtrada por el resto de criterios |
 | `min_price > max_price` | Se invierten silenciosamente |
-| `page` fuera de rango | Se limita a la última página válida |
-| `page` no numérica o menor que 1 | Se limita a 1 |
-| `category_slug` inexistente | Estado vacío, sin redirección |
+| `page` fuera de rango en rutas de catálogo | Se limita a la última página válida |
+| `page` no numérica o menor que 1 en rutas de catálogo | Se limita a 1 |
+| `page` fuera de rango, no numérica o menor que 1 en `/ideas/{slug}` | `404` (enmienda 2026-10-07) |
+| `category_slug` inexistente en `/catalog` | Estado vacío, sin redirección |
+| `category_slug` inexistente o sin productos visibles en `/ideas/{slug}` | `404` (enmienda 2026-10-07) |
 | Precio `"N/A"` | Se muestra sin precio; no participa en filtros de precio |
 | Cero resultados | Estado vacío con llamada a la acción |
 
@@ -253,3 +257,23 @@ y el botón "atrás" funcione.
   import, con desactivación de productos ausentes.
 - **Fase 3 — Recomendaciones:** sugerencias según presupuesto del grupo, wishlist del destinatario
   y reservas existentes, apoyadas en la base ya normalizada.
+
+## 17. Enmienda 2026-10-07: política estricta de `/ideas/{slug}`
+
+Decisión del usuario (2026-10-07): endurecer la landing SEO por categoría. Sustituye, solo para
+esta ruta, las reglas generales de las secciones 8, 9 y 11.
+
+| Caso | Comportamiento |
+|---|---|
+| `slug` ausente de `list_categories(session)` (conjunto visible) | `404` real |
+| `?page` no entero, `< 1` o `> total_pages` | `404` real |
+| `?page=N` con `N > 1` en rango | `200`; `canonical` autorreferente `/ideas/{slug}?page=N` |
+| `/ideas/{slug}` página 1 | `200`; `canonical` `/ideas/{slug}` |
+
+- En las páginas `200` se conservan `rel="prev"` y `rel="next"` de la paginación.
+- La respuesta `404` usa `templates/404.html`, con `meta robots="noindex"`, y no emite `canonical`.
+- Las peticiones HTMX a una URL inválida también reciben `404`.
+- Consecuencia aceptada: bajo modo editorial `enforce`, una categoría sin productos visibles
+  responde `404` en lugar de renderizar una página vacía.
+- El resto de rutas (`/catalog`, `/bestsellers`, `/trends`, `/most-desired`) conservan el recorte
+  de página y el estado vacío descritos en las secciones 8 y 11.
