@@ -16,6 +16,12 @@
         <i class="ph-bold ph-arrow-left mr-2"></i> Volver al Blog
     </a>
 
+    {% if post.hero_image %}
+    <div class="mb-10">
+        <img src="{{ post.hero_image }}" alt="{{ post.title }}" class="w-full h-64 md:h-80 object-cover rounded-3xl shadow-2xl">
+    </div>
+    {% endif %}
+
     <!-- Header -->
     <div class="text-center mb-12">
         <h1 class="text-3xl md:text-5xl font-extrabold text-white mb-6 leading-tight">

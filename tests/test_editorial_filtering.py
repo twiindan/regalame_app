@@ -333,6 +333,17 @@ def test_blog_hero_uses_the_first_visible_product(client, session, enforce, seed
     assert post["hero_image"] == "img-blog2.jpg"
 
 
+def test_blog_index_renders_cover_from_first_visible_product(client, catalog_seed):
+    body = client.get("/blog").text
+    assert "img-a1.jpg" in body
+
+
+def test_blog_detail_renders_the_cover_banner(client, catalog_seed):
+    body = client.get("/blog/regalos-amigo-invisible-10-euros").text
+    assert 'class="w-full h-64 md:h-80 object-cover rounded-3xl shadow-2xl"' in body
+    assert 'src="img-a1.jpg"' in body
+
+
 # --------------------------------------------------------------------------- #
 # 6.5 Safety rails: wishes + import health
 # --------------------------------------------------------------------------- #
