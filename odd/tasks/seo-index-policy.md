@@ -117,10 +117,15 @@ Revert the T1/T2/T3 commits; the changes are metadata-only and additive except t
 - [x] T1 (`24928af`) — approved/burned.
 - [x] T2 (`2af635f`) — approved/burned.
 - [x] T3 (`5dc9cb4`) — approved/burned.
-- [x] ODD doc committed; branch pushed; PR opened to `main` (merge is user-owned).
+- [x] Polish (`3bf4f0f`) — three follow-ups addressed; approved/burned.
+- [x] ODD doc committed; branch pushed; PR #57 opened to `main` (merge is user-owned).
 
-## Follow-ups (non-blocking advisory findings, acknowledged)
+## Follow-ups (advisory findings — RESOLVED in polish `3bf4f0f`)
 
-- R3-coverage-follow (`tests/test_seo_index_policy.py:5-8`): tighten `_is_noindex` / the T2 assertions to assert `follow` explicitly, matching §18.
-- R3-param-order (`main.py:294`): consider moving `has_query_params` after `editorial_context` (or making the new params keyword-only) to remove positional-caller risk.
-- R3-001 (`tests/test_seo_index_policy.py:78-86`): derive the sitemap expected domain from the same fallback, or set/clear `DOMAIN_URL` in the test, to remove environment dependence.
+All three non-blocking advisories from the T1–T3 reviews were closed in `3bf4f0f` (`test(seo): harden index-policy assertions and sitemap determinism`, 2 paths, 33 lines; native review `medium`, lens `review-reliability` → **approved**, acknowledgement burned):
+
+- R3-coverage-follow: `_is_noindex` replaced by `_robots_content`; every noindex assertion now pins the exact `"noindex, follow"` value and indexable cases assert `is None`. Mutation proof: mutating `templates/catalog.html` to `content="noindex"` made **5 T2 tests fail** (the old substring assertion would have passed), then reverted.
+- R3-param-order: `has_query_params` moved after `editorial_context` for readability. **This was a false positive**: the bare `*` in `_catalog_context` makes every parameter from `base_path` onward keyword-only, so no positional caller can exist. The polish review re-raised the same inferential concern (`R3-PARAM-REORDER`, `main.py:282`) because the `*` sits outside the changed hunk; resolved as informational and deliberately not re-churned.
+- R3-001 (sitemap `DOMAIN_URL`): `test_sitemap_excludes_profiles_but_keeps_landings` now calls `monkeypatch.delenv("DOMAIN_URL", raising=False)`, removing environment dependence.
+
+Polish verification: focused `tests/test_seo_index_policy.py` 13 passed; mutation 5 failed; full suite `--ignore=tests/test_e2e.py` 410 passed.
