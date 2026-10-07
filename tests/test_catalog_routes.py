@@ -1,3 +1,5 @@
+import sys
+
 import pytest
 
 from main import _parse_page_number
@@ -69,6 +71,13 @@ def test_ideas_slug_has_canonical(client, catalog_seed):
     assert 'rel="canonical"' in response.text
 
 
+def test_ideas_explicit_page_one_canonical_is_clean(client, catalog_seed):
+    response = client.get("/ideas/alimentacion-y-bebidas?page=1")
+    assert response.status_code == 200
+    assert '<link rel="canonical" href="/ideas/alimentacion-y-bebidas">' in response.text
+    assert 'href="/ideas/alimentacion-y-bebidas?page=1"' not in response.text
+
+
 def test_ideas_unknown_slug_returns_404(client, catalog_seed):
     response = client.get("/ideas/inexistente")
     assert response.status_code == 404
@@ -120,10 +129,17 @@ def test_parse_page_number_rejects_lenient_integer_forms(raw_value):
 
 
 def test_parse_page_number_rejects_over_long_digit_string():
-    # CPython 3.11+ caps int() string conversion at int_max_str_digits (4300)
-    # by default: an over-long ASCII digit string must be treated as invalid
-    # (return None) instead of escaping as a ValueError.
-    assert _parse_page_number("1" * 5000) is None
+    setter = getattr(sys, "set_int_max_str_digits", None)
+    if setter is None:
+        pytest.skip("interpreter has no int_max_str_digits cap")
+    original = sys.get_int_max_str_digits()
+    try:
+        sys.set_int_max_str_digits(640)  # minimum allowed by CPython (>=640)
+        payload = "1" * 5000
+        assert len(payload) > sys.get_int_max_str_digits()
+        assert _parse_page_number(payload) is None
+    finally:
+        sys.set_int_max_str_digits(original)
 
 
 @pytest.mark.parametrize(
@@ -223,6 +239,11 @@ def test_ideas_htmx_returns_partial_only(client, catalog_seed):
 def test_ideas_htmx_unknown_slug_returns_404(client, catalog_seed):
     response = client.get("/ideas/inexistente", headers={"HX-Request": "true"})
     assert response.status_code == 404
+    # htmx 1.9.10 has no 4xx swap configured, so an invalid HTMX request
+    # intentionally receives the full-document 404 (htmx does not swap a 4xx
+    # by default) rather than a fragment. Assert the full document is returned.
+    assert "<html" in response.text
+    assert "Página no encontrada" in response.text
 
 
 def test_legacy_routes_noindex_with_price_filters(client, catalog_seed):
