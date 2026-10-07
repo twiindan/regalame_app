@@ -256,9 +256,35 @@ def test_blog_post_has_self_canonical_and_identity(client, slug):
         ]
 
 
-def test_blog_post_uses_hero_image_as_og_image(client, catalog_seed):
+def test_blog_post_falls_back_to_the_default_social_image_for_a_relative_hero(
+        client, catalog_seed):
+    from main import public_origin
+
     soup = page(client, "/blog/regalos-amigo-invisible-10-euros")
-    assert soup.find("meta", property="og:image")["content"] == "img-a1.jpg"
+    default = public_origin() + "/static/og-image-default.jpg"
+    assert soup.find("meta", property="og:image")["content"] == default
+    assert soup.find("meta", property="twitter:image")["content"] == default
+    assert soup.find("meta", property="og:image:width")["content"] == "1200"
+    assert soup.find("meta", property="og:image:height")["content"] == "630"
+
+
+def test_blog_post_lets_an_absolute_hero_override_og_image(client, monkeypatch):
+    def fake_detail(session, slug):
+        return ({
+            "slug": slug,
+            "title": "Regalo absoluto",
+            "description": "Descripción de prueba",
+            "hero_image": "https://cdn.example/hero.jpg",
+        }, [])
+
+    monkeypatch.setattr("main.get_blog_post_detail", fake_detail)
+    soup = page(client, "/blog/regalos-amigo-invisible-10-euros")
+    assert soup.find("meta", property="og:image")["content"] == "https://cdn.example/hero.jpg"
+    assert soup.find("meta", property="twitter:image")["content"] == (
+        "https://cdn.example/hero.jpg"
+    )
+    assert soup.find("meta", property="og:image:width") is None
+    assert soup.find("meta", property="og:image:height") is None
 
 
 @pytest.mark.parametrize("path", ["/bestsellers", "/trends", "/most-desired"])

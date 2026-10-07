@@ -535,6 +535,11 @@ async def blog_post_detail(
     if not post:
         raise HTTPException(status_code=404, detail="Artículo no encontrado")
 
+    # Only an absolute hero can be a valid og:image; a relative path would render
+    # unfetchable for social crawlers, so fall back to the default asset instead.
+    hero = post.get("hero_image")
+    og_image = hero if hero and hero.startswith(("http://", "https://")) else None
+
     return templates.TemplateResponse(request, "blog_post.html", {
         "user": user,
         "post": post,
@@ -542,7 +547,7 @@ async def blog_post_detail(
         "amazon_link": generate_amazon_link,
         "title": post["title"],
         "canonical_url": f"/blog/{slug}",
-        "og_image": post.get("hero_image"),
+        "og_image": og_image,
     })
 
 # --- Rutas de Grupos ---
