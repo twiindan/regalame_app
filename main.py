@@ -93,9 +93,6 @@ Sitemap: {domain}/sitemap.xml"""
 async def sitemap_xml(session: Session = Depends(get_session)):
     domain = os.getenv("DOMAIN_URL", "https://regalame.app").rstrip("/")
     
-    # Obtener usuarios recientes (limitado a 1000 para MVP)
-    users = session.exec(select(User).limit(1000)).all()
-    
     urls = []
     # Home
     urls.append(f"""
@@ -114,16 +111,6 @@ async def sitemap_xml(session: Session = Depends(get_session)):
     </url>
 """)
     
-    # Perfiles públicos
-    for user in users:
-        urls.append(f"""
-        <url>
-            <loc>{domain}/p/{user.id}</loc>
-            <changefreq>weekly</changefreq>
-            <priority>0.8</priority>
-        </url>
-        """)
-        
     # Categorías SEO (Programmatic SEO)
     categories = list_categories(session)
     for _, slug in categories:

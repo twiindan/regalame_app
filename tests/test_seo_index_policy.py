@@ -64,3 +64,25 @@ def test_idea_landing_page_one_stays_indexable(client, catalog_seed):
     assert response.status_code == 200
     assert not _is_noindex(response.text)
 
+
+def test_public_profile_is_noindexed(client, test_user):
+    response = client.get(f"/p/{test_user.id}")
+    assert response.status_code == 200
+    soup = BeautifulSoup(response.text, "html.parser")
+    robots = soup.find("meta", attrs={"name": "robots"})
+    assert robots is not None
+    assert robots["content"] == "noindex, follow"
+
+
+def test_sitemap_excludes_profiles_but_keeps_landings(client, test_user, catalog_seed):
+    response = client.get("/sitemap.xml")
+    assert response.status_code == 200
+    text = response.text
+    assert "/p/" not in text
+    assert f"/p/{test_user.id}" not in text
+    assert "<loc>https://regalame.app/</loc>" in text
+    assert "/amigo-invisible" in text
+    assert "/ideas/alimentacion-y-bebidas" in text
+    assert "/blog/" in text
+
+
