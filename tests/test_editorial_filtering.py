@@ -338,6 +338,14 @@ def test_blog_index_renders_cover_from_first_visible_product(client, catalog_see
     assert "img-a1.jpg" in body
 
 
+def test_blog_index_covers_fit_instead_of_cropping(client, catalog_seed):
+    body = client.get("/blog").text
+    # Card covers must fit (object-contain) rather than crop (object-cover).
+    assert "img-a1.jpg" in body
+    assert "object-contain" in body
+    assert "object-cover" not in body
+
+
 def test_blog_detail_renders_the_cover_banner(client, catalog_seed):
     body = client.get("/blog/regalos-amigo-invisible-10-euros").text
     assert 'class="w-full h-64 md:h-80 object-cover rounded-3xl shadow-2xl"' in body
