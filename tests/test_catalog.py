@@ -472,6 +472,25 @@ def test_get_blog_post_detail_does_not_mutate_shared_post(session, catalog_seed)
     assert shared.get("hero_image") is None  # module-level dict untouched
 
 
+def test_get_blog_posts_with_covers_resolves_cover(session, catalog_seed):
+    from services import get_blog_posts_with_covers
+
+    posts = get_blog_posts_with_covers(session)
+    post = next(p for p in posts if p["slug"] == "regalos-amigo-invisible-10-euros")
+    assert post["hero_image"] == "img-a1.jpg"
+
+
+def test_get_blog_posts_with_covers_does_not_mutate_shared_posts(session, catalog_seed):
+    from blog_config import BLOG_POSTS
+    from services import get_blog_posts_with_covers
+
+    assert all(p.get("hero_image") is None for p in BLOG_POSTS)
+
+    get_blog_posts_with_covers(session)
+
+    assert all(p.get("hero_image") is None for p in BLOG_POSTS)
+
+
 def test_search_treats_percent_as_literal(session, catalog_seed):
     # "a%" survives the 2-char guard; unescaped it would match every title containing "a"
     assert search_products(session, CatalogQuery(q="a%")).total == 0

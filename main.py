@@ -17,7 +17,7 @@ from models import User, Group, GroupMember, Wish, GroupExclusion, Message, Frie
 from security import get_password_hash, verify_password
 from services import (
     scrape_metadata, generate_amazon_link, perform_draw,
-    get_blog_posts_list, get_blog_post_detail
+    get_blog_posts_list, get_blog_post_detail, get_blog_posts_with_covers
 )
 from catalog import CatalogQuery, search_products, list_categories
 from email_utils import send_invitation_email, send_wishlist_share_email
@@ -444,9 +444,10 @@ async def category_seo_page(
 @app.get("/blog", response_class=HTMLResponse)
 async def blog_index(
     request: Request,
-    user: Optional[User] = Depends(get_current_user)
+    user: Optional[User] = Depends(get_current_user),
+    session: Session = Depends(get_session)
 ):
-    posts = get_blog_posts_list()
+    posts = get_blog_posts_with_covers(session)
     return templates.TemplateResponse(request, "blog_index.html", {
         "user": user,
         "posts": posts,

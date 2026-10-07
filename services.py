@@ -218,3 +218,27 @@ def get_blog_post_detail(session: Session, slug: str):
         post = {**post, "hero_image": products[0].image_url}
 
     return post, products
+
+
+def get_blog_posts_with_covers(session: Session):
+    """
+    Retorna las entradas de BLOG_POSTS enriquecidas con una imagen de portada,
+    resuelta desde el primer producto visible que cumple los criterios del post.
+    No muta BLOG_POSTS: devuelve copias.
+    """
+    posts = []
+    for post in BLOG_POSTS:
+        if post.get("hero_image"):
+            posts.append(post)
+            continue
+        criteria = post.get("criteria", {})
+        category_slug = slugify(criteria["category"]) if "category" in criteria else None
+        result = search_products(session, CatalogQuery(
+            category_slug=category_slug,
+            max_price=criteria.get("max_price"),
+            page=1,
+            per_page=1,
+        ))
+        cover = result.items[0].image_url if result.items else None
+        posts.append({**post, "hero_image": cover})
+    return posts
