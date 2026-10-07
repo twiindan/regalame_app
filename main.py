@@ -374,6 +374,7 @@ def _catalog_context(
         "filter_qs": filter_qs,
         "has_filters": has_filters,
         "noindex": noindex,
+        "canonical_url": None if noindex else base_path,
         "amazon_link": generate_amazon_link,
     }
 
@@ -519,7 +520,8 @@ async def blog_index(
     return templates.TemplateResponse(request, "blog_index.html", {
         "user": user,
         "posts": posts,
-        "title": "Blog de Ideas y Regalos"
+        "title": "Blog de Ideas y Regalos",
+        "canonical_url": "/blog",
     })
 
 @app.get("/blog/{slug}", response_class=HTMLResponse)
@@ -538,7 +540,9 @@ async def blog_post_detail(
         "post": post,
         "items": products,
         "amazon_link": generate_amazon_link,
-        "title": post["title"]
+        "title": post["title"],
+        "canonical_url": f"/blog/{slug}",
+        "og_image": post.get("hero_image"),
     })
 
 # --- Rutas de Grupos ---

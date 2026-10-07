@@ -110,7 +110,7 @@ def test_shared_metadata_is_valid_and_does_not_invent_claims(client, path):
         assert unsupported not in claims
 
 
-@pytest.mark.parametrize("path,noindex", [("/blog", False), ("/catalog", True),
+@pytest.mark.parametrize("path,noindex", [("/catalog", True),
                                          ("/trends?q=regalo&page=2", True)])
 def test_unrelated_pages_keep_canonical_and_noindex_policy(client, path, noindex):
     soup = page(client, path)
@@ -229,3 +229,51 @@ def test_wish_store_link_is_sponsored(auth_client, session, test_user):
     anchor = soup.find("a", href=lambda href: href and "ZZTOP" in href)
     assert anchor is not None
     _assert_sponsored(anchor)
+
+
+def test_blog_index_has_self_canonical_and_identity(client):
+    from main import public_origin
+
+    soup = page(client, "/blog")
+    assert [item["href"] for item in soup.find_all("link", rel="canonical")] == ["/blog"]
+    for prop in ["og:url", "twitter:url"]:
+        assert [item["content"] for item in soup.find_all("meta", property=prop)] == [
+            public_origin() + "/blog"
+        ]
+
+
+@pytest.mark.parametrize("slug", [post["slug"] for post in BLOG_POSTS])
+def test_blog_post_has_self_canonical_and_identity(client, slug):
+    from main import public_origin
+
+    soup = page(client, f"/blog/{slug}")
+    assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [
+        f"/blog/{slug}"
+    ]
+    for prop in ["og:url", "twitter:url"]:
+        assert [item["content"] for item in soup.find_all("meta", property=prop)] == [
+            public_origin() + f"/blog/{slug}"
+        ]
+
+
+def test_blog_post_uses_hero_image_as_og_image(client, catalog_seed):
+    soup = page(client, "/blog/regalos-amigo-invisible-10-euros")
+    assert soup.find("meta", property="og:image")["content"] == "img-a1.jpg"
+
+
+@pytest.mark.parametrize("path", ["/bestsellers", "/trends", "/most-desired"])
+def test_indexable_catalog_pages_have_self_canonical(client, catalog_seed, path):
+    soup = page(client, path)
+    assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [path]
+    assert not soup.find("meta", attrs={"name": "robots"})
+
+
+@pytest.mark.parametrize("path", ["/blog", "/bestsellers", "/trends", "/most-desired"])
+def test_indexable_pages_use_the_configured_origin(client, catalog_seed, monkeypatch, path):
+    monkeypatch.setenv("DOMAIN_URL", "https://landing.example/")
+    soup = page(client, path)
+    for prop in ["og:url", "twitter:url"]:
+        assert [item["content"] for item in soup.find_all("meta", property=prop)] == [
+            "https://landing.example" + path
+        ]
+    assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [path]

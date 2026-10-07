@@ -78,13 +78,13 @@ defects on `https://regalame.app` (read-only exploration, 2026-10-07):
 
 ## Task checklist and acceptance
 
-- [ ] **T1 — Real social image**: commit `static/og-image-default.jpg` and emit it with
+- [x] **T1 — Real social image**: commit `static/og-image-default.jpg` and emit it with
       `og:image:width=1200`, `og:image:height=630`, `og:image:alt`, `twitter:image:alt`.
-- [ ] **T2 — Validated public origin**: `public_origin()` used by sitemap, robots, landings and
+- [x] **T2 — Validated public origin**: `public_origin()` used by sitemap, robots, landings and
       every identity tag; no hardcoded origin left in `base.html`.
-- [ ] **T3 — Per-page identity**: self canonical + self `og:url`/`twitter:url` on the indexable
+- [x] **T3 — Per-page identity**: self canonical + self `og:url`/`twitter:url` on the indexable
       pages; blog post hero as `og:image`; noindex pages unchanged; baselines regenerated.
-- [ ] **T4 — Affiliate/sponsored**: `rel="sponsored nofollow noopener"` on affiliate/store anchors;
+- [x] **T4 — Affiliate/sponsored**: `rel="sponsored nofollow noopener"` on affiliate/store anchors;
       `AMAZON_TAG` unset logs one warning.
 
 Acceptance (Given/When/Then):
@@ -116,3 +116,7 @@ Baselines are regenerated once with `venv/bin/python -m pytest -q tests/test_edi
 - 2026-10-07: read-only exploration (Engram obs #978); worktree `feature/seo-public-identity`
   created off `main@dd02c4a`; real `static/og-image-default.jpg` (1200x630 JPEG, 46 KB) rendered
   with Playwright + Chromium and placed in the worktree.
+- 2026-10-07: local implementation complete. Commits: T1 `7719093`, T2 `ea830fc`,
+  T4 `9ec23ea`, T3 (per-page identity + baselines). The nine golden baselines were regenerated
+  exactly once (`--editorial-update-baselines`); `editorial_off_sitemap.html` did not change.
+  Full suite excluding e2e: 441 passed.
