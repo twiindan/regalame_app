@@ -2,6 +2,7 @@
 
 {% block title %}Lista de Regalos de {{ profile_user.name }} | Regálame{% endblock %}
 {% block description %}Descubre la lista de deseos de {{ profile_user.name }} y reserva el regalo perfecto. Evita duplicados y acierta siempre con Regálame.{% endblock %}
+{% block extra_head %}<meta name="robots" content="noindex, follow">{% endblock %}
 
 {% block content %}
 <div class="max-w-3xl mx-auto">
