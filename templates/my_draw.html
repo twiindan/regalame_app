@@ -15,7 +15,7 @@
                     <li>
                         {{ wish.description }}
                         {% if wish.amazon_link %}
-                            <a href="{{ wish.amazon_link }}" target="_blank" class="text-blue-500 hover:underline text-sm ml-2">(View on Amazon)</a>
+                            <a href="{{ wish.amazon_link }}" target="_blank" rel="sponsored nofollow noopener" class="text-blue-500 hover:underline text-sm ml-2">(View on Amazon)</a>
                         {% endif %}
                     </li>
                 {% endfor %}

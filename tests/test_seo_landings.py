@@ -1,10 +1,13 @@
 import json
+from pathlib import Path
 from xml.etree import ElementTree
 
 import pytest
 from bs4 import BeautifulSoup
 
 from blog_config import BLOG_POSTS
+
+STATIC_DIR = Path(__file__).resolve().parents[1] / "static"
 
 
 def page(client, path):
@@ -107,7 +110,7 @@ def test_shared_metadata_is_valid_and_does_not_invent_claims(client, path):
         assert unsupported not in claims
 
 
-@pytest.mark.parametrize("path,noindex", [("/blog", False), ("/catalog", True),
+@pytest.mark.parametrize("path,noindex", [("/catalog", True),
                                          ("/trends?q=regalo&page=2", True)])
 def test_unrelated_pages_keep_canonical_and_noindex_policy(client, path, noindex):
     soup = page(client, path)
@@ -128,6 +131,43 @@ def test_category_retains_its_existing_relative_canonical(client, catalog_seed):
     assert "noindex" not in str(soup.head)
 
 
+def test_default_social_image_is_a_real_asset_emitted_with_dimensions(client):
+    assert (STATIC_DIR / "og-image-default.jpg").is_file()
+    soup = page(client, "/")
+    assert soup.find("meta", property="og:image")["content"].endswith(
+        "/static/og-image-default.jpg"
+    )
+    assert soup.find("meta", property="og:image:width")["content"] == "1200"
+    assert soup.find("meta", property="og:image:height")["content"] == "630"
+    assert soup.find("meta", property="og:image:alt")["content"]
+    assert soup.find("meta", property="twitter:image:alt")["content"]
+
+
+def test_public_origin_helpers_use_the_configured_domain(monkeypatch):
+    from main import public_origin, social_url
+
+    monkeypatch.setenv("DOMAIN_URL", "https://landing.example/")
+    assert public_origin() == "https://landing.example"
+    assert social_url("/blog") == "https://landing.example/blog"
+    assert social_url("https://other.example/post") == "https://other.example/post"
+    assert social_url(None) == "https://landing.example/"
+
+
+def test_default_social_image_uses_the_configured_origin(client, monkeypatch):
+    monkeypatch.setenv("DOMAIN_URL", "https://landing.example/")
+    soup = page(client, "/")
+    assert soup.find("meta", property="og:image")["content"] == (
+        "https://landing.example/static/og-image-default.jpg"
+    )
+
+
+def test_identity_tags_have_no_hardcoded_default_origin(client, monkeypatch):
+    monkeypatch.setenv("DOMAIN_URL", "https://landing.example/")
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "regalame.app" not in response.text
+
+
 @pytest.mark.parametrize("domain", ["https://regalame.app", "https://landing.example/"])
 def test_organizer_sitemap_is_unique_and_robots_allow_public_landings(client, monkeypatch, domain):
     monkeypatch.setenv("DOMAIN_URL", domain)
@@ -144,3 +184,96 @@ def test_organizer_sitemap_is_unique_and_robots_allow_public_landings(client, mo
     assert "Disallow: /amigo-invisible" not in robots.text
     assert f"Sitemap: {domain.rstrip('/')}/sitemap.xml" in robots.text
     assert client.get("/amigo-invisible/desconocido").status_code == 404
+
+
+def _affiliate_anchors(soup):
+    return [a for a in soup.find_all("a", href=True) if "amazon." in a["href"]]
+
+
+def _assert_sponsored(anchor):
+    rel = set(anchor.get("rel") or [])
+    assert {"sponsored", "nofollow", "noopener"}.issubset(rel), anchor
+
+
+def test_catalog_affiliate_links_are_sponsored(client, catalog_seed):
+    anchors = _affiliate_anchors(page(client, "/bestsellers"))
+    assert anchors
+    for anchor in anchors:
+        _assert_sponsored(anchor)
+
+
+def test_blog_affiliate_links_are_sponsored(client, catalog_seed):
+    anchors = _affiliate_anchors(page(client, "/blog/regalos-amigo-invisible-10-euros"))
+    assert anchors
+    for anchor in anchors:
+        _assert_sponsored(anchor)
+
+
+def test_dashboard_affiliate_links_are_sponsored(auth_client, catalog_seed):
+    response = auth_client.get("/dashboard")
+    assert response.status_code == 200
+    anchors = _affiliate_anchors(BeautifulSoup(response.text, "html.parser"))
+    assert anchors
+    for anchor in anchors:
+        _assert_sponsored(anchor)
+
+
+def test_wish_store_link_is_sponsored(auth_client, session, test_user):
+    from models import Wish
+
+    session.add(Wish(user_id=test_user.id, title="Regalo test",
+                     url="https://www.amazon.es/dp/ZZTOP?tag=test-21"))
+    session.commit()
+
+    soup = BeautifulSoup(auth_client.get("/dashboard").text, "html.parser")
+    anchor = soup.find("a", href=lambda href: href and "ZZTOP" in href)
+    assert anchor is not None
+    _assert_sponsored(anchor)
+
+
+def test_blog_index_has_self_canonical_and_identity(client):
+    from main import public_origin
+
+    soup = page(client, "/blog")
+    assert [item["href"] for item in soup.find_all("link", rel="canonical")] == ["/blog"]
+    for prop in ["og:url", "twitter:url"]:
+        assert [item["content"] for item in soup.find_all("meta", property=prop)] == [
+            public_origin() + "/blog"
+        ]
+
+
+@pytest.mark.parametrize("slug", [post["slug"] for post in BLOG_POSTS])
+def test_blog_post_has_self_canonical_and_identity(client, slug):
+    from main import public_origin
+
+    soup = page(client, f"/blog/{slug}")
+    assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [
+        f"/blog/{slug}"
+    ]
+    for prop in ["og:url", "twitter:url"]:
+        assert [item["content"] for item in soup.find_all("meta", property=prop)] == [
+            public_origin() + f"/blog/{slug}"
+        ]
+
+
+def test_blog_post_uses_hero_image_as_og_image(client, catalog_seed):
+    soup = page(client, "/blog/regalos-amigo-invisible-10-euros")
+    assert soup.find("meta", property="og:image")["content"] == "img-a1.jpg"
+
+
+@pytest.mark.parametrize("path", ["/bestsellers", "/trends", "/most-desired"])
+def test_indexable_catalog_pages_have_self_canonical(client, catalog_seed, path):
+    soup = page(client, path)
+    assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [path]
+    assert not soup.find("meta", attrs={"name": "robots"})
+
+
+@pytest.mark.parametrize("path", ["/blog", "/bestsellers", "/trends", "/most-desired"])
+def test_indexable_pages_use_the_configured_origin(client, catalog_seed, monkeypatch, path):
+    monkeypatch.setenv("DOMAIN_URL", "https://landing.example/")
+    soup = page(client, path)
+    for prop in ["og:url", "twitter:url"]:
+        assert [item["content"] for item in soup.find_all("meta", property=prop)] == [
+            "https://landing.example" + path
+        ]
+    assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [path]

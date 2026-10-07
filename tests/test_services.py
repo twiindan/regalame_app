@@ -1,6 +1,8 @@
+import logging
 from unittest.mock import patch
 import pytest
 from sqlmodel import select
+import services
 from services import scrape_metadata, generate_amazon_link, perform_draw
 from models import User, Group, GroupMember, GroupExclusion
 
@@ -15,6 +17,16 @@ def test_generate_amazon_link_url():
     link = generate_amazon_link(url)
     assert "tag=" in link
     assert "B08H93ZRLL" in link
+
+def test_generate_amazon_link_warns_once_when_tag_unset(monkeypatch, caplog):
+    monkeypatch.delenv("AMAZON_TAG", raising=False)
+    monkeypatch.setattr(services, "_amazon_tag_warned", False, raising=False)
+    with caplog.at_level(logging.WARNING, logger="services"):
+        first = services.generate_amazon_link("PlayStation 5")
+        second = services.generate_amazon_link("PlayStation 5")
+    assert "tag=" in first
+    assert "tag=" in second
+    assert caplog.text.count("AMAZON_TAG") == 1
 
 @patch("services.requests.get")
 def test_scrape_metadata_success(mock_get):

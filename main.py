@@ -62,6 +62,24 @@ if analytics_b64:
 # Inyectar analítica de forma global
 templates.env.globals['analytics_script'] = analytics_html
 
+# --- Identidad pública ---
+def public_origin() -> str:
+    """Origen público único (sin barra final). Fuente única de verdad del SEO."""
+    return os.getenv("DOMAIN_URL", "https://regalame.app").rstrip("/")
+
+
+def social_url(canonical_url) -> str:
+    """URL absoluta para etiquetas de identidad a partir de un canonical."""
+    if canonical_url and canonical_url.startswith("http"):
+        return canonical_url
+    if canonical_url:
+        return public_origin() + canonical_url
+    return public_origin() + "/"
+
+
+templates.env.globals["public_origin"] = public_origin
+templates.env.globals["social_url"] = social_url
+
 # --- Dependencias ---
 
 def get_current_user(request: Request, session: Session = Depends(get_session)) -> Optional[User]:
@@ -79,7 +97,7 @@ def require_user(request: Request, user: Optional[User] = Depends(get_current_us
 
 @app.get("/robots.txt", response_class=PlainTextResponse)
 async def robots_txt():
-    domain = os.getenv("DOMAIN_URL", "https://regalame.app").rstrip("/")
+    domain = public_origin()
     return f"""User-agent: *
 Allow: /
 Disallow: /private/
@@ -91,7 +109,7 @@ Sitemap: {domain}/sitemap.xml"""
 
 @app.get("/sitemap.xml", response_class=HTMLResponse)
 async def sitemap_xml(session: Session = Depends(get_session)):
-    domain = os.getenv("DOMAIN_URL", "https://regalame.app").rstrip("/")
+    domain = public_origin()
     
     urls = []
     # Home
@@ -148,14 +166,14 @@ async def index(request: Request, user: Optional[User] = Depends(get_current_use
         return RedirectResponse(url="/dashboard", status_code=303)
     return templates.TemplateResponse(request, "index.html", {
         "user": user,
-        "landing_canonical_url": os.getenv("DOMAIN_URL", "https://regalame.app").rstrip("/") + "/",
+        "canonical_url": public_origin() + "/",
     })
 
 @app.get("/amigo-invisible", response_class=HTMLResponse)
 async def amigo_invisible(request: Request, user: Optional[User] = Depends(get_current_user)):
     return templates.TemplateResponse(request, "amigo_invisible.html", {
         "user": user,
-        "landing_canonical_url": os.getenv("DOMAIN_URL", "https://regalame.app").rstrip("/") + "/amigo-invisible",
+        "canonical_url": public_origin() + "/amigo-invisible",
     })
 
 @app.post("/register", response_class=HTMLResponse)
@@ -356,6 +374,7 @@ def _catalog_context(
         "filter_qs": filter_qs,
         "has_filters": has_filters,
         "noindex": noindex,
+        "canonical_url": None if noindex else base_path,
         "amazon_link": generate_amazon_link,
     }
 
@@ -501,7 +520,8 @@ async def blog_index(
     return templates.TemplateResponse(request, "blog_index.html", {
         "user": user,
         "posts": posts,
-        "title": "Blog de Ideas y Regalos"
+        "title": "Blog de Ideas y Regalos",
+        "canonical_url": "/blog",
     })
 
 @app.get("/blog/{slug}", response_class=HTMLResponse)
@@ -520,7 +540,9 @@ async def blog_post_detail(
         "post": post,
         "items": products,
         "amazon_link": generate_amazon_link,
-        "title": post["title"]
+        "title": post["title"],
+        "canonical_url": f"/blog/{slug}",
+        "og_image": post.get("hero_image"),
     })
 
 # --- Rutas de Grupos ---
