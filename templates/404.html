@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Página no encontrada | Regálame{% endblock %}
+{% block extra_head %}
+<meta name="robots" content="noindex">
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto text-center py-16">
+    <h1 class="text-5xl md:text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 mb-6">404</h1>
+    <p class="text-gray-300 text-lg mb-8">
+        La página que buscas no existe o ya no está disponible.
+    </p>
+    <a href="/catalog" class="glass-btn inline-flex items-center px-6 py-3 rounded-lg text-sm font-medium hover:text-white">
+        <i class="ph ph-storefront mr-2"></i>Explorar el catálogo
+    </a>
+</div>
+{% endblock %}

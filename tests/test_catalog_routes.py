@@ -1,3 +1,10 @@
+import sys
+
+import pytest
+
+from main import _parse_page_number
+
+
 def test_catalog_page_returns_200(client, catalog_seed):
     response = client.get("/catalog")
     assert response.status_code == 200
@@ -64,9 +71,103 @@ def test_ideas_slug_has_canonical(client, catalog_seed):
     assert 'rel="canonical"' in response.text
 
 
-def test_ideas_unknown_slug_is_empty_not_redirect(client, catalog_seed):
-    response = client.get("/ideas/inexistente")
+def test_ideas_explicit_page_one_canonical_is_clean(client, catalog_seed):
+    response = client.get("/ideas/alimentacion-y-bebidas?page=1")
     assert response.status_code == 200
+    assert '<link rel="canonical" href="/ideas/alimentacion-y-bebidas">' in response.text
+    assert 'href="/ideas/alimentacion-y-bebidas?page=1"' not in response.text
+
+
+def test_ideas_unknown_slug_returns_404(client, catalog_seed):
+    response = client.get("/ideas/inexistente")
+    assert response.status_code == 404
+
+
+def test_ideas_unknown_slug_has_no_canonical(client, catalog_seed):
+    response = client.get("/ideas/inexistente")
+    assert response.status_code == 404
+    assert 'rel="canonical"' not in response.text
+
+
+def test_ideas_unknown_slug_404_is_noindex(client, catalog_seed):
+    response = client.get("/ideas/inexistente")
+    assert response.status_code == 404
+    assert '<meta name="robots" content="noindex">' in response.text
+
+
+def test_ideas_page_overflow_returns_404(client, catalog_seed):
+    response = client.get("/ideas/alimentacion-y-bebidas?page=99")
+    assert response.status_code == 404
+
+
+def test_ideas_page_zero_returns_404(client, catalog_seed):
+    response = client.get("/ideas/alimentacion-y-bebidas?page=0")
+    assert response.status_code == 404
+
+
+def test_ideas_page_non_integer_returns_404(client, catalog_seed):
+    response = client.get("/ideas/alimentacion-y-bebidas?page=abc")
+    assert response.status_code == 404
+
+
+@pytest.mark.parametrize(
+    "raw_value",
+    [
+        " 2 ",     # surrounding whitespace
+        "+2",      # leading sign
+        "1_0",     # PEP-515 underscore separator
+        "\uff12",  # fullwidth digit 2 (non-ASCII)
+        " 1 ",     # in-range whitespace representative
+        "+1",      # in-range sign representative
+        "0_1",     # in-range underscore representative
+        "\uff11",  # in-range fullwidth digit 1 (non-ASCII)
+        "",        # empty string
+    ],
+)
+def test_parse_page_number_rejects_lenient_integer_forms(raw_value):
+    assert _parse_page_number(raw_value) is None
+
+
+def test_parse_page_number_rejects_over_long_digit_string():
+    setter = getattr(sys, "set_int_max_str_digits", None)
+    if setter is None:
+        pytest.skip("interpreter has no int_max_str_digits cap")
+    original = sys.get_int_max_str_digits()
+    try:
+        sys.set_int_max_str_digits(640)  # minimum allowed by CPython (>=640)
+        payload = "1" * 5000
+        assert len(payload) > sys.get_int_max_str_digits()
+        assert _parse_page_number(payload) is None
+    finally:
+        sys.set_int_max_str_digits(original)
+
+
+@pytest.mark.parametrize(
+    "raw_page",
+    [
+        "%202%20",    # 2 (surrounding whitespace) — reported by review
+        "%2B2",       # 2 (leading sign) — reported by review
+        "1_0",        # 10 (PEP-515 underscore) — reported by review
+        "%EF%BC%92",  # 2 (fullwidth digit, non-ASCII) — reported by review
+        "%201%20",    # 1 (surrounding whitespace) — in range, isolates the parser
+        "%2B1",       # 1 (leading sign) — in range, isolates the parser
+        "0_1",        # 1 (underscore separator) — in range, isolates the parser
+        "%EF%BC%91",  # 1 (fullwidth digit, non-ASCII) — in range, isolates the parser
+    ],
+)
+def test_ideas_page_lenient_integer_forms_return_404(client, catalog_seed, raw_page):
+    response = client.get(f"/ideas/alimentacion-y-bebidas?page={raw_page}")
+    assert response.status_code == 404
+
+
+def test_ideas_page_empty_returns_404(client, catalog_seed):
+    response = client.get("/ideas/alimentacion-y-bebidas?page=")
+    assert response.status_code == 404
+
+
+def test_ideas_page_over_long_digit_string_returns_404(client, catalog_seed):
+    response = client.get("/ideas/alimentacion-y-bebidas?page=" + "1" * 5000)
+    assert response.status_code == 404
 
 
 def test_sitemap_lists_categories(client, catalog_seed):
@@ -110,7 +211,7 @@ def test_ideas_slug_canonical_and_pagination_links(client, session):
     assert 'rel="next"' in page1.text
 
     page2 = client.get("/ideas/electronica?page=2")
-    assert '<link rel="canonical" href="/ideas/electronica">' in page2.text
+    assert '<link rel="canonical" href="/ideas/electronica?page=2">' in page2.text
     assert 'rel="prev"' in page2.text
 
 
@@ -133,6 +234,16 @@ def test_ideas_htmx_returns_partial_only(client, catalog_seed):
     assert response.status_code == 200
     assert "catalog-results" in response.text
     assert "<html" not in response.text
+
+
+def test_ideas_htmx_unknown_slug_returns_404(client, catalog_seed):
+    response = client.get("/ideas/inexistente", headers={"HX-Request": "true"})
+    assert response.status_code == 404
+    # htmx 1.9.10 has no 4xx swap configured, so an invalid HTMX request
+    # intentionally receives the full-document 404 (htmx does not swap a 4xx
+    # by default) rather than a fragment. Assert the full document is returned.
+    assert "<html" in response.text
+    assert "Página no encontrada" in response.text
 
 
 def test_legacy_routes_noindex_with_price_filters(client, catalog_seed):

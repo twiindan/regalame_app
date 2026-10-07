@@ -228,6 +228,13 @@ def test_sitemap_suppresses_zero_visible_category(client, session, enforce, seed
     assert "/ideas/juguetes" not in body
 
 
+def test_ideas_zero_visible_category_returns_404(client, session, enforce, seed_editorial):
+    hidden = _make_product(session, "P2", "Pistola", category="Juguetes", slug="juguetes")
+    seed_editorial(hidden, "excluded")
+
+    assert client.get("/ideas/juguetes").status_code == 404
+
+
 def test_sitemap_unchanged_when_off(client, session, monkeypatch, seed_editorial):
     monkeypatch.setattr(curation, "EDITORIAL_FILTER_MODE", "off")
     visible = _make_product(session, "P1", "Cafetera", category="Hogar", slug="hogar")

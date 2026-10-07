@@ -254,6 +254,27 @@ def _to_int(value, default=1):
         return default
 
 
+def _parse_page_number(value):
+    """Strictly parse a ``page`` query string; return ``None`` unless it is ASCII digits.
+
+    Only ``[0-9]+`` is accepted, so whitespace, signs, underscore separators and
+    non-ASCII digits are rejected instead of being normalized by ``int``. The
+    digit length is also guarded: CPython 3.11+ caps ``int()`` at
+    ``int_max_str_digits`` (4300 by default), so an over-long digit string is
+    treated as invalid instead of raising ``ValueError``.
+    Unlike ``_to_int``, this never falls back to a default: the SEO routes need
+    to tell "missing/invalid" apart from a real page number so they can 404.
+    """
+    if isinstance(value, str) and value.isascii() and value.isdigit():
+        try:
+            return int(value, 10)
+        except ValueError:
+            # CPython 3.11+ limits int() to int_max_str_digits; an over-long
+            # digit string is not a usable page number, so treat it as invalid.
+            return None
+    return None
+
+
 def _catalog_context(
     session: Session,
     user,
@@ -445,12 +466,30 @@ async def category_seo_page(
         category=category_slug, page=page, always_indexable=True,
         editorial_context=category_slug,
     )
+    # Strict policy for the SEO landing: an unknown slug or an out-of-range /
+    # unparseable page is a real 404, not an empty 200 soft-404. `categories`
+    # is the visible `list_categories` set, reused here (no second query).
+    visible_slugs = {slug for _, slug in context["categories"]}
+    parsed_page = _parse_page_number(page)
+    if (
+        category_slug not in visible_slugs
+        or parsed_page is None
+        or parsed_page < 1
+        or parsed_page > context["result"].total_pages
+    ):
+        return templates.TemplateResponse(
+            request, "404.html",
+            {"user": user, "title": "Página no encontrada"},
+            status_code=404,
+        )
     context["category_name"] = next(
         (name for name, slug in context["categories"] if slug == category_slug),
         category_slug.replace("-", " ").title(),
     )
     context["other_categories"] = [c for c in context["categories"] if c[1] != category_slug]
-    context["canonical_url"] = f"/ideas/{category_slug}"
+    context["canonical_url"] = (
+        f"/ideas/{category_slug}?page={parsed_page}" if parsed_page > 1 else f"/ideas/{category_slug}"
+    )
     context["prev_page"] = context["result"].page - 1 if context["result"].page > 1 else None
     context["next_page"] = context["result"].page + 1 if context["result"].page < context["result"].total_pages else None
     if request.headers.get("HX-Request"):
