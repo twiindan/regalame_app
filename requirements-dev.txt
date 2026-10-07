@@ -5,3 +5,12 @@
 -r requirements.txt
 pytest==8.2.2
 httpx==0.28.1
+
+# Test-only dependencies for the isolated Search Console CLI tests
+# (tests/test_search_console.py). The CLI's own runtime dependencies stay
+# isolated in requirements-search-console.txt; they are duplicated here, pinned
+# identically, only so the CI test suite can import and run those tests.
+google-auth==2.60.0
+google-auth-oauthlib==1.5.0
+requests-oauthlib==2.0.0
+oauthlib==4.0.0
