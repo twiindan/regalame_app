@@ -1,10 +1,13 @@
 import json
+from pathlib import Path
 from xml.etree import ElementTree
 
 import pytest
 from bs4 import BeautifulSoup
 
 from blog_config import BLOG_POSTS
+
+STATIC_DIR = Path(__file__).resolve().parents[1] / "static"
 
 
 def page(client, path):
@@ -126,6 +129,18 @@ def test_category_retains_its_existing_relative_canonical(client, catalog_seed):
         "/ideas/alimentacion-y-bebidas"
     ]
     assert "noindex" not in str(soup.head)
+
+
+def test_default_social_image_is_a_real_asset_emitted_with_dimensions(client):
+    assert (STATIC_DIR / "og-image-default.jpg").is_file()
+    soup = page(client, "/")
+    assert soup.find("meta", property="og:image")["content"].endswith(
+        "/static/og-image-default.jpg"
+    )
+    assert soup.find("meta", property="og:image:width")["content"] == "1200"
+    assert soup.find("meta", property="og:image:height")["content"] == "630"
+    assert soup.find("meta", property="og:image:alt")["content"]
+    assert soup.find("meta", property="twitter:image:alt")["content"]
 
 
 @pytest.mark.parametrize("domain", ["https://regalame.app", "https://landing.example/"])
