@@ -240,12 +240,20 @@ def _parse_page_number(value):
     """Strictly parse a ``page`` query string; return ``None`` unless it is ASCII digits.
 
     Only ``[0-9]+`` is accepted, so whitespace, signs, underscore separators and
-    non-ASCII digits are rejected instead of being normalized by ``int``.
+    non-ASCII digits are rejected instead of being normalized by ``int``. The
+    digit length is also guarded: CPython 3.11+ caps ``int()`` at
+    ``int_max_str_digits`` (4300 by default), so an over-long digit string is
+    treated as invalid instead of raising ``ValueError``.
     Unlike ``_to_int``, this never falls back to a default: the SEO routes need
     to tell "missing/invalid" apart from a real page number so they can 404.
     """
     if isinstance(value, str) and value.isascii() and value.isdigit():
-        return int(value, 10)
+        try:
+            return int(value, 10)
+        except ValueError:
+            # CPython 3.11+ limits int() to int_max_str_digits; an over-long
+            # digit string is not a usable page number, so treat it as invalid.
+            return None
     return None
 
 

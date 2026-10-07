@@ -119,6 +119,13 @@ def test_parse_page_number_rejects_lenient_integer_forms(raw_value):
     assert _parse_page_number(raw_value) is None
 
 
+def test_parse_page_number_rejects_over_long_digit_string():
+    # CPython 3.11+ caps int() string conversion at int_max_str_digits (4300)
+    # by default: an over-long ASCII digit string must be treated as invalid
+    # (return None) instead of escaping as a ValueError.
+    assert _parse_page_number("1" * 5000) is None
+
+
 @pytest.mark.parametrize(
     "raw_page",
     [
@@ -139,6 +146,11 @@ def test_ideas_page_lenient_integer_forms_return_404(client, catalog_seed, raw_p
 
 def test_ideas_page_empty_returns_404(client, catalog_seed):
     response = client.get("/ideas/alimentacion-y-bebidas?page=")
+    assert response.status_code == 404
+
+
+def test_ideas_page_over_long_digit_string_returns_404(client, catalog_seed):
+    response = client.get("/ideas/alimentacion-y-bebidas?page=" + "1" * 5000)
     assert response.status_code == 404
 
 
