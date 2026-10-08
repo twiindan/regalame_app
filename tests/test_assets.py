@@ -44,3 +44,19 @@ def test_self_hosted_font_css_exists():
     assert "@font-face" in css
     assert "font-display: swap" in css
     assert "/static/fonts/inter-latin.woff2" in css
+
+
+def test_home_serves_prebuilt_tailwind_without_play_cdn(client):
+    html = client.get("/").text
+
+    assert "cdn.tailwindcss.com" not in html
+    assert "tailwind.config" not in html
+    assert "/static/css/tailwind.css" in html
+
+
+def test_prebuilt_tailwind_css_exists_and_covers_used_utilities():
+    css = (BASE_DIR / "static" / "css" / "tailwind.css").read_text(encoding="utf-8")
+
+    assert ".animate-fade-in-up" in css
+    assert ".grid-cols-1" in css
+    assert r".h-\[500px\]" in css

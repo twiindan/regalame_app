@@ -50,30 +50,8 @@
     <link rel="preload" href="/static/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="/static/css/fonts.css">
     
-    <!-- TailwindCSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: {
-                        glass: "rgba(255, 255, 255, 0.1)",
-                        glassBorder: "rgba(255, 255, 255, 0.2)",
-                    },
-                    animation: {
-                        'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
-                    },
-                    keyframes: {
-                        fadeInUp: {
-                            '0%': { opacity: '0', transform: 'translateY(20px)' },
-                            '100%': { opacity: '1', transform: 'translateY(0)' },
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <!-- TailwindCSS (prebuilt, no Node: regenerate with tools/build_tailwind.sh) -->
+    <link rel="stylesheet" href="/static/css/tailwind.css">
 
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
