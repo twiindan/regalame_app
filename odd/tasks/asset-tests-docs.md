@@ -47,5 +47,7 @@ user-owned. Rollback: revert; no runtime change.
 
 ## Progress
 
-- [ ] Tests, macro, docs, baselines.
-- [ ] Commit / PR — user-owned.
+- [x] Tests, macro, docs, baselines.
+- [x] Delivered under ordinary repository policy: PR #67 (commit bb3fdd0). The native review did
+      not close — the single selected lens (`review-reliability`) returned empty reviewer output
+      on every attempt — so no PASS or receipt exists for this candidate.
