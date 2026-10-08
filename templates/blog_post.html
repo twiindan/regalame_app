@@ -19,7 +19,7 @@
 
     {% if post.hero_image %}
     <div class="mb-10">
-        <img src="{{ post.hero_image }}" alt="{{ post.title }}" class="w-full h-64 md:h-80 object-cover rounded-3xl shadow-2xl">
+        <img src="{{ post.hero_image | amazon_webp }}" alt="{{ post.title }}" class="w-full h-64 md:h-80 object-cover rounded-3xl shadow-2xl">
     </div>
     {% endif %}
 
@@ -48,7 +48,7 @@
             
             <!-- Image Area -->
             <div class="relative h-48 overflow-hidden bg-white p-4">
-                <img src="{{ item.image_url }}" alt="{{ item.title }}" loading="lazy" class="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110">
+                <img src="{{ item.image_url | amazon_webp }}" alt="{{ item.title }}" loading="lazy" class="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110">
                 
                 {% if item.category %}
                 <div class="absolute top-2 right-2">

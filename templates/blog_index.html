@@ -25,7 +25,7 @@
             <!-- Image -->
             <a href="/blog/{{ post.slug }}" class="block overflow-hidden h-48 relative bg-white">
                 {% if post.hero_image %}
-                <img src="{{ post.hero_image }}" alt="{{ post.title }}" class="w-full h-full object-contain p-4 transform group-hover:scale-110 transition-transform duration-500">
+                <img src="{{ post.hero_image | amazon_webp }}" alt="{{ post.title }}" class="w-full h-full object-contain p-4 transform group-hover:scale-110 transition-transform duration-500">
                 {% else %}
                 <div class="w-full h-full bg-gradient-to-br from-indigo-900 to-purple-900 flex items-center justify-center">
                     {{ ph_duotone_gift("text-6xl text-white/20") }}

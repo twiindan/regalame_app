@@ -168,7 +168,7 @@
                     <div class="min-w-[220px] max-w-[220px] snap-center bg-white/5 rounded-xl overflow-hidden hover:bg-white/10 transition-colors flex flex-col border border-white/5 shadow-lg">
                         <!-- Image -->
                         <div class="h-40 overflow-hidden relative bg-white">
-                             <img src="{{ item.image_url or '' }}" alt="{{ item.title }}" loading="lazy" class="w-full h-full object-contain p-2">
+                             <img src="{{ (item.image_url or '') | amazon_webp }}" alt="{{ item.title }}" loading="lazy" class="w-full h-full object-contain p-2">
                              <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
                                  <span class="text-xs font-bold text-white bg-green-600 px-2 py-0.5 rounded-full shadow-sm">{{ item.price_raw or 'N/A' }}</span>
                              </div>
@@ -211,7 +211,7 @@
                     <div class="min-w-[220px] max-w-[220px] snap-center bg-white/5 rounded-xl overflow-hidden hover:bg-white/10 transition-colors flex flex-col border border-white/5 shadow-lg">
                         <!-- Image -->
                         <div class="h-40 overflow-hidden relative bg-white">
-                            <img src="{{ item.image_url or '' }}" alt="{{ item.title }}" loading="lazy" class="w-full h-full object-contain p-2">
+                            <img src="{{ (item.image_url or '') | amazon_webp }}" alt="{{ item.title }}" loading="lazy" class="w-full h-full object-contain p-2">
                              <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
                                  <span class="text-xs font-bold text-white bg-green-600 px-2 py-0.5 rounded-full shadow-sm">{{ item.price_raw or 'N/A' }}</span>
                              </div>
@@ -255,7 +255,7 @@
                     <div class="min-w-[220px] max-w-[220px] snap-center bg-white/5 rounded-xl overflow-hidden hover:bg-white/10 transition-colors flex flex-col border border-white/5 shadow-lg">
                         <!-- Image -->
                         <div class="h-40 overflow-hidden relative bg-white">
-                            <img src="{{ item.image_url or '' }}" alt="{{ item.title }}" loading="lazy" class="w-full h-full object-contain p-2">
+                            <img src="{{ (item.image_url or '') | amazon_webp }}" alt="{{ item.title }}" loading="lazy" class="w-full h-full object-contain p-2">
                              <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
                                  <span class="text-xs font-bold text-white bg-red-600 px-2 py-0.5 rounded-full shadow-sm">{{ item.price_raw or 'N/A' }}</span>
                              </div>

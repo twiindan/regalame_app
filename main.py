@@ -22,6 +22,7 @@ from services import (
 )
 from catalog import CatalogQuery, search_products, list_categories
 from email_utils import send_invitation_email, send_wishlist_share_email
+from image_urls import amazon_webp_url
 from urllib.parse import urlencode
 
 # Sorts that a user may request through the catalog routes. `random` is
@@ -80,6 +81,9 @@ def social_url(canonical_url) -> str:
 
 templates.env.globals["public_origin"] = public_origin
 templates.env.globals["social_url"] = social_url
+
+# Rewrite Amazon image URLs to their WebP variant at render time only.
+templates.env.filters["amazon_webp"] = amazon_webp_url
 
 # --- Dependencias ---
 
