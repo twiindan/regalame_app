@@ -17,7 +17,8 @@ from models import User, Group, GroupMember, Wish, GroupExclusion, Message, Frie
 from security import get_password_hash, verify_password
 from services import (
     scrape_metadata, generate_amazon_link, perform_draw,
-    get_blog_posts_list, get_blog_post_detail, get_blog_posts_with_covers
+    get_blog_posts_list, get_blog_post_detail, get_blog_posts_with_covers,
+    record_conversion
 )
 from catalog import CatalogQuery, search_products, list_categories
 from email_utils import send_invitation_email, send_wishlist_share_email
@@ -194,6 +195,7 @@ async def register(
     session.add(new_user)
     session.commit()
     session.refresh(new_user)
+    record_conversion(session, "signup")
     
     # Login automático
     request.session["user_id"] = new_user.id
@@ -216,6 +218,7 @@ async def login(
          return templates.TemplateResponse(request, "partials/login_error.html", {"error": "Credenciales inválidas"})
     
     request.session["user_id"] = user.id
+    record_conversion(session, "login")
     
     # HTMX Redirect para evitar nesting
     from fastapi import Response
@@ -586,6 +589,7 @@ async def create_group(
     member = GroupMember(group_id=new_group.id, user_id=user.id)
     session.add(member)
     session.commit()
+    record_conversion(session, "group_created")
     
     if emails:
         email_list = [e.strip() for e in emails.split(",") if e.strip()]
@@ -647,6 +651,7 @@ async def join_action(
     new_member = GroupMember(group_id=group.id, user_id=user.id)
     session.add(new_member)
     session.commit()
+    record_conversion(session, "invitation_accepted")
     
     return RedirectResponse(url=f"/group/{group.id}", status_code=303)
 
@@ -709,6 +714,8 @@ async def invite_to_group(
     email_list = [e.strip() for e in emails.split(",") if e.strip()]
     for email in email_list:
         background_tasks.add_task(send_invitation_email, email, group.name, group.code)
+    if email_list:
+        record_conversion(session, "invitation_sent")
         
     return templates.TemplateResponse(request, "partials/invitation_sent_message.html", {"count": len(email_list)})
 
@@ -725,6 +732,7 @@ async def draw_group(
         
     try:
         perform_draw(group_id, session)
+        record_conversion(session, "draw_performed")
         return RedirectResponse(url=f"/group/{group_id}", status_code=303)
     except ValueError as e:
         return HTMLResponse(f"<div class='text-red-500 bg-red-900/20 p-4 rounded-lg mt-4'>{str(e)}</div>")
@@ -898,6 +906,7 @@ async def add_wish(
     session.add(new_wish)
     session.commit()
     session.refresh(new_wish)
+    record_conversion(session, "wish_added")
     
     return templates.TemplateResponse(request, "partials/wish_item.html", {"wish": new_wish, "user": user, "readonly": False})
 
@@ -915,16 +924,20 @@ async def toggle_reserve(
     if wish.user_id == user.id:
         return HTMLResponse("No puedes reservar tu propio deseo", status_code=400)
     
+    reserved = False
     if wish.reserved_by_id == user.id:
         wish.reserved_by_id = None
     elif wish.reserved_by_id is None:
         wish.reserved_by_id = user.id
+        reserved = True
     else:
         return HTMLResponse("Ya reservado por otro", status_code=400)
         
     session.add(wish)
     session.commit()
     session.refresh(wish)
+    if reserved:
+        record_conversion(session, "wish_reserved")
     
     return templates.TemplateResponse(request, "partials/reserve_button.html", {"wish": wish, "user": user})
 

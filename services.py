@@ -5,11 +5,67 @@ from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 import requests
 from bs4 import BeautifulSoup
 from sqlmodel import Session, select
-from models import GroupMember, GroupExclusion
+from sqlalchemy import func
+from models import GroupMember, GroupExclusion, ConversionEvent
 from blog_config import BLOG_POSTS
 from catalog import CatalogQuery, MAX_PER_PAGE, search_products, slugify
 
 logger = logging.getLogger(__name__)
+
+# --- PRIVACY-SCOPED CONVERSION EVENTS ---
+#
+# The allowlist is the whole vocabulary we are allowed to persist. A conversion
+# row carries only the event name and a naive UTC timestamp; adding an event is
+# a deliberate, reviewed change to this frozenset. Never store identifying data.
+CONVERSION_EVENTS = frozenset({
+    "signup", "login", "group_created", "invitation_accepted",
+    "invitation_sent", "wish_added", "wish_reserved", "draw_performed",
+})
+
+
+def record_conversion(session: Session, name: str) -> None:
+    """Append one conversion event for an allowlisted name.
+
+    Unknown names are ignored (nothing is stored). Recording is a resilient
+    side-channel: it must never break or fail the user action that triggered it.
+    """
+    if name not in CONVERSION_EVENTS:
+        return
+
+    try:
+        session.add(ConversionEvent(name=name))
+        session.commit()
+    except Exception:
+        # Analytics must never break the user action it observes. Roll back a
+        # poisoned transaction so the caller's session stays usable, log, and
+        # return quietly.
+        try:
+            session.rollback()
+        except Exception:
+            pass
+        logger.warning("Failed to record conversion event %r", name, exc_info=True)
+
+
+def conversion_counts(session: Session, since=None) -> dict:
+    """Read-only aggregates over conversion events.
+
+    Returns ``{"totals": {name: count}, "per_day": {"YYYY-MM-DD": count}}``
+    restricted to events at or after ``since`` (a naive UTC datetime) when given.
+    Only aggregates leave this function; no row-level data is exposed.
+    """
+    totals_stmt = select(ConversionEvent.name, func.count()).group_by(ConversionEvent.name)
+    per_day_stmt = (
+        select(func.date(ConversionEvent.occurred_at), func.count())
+        .group_by(func.date(ConversionEvent.occurred_at))
+    )
+    if since is not None:
+        totals_stmt = totals_stmt.where(ConversionEvent.occurred_at >= since)
+        per_day_stmt = per_day_stmt.where(ConversionEvent.occurred_at >= since)
+
+    totals = {name: count for name, count in session.exec(totals_stmt).all()}
+    per_day = {str(day): count for day, count in session.exec(per_day_stmt).all()}
+    return {"totals": totals, "per_day": per_day}
+
 
 # The placeholder affiliate tag keeps working without configuration but is not
 # a real monetization value. Warn once per process so the misconfiguration is
