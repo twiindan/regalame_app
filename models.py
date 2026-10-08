@@ -1,7 +1,7 @@
 from typing import Optional, List
 from datetime import date, datetime, timezone
 from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import UniqueConstraint, Index
 
 
 def utcnow_naive() -> datetime:
@@ -165,3 +165,19 @@ class EditorialGateState(SQLModel, table=True):
     model_id: str
     evaluated_at: datetime = Field(default_factory=utcnow_naive)
     updated_at: datetime = Field(default_factory=utcnow_naive)
+
+class ConversionEvent(SQLModel, table=True):
+    """Append-only, privacy-scoped conversion event.
+
+    Deliberately stores only the allowlisted event ``name`` and the naive UTC
+    ``occurred_at``. No user id, email, group, wish, IP, or user-agent is ever
+    persisted here: the privacy scope is enforced by the schema itself.
+    """
+    __tablename__ = "conversion_event"
+    __table_args__ = (
+        Index("ix_conversion_event_name_occurred_at", "name", "occurred_at"),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str = Field(index=True)
+    occurred_at: datetime = Field(default_factory=utcnow_naive, index=True)
