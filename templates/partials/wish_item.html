@@ -15,7 +15,7 @@
     <!-- Image -->
     {% if wish.image_url %}
     <div class="h-40 w-full overflow-hidden bg-black/20">
-        <img src="{{ wish.image_url }}" alt="{{ wish.title }}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500">
+        <img src="{{ wish.image_url | amazon_webp }}" alt="{{ wish.title }}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500">
     </div>
     {% else %}
     <div class="h-24 w-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center opacity-50 group-hover:opacity-70 transition-opacity">
