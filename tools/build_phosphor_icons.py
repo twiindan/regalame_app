@@ -8,10 +8,12 @@ Pipeline:
   1. Scan templates/**/*.html + main.py for `class="..."` attributes and collect
      the used (weight, name) pairs. Only class-attribute tokens are considered so
      the word "ph" inside unrelated words never matches.
-  2. Download every non-duotone icon from the pinned @phosphor-icons/core release
-     into static/icons/<weight>/<name>.svg (deterministic overwrite).
-  3. Write static/css/phosphor.css: one shared base rule plus one mask-image rule
-     per used icon, colored with `background-color: currentColor`.
+  2. Download and validate every non-duotone icon from the pinned
+     @phosphor-icons/core release into a temporary staging directory. Each icon
+     must parse as well-formed XML with an SVG-namespaced root.
+  3. Commit: atomically move the staged icons into static/icons/<weight>/<name>.svg
+     and only then write static/css/phosphor.css. Any download or validation
+     failure aborts before static/ is touched.
 
 Duotone icons are intentionally skipped here: their two-tone effect is inlined as
 literal <svg> in the templates (see the work unit odd/tasks/phosphor-svg.md).
@@ -21,11 +23,15 @@ Stdlib only. Run from anywhere; paths are resolved relative to the repo root.
 
 from __future__ import annotations
 
+import os
 import re
+import shutil
 import ssl
 import sys
+import tempfile
 import urllib.error
 import urllib.request
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 VERSION = "2.1.1"
@@ -42,9 +48,14 @@ BASE_RULE = (
     "-webkit-mask-size:100% 100%;mask-size:100% 100%}"
 )
 
+SVG_TAG = "{http://www.w3.org/2000/svg}svg"
+
 ROOT = Path(__file__).resolve().parents[1]
 ICONS_DIR = ROOT / "static" / "icons"
 CSS_PATH = ROOT / "static" / "css" / "phosphor.css"
+# Staging lives on the same filesystem as static/ so os.replace() stays atomic.
+# tools/.bin/ is already git-ignored, so a crashed run leaves nothing tracked.
+STAGING_PARENT = ROOT / "tools" / ".bin"
 
 # Weight token -> canonical weight directory. Bare `ph` is the regular weight.
 WEIGHT_TOKENS = {
@@ -106,6 +117,20 @@ def remote_url(weight: str, name: str) -> str:
     return f"{BASE_URL}/{weight}/{name}-{weight}.svg"
 
 
+def validate_svg(url: str, body: bytes) -> None:
+    """Require well-formed XML with a non-empty SVG-namespaced root element."""
+    try:
+        root = ET.fromstring(body)
+    except ET.ParseError as exc:
+        raise SystemExit(f"ERROR: {url} is not well-formed XML: {exc}") from exc
+    if root.tag != SVG_TAG:
+        raise SystemExit(
+            f"ERROR: {url} root element is {root.tag!r}, expected {SVG_TAG!r}"
+        )
+    if len(root) == 0 and not (root.text or "").strip():
+        raise SystemExit(f"ERROR: {url} returned an empty <svg> root")
+
+
 def download(context: ssl.SSLContext, weight: str, name: str, target: Path) -> int:
     url = remote_url(weight, name)
     try:
@@ -113,11 +138,19 @@ def download(context: ssl.SSLContext, weight: str, name: str, target: Path) -> i
             body = response.read()
     except (urllib.error.URLError, urllib.error.HTTPError, OSError) as exc:
         raise SystemExit(f"ERROR: failed to download {url}: {exc}") from exc
-    if b"<svg" not in body:
-        raise SystemExit(f"ERROR: {url} did not return an SVG (got {body[:40]!r})")
+    validate_svg(url, body)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(body)
     return len(body)
+
+
+def commit(staging: Path, used: set[tuple[str, str]]) -> None:
+    """Atomically move every validated staged icon into static/icons/."""
+    for weight, name in sorted(used):
+        staged = staging / weight / f"{name}.svg"
+        target = ICONS_DIR / weight / f"{name}.svg"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        os.replace(staged, target)
 
 
 def selector_for(weight: str, name: str) -> str:
@@ -148,11 +181,18 @@ def main() -> int:
     if not used:
         raise SystemExit("ERROR: no Phosphor icon usages found; scan broken?")
     context = _ssl_context()
+    STAGING_PARENT.mkdir(parents=True, exist_ok=True)
+    staging = Path(tempfile.mkdtemp(prefix="phosphor-", dir=STAGING_PARENT))
     total_bytes = 0
-    for weight, name in sorted(used):
-        target = ICONS_DIR / weight / f"{name}.svg"
-        total_bytes += download(context, weight, name, target)
-    write_css(used)
+    try:
+        for weight, name in sorted(used):
+            total_bytes += download(
+                context, weight, name, staging / weight / f"{name}.svg"
+            )
+        commit(staging, used)
+        write_css(used)
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
     print(f"Downloaded {len(used)} icons ({total_bytes} bytes) into {ICONS_DIR}")
     print(f"Wrote {CSS_PATH}")
     return 0
