@@ -268,6 +268,13 @@ def get_blog_post_detail(session: Session, slug: str):
     criteria = post.get("criteria", {})
     category_slug = slugify(criteria["category"]) if "category" in criteria else None
 
+    # Optional cap: a guide with no category/price filter (e.g. the Christmas
+    # most-wanted list) would otherwise collect the whole catalog and render it.
+    # Only a positive int caps; anything else keeps the previous behavior.
+    limit = criteria.get("limit")
+    if not (isinstance(limit, int) and not isinstance(limit, bool) and limit > 0):
+        limit = None
+
     products = []
     page = 1
     while True:
@@ -278,6 +285,9 @@ def get_blog_post_detail(session: Session, slug: str):
             per_page=MAX_PER_PAGE,
         ))
         products.extend(result.items)
+        if limit is not None and len(products) >= limit:
+            products = products[:limit]
+            break
         if page >= result.total_pages or not result.items:
             break
         page += 1
