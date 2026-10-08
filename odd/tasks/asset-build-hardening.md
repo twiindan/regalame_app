@@ -62,12 +62,12 @@ implementation time; they make the build reproducible and detect any later repla
 
 ## Tasks and acceptance
 
-- [ ] **T1 — Tailwind script**: platform resolution, pinned-hash verification (including a
+- [x] **T1 — Tailwind script**: platform resolution, pinned-hash verification (including a
       corrupted-cache re-download), asset-keyed cache, `cd` to root, bounded retry/timeout.
-- [ ] **T2 — Phosphor tool**: `ElementTree` well-formedness validation and stage-then-commit.
-- [ ] **T3 — Artifact neutrality**: run both builders and confirm `git status --short static/`
+- [x] **T2 — Phosphor tool**: `ElementTree` well-formedness validation and stage-then-commit.
+- [x] **T3 — Artifact neutrality**: run both builders and confirm `git status --short static/`
       is clean (the committed artifacts reproduce byte-for-byte).
-- [ ] **T4 — Full suite green** with observed results.
+- [x] **T4 — Full suite green** with observed results.
 
 ## TDD mode and verification checks
 
@@ -90,5 +90,10 @@ sha256sum static/css/tailwind.css static/css/phosphor.css   # record before/afte
 
 ## Progress
 
-- [ ] T1-T4.
-- [ ] Commit / PR — user-owned.
+- [x] T1-T4.
+- [x] Delivered under ordinary repository policy: PR #66 (commit 604b87e). The native review did
+      not close — 3 of 4 lenses returned empty reviewer output on the initial batch and on the
+      bounded relaunch — so no PASS or receipt exists for this candidate.
+- [x] Extra finding folded in: the committed `static/css/tailwind.css` carried a dead
+      `.ease-out` rule (-60 B) and was not reproducible; it is regenerated so re-running both
+      builders leaves `static/` byte-identical.
