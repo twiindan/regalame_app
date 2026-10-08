@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 from sqlalchemy import func
 from models import GroupMember, GroupExclusion, ConversionEvent
 from blog_config import BLOG_POSTS
-from catalog import CatalogQuery, MAX_PER_PAGE, search_products, slugify
+from catalog import CatalogQuery, MAX_PER_PAGE, products_by_asins, search_products, slugify
 
 logger = logging.getLogger(__name__)
 
@@ -266,21 +266,42 @@ def get_blog_post_detail(session: Session, slug: str):
         return None, []
 
     criteria = post.get("criteria", {})
-    category_slug = slugify(criteria["category"]) if "category" in criteria else None
 
-    products = []
-    page = 1
-    while True:
-        result = search_products(session, CatalogQuery(
-            category_slug=category_slug,
-            max_price=criteria.get("max_price"),
-            page=page,
-            per_page=MAX_PER_PAGE,
-        ))
-        products.extend(result.items)
-        if page >= result.total_pages or not result.items:
-            break
-        page += 1
+    # Optional cap: a guide with no category/price filter (e.g. the Christmas
+    # most-wanted list) would otherwise collect the whole catalog and render it.
+    # Only a positive int caps; anything else keeps the previous behavior.
+    limit = criteria.get("limit")
+    if not (isinstance(limit, int) and not isinstance(limit, bool) and limit > 0):
+        limit = None
+
+    items = criteria.get("items")
+    if isinstance(items, (list, tuple)) and items:
+        # Hand-curated list: resolve the explicit ASINs in the authored order.
+        # A catalog filter would order everything by rank, which is grouped by
+        # category (the scraper appends 50 products per category), not by
+        # popularity — so a broad or price-only guide clusters one category.
+        products = products_by_asins(session, list(items))
+        if limit is not None:
+            products = products[:limit]
+    else:
+        category_slug = slugify(criteria["category"]) if "category" in criteria else None
+
+        products = []
+        page = 1
+        while True:
+            result = search_products(session, CatalogQuery(
+                category_slug=category_slug,
+                max_price=criteria.get("max_price"),
+                page=page,
+                per_page=MAX_PER_PAGE,
+            ))
+            products.extend(result.items)
+            if limit is not None and len(products) >= limit:
+                products = products[:limit]
+                break
+            if page >= result.total_pages or not result.items:
+                break
+            page += 1
 
     # Pagination already runs over the filtered visible set: search_products
     # applies the editorial predicate before computing totals, so the loop above
