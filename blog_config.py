@@ -1,6 +1,24 @@
 # Configuración de Posts para el Blog (Listas Curadas)
 
 BLOG_POSTS = [
+    # --- NAVIDAD ---
+    {
+        "slug": "regalos-navidad-mas-deseados",
+        "title": "Los regalos más deseados para Navidad",
+        "description": "Una selección curada a mano con los regalos que más gustan para estas Navidades: ideas para todos los gustos y presupuestos, con enlace directo a Amazon.",
+        "criteria": {
+            "items": [
+                "B0B77CMJXZ", "B0FLQG3BL5", "B0DHSDHHPG", "B0CN41GMDK", "B0DRCZ7YL2",
+                "B0D9LNMRB6", "B0FXB1RNCM", "B0FQNWG1YX", "B07Q7463M7", "B0CHFHK76L",
+                "B08CGQZ7ND", "B09FK88YSH", "B09XHTR4RP", "B0CJVTDTB1", "B0B8ZMMV2H",
+                "B09C1ZT1TQ", "B0FPQRM6MS", "B0D2D4M1VG", "B0FZB7CGCK", "B07MCD3WVG",
+                "B07BB2MBNC", "B0DT4RPCK9", "B08L9HVWT3", "B0DHNYMK86", "8434439689",
+                "B0F5HPS9HW", "B0CB4JY5DV"
+            ]
+        },
+        "hero_image": None
+    },
+
     # --- PRECIO / PRESUPUESTO ---
     {
         "slug": "regalos-amigo-invisible-10-euros",
