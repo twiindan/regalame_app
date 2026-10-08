@@ -118,13 +118,13 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center">
-                    <a href="/" class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-violet-500 flex items-center">
+                    <a href="/" class="text-2xl font-bold bg-clip-text text-transparent bg-linear-to-r from-pink-500 to-violet-500 flex items-center">
                         <i class="ph-fill ph-gift mr-2 text-pink-500"></i>Regálame
                     </a>
                 </div>
                 <form action="/catalog" method="GET" class="hidden md:block flex-1 max-w-xs mx-6">
                     <input type="search" name="q" placeholder="Buscar productos..."
-                           class="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-indigo-400">
+                           class="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-hidden focus:border-indigo-400">
                 </form>
                 <div class="flex items-center space-x-4">
                     <div class="hidden md:flex space-x-4 mr-4 border-r border-white/10 pr-4">
@@ -144,7 +144,7 @@
     </nav>
 
     <!-- Content -->
-    <main class="flex-grow container mx-auto px-4 pt-24 pb-12">
+    <main class="grow container mx-auto px-4 pt-24 pb-12">
         
 <div class="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] gap-12 px-4">
     
@@ -152,7 +152,7 @@
     <div class="text-center max-w-2xl animate-fade-in-up">
         <h1 class="text-5xl md:text-7xl font-bold mb-6 tracking-tight leading-tight">
             Crea y comparte tu <br>
-            <span class="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400">
+            <span class="text-transparent bg-clip-text bg-linear-to-r from-pink-400 via-purple-400 to-indigo-400">
                 lista de regalos
             </span>
         </h1>
@@ -182,16 +182,16 @@
                     <div>
                         <label class="block text-xs font-bold text-gray-400 mb-2 ml-1 tracking-wide">EMAIL</label>
                         <input type="email" name="email" required 
-                               class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-colors placeholder-gray-600 text-white"
+                               class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 focus:outline-hidden focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-colors placeholder-gray-600 text-white"
                                placeholder="tu@email.com">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-400 mb-2 ml-1 tracking-wide">CONTRASEÑA</label>
                         <input type="password" name="password" required 
-                               class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-colors placeholder-gray-600 text-white"
+                               class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 focus:outline-hidden focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-colors placeholder-gray-600 text-white"
                                placeholder="••••••••">
                     </div>
-                    <button type="submit" class="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-bold py-3.5 rounded-xl shadow-lg transform transition hover:scale-[1.02] active:scale-95">
+                    <button type="submit" class="w-full bg-linear-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-bold py-3.5 rounded-xl shadow-lg transform transition hover:scale-[1.02] active:scale-95">
                         Entrar
                     </button>
                 </div>
@@ -205,22 +205,22 @@
                     <div>
                         <label class="block text-xs font-bold text-gray-400 mb-2 ml-1 tracking-wide">NOMBRE</label>
                         <input type="text" name="name" required 
-                               class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-colors placeholder-gray-600 text-white"
+                               class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 focus:outline-hidden focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-colors placeholder-gray-600 text-white"
                                placeholder="Tu nombre">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-400 mb-2 ml-1 tracking-wide">EMAIL</label>
                         <input type="email" name="email" required 
-                               class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-colors placeholder-gray-600 text-white"
+                               class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 focus:outline-hidden focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-colors placeholder-gray-600 text-white"
                                placeholder="tu@email.com">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-400 mb-2 ml-1 tracking-wide">CONTRASEÑA</label>
                         <input type="password" name="password" required 
-                               class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-colors placeholder-gray-600 text-white"
+                               class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 focus:outline-hidden focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-colors placeholder-gray-600 text-white"
                                placeholder="Crea una contraseña segura">
                     </div>
-                    <button type="submit" class="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold py-3.5 rounded-xl shadow-lg transform transition hover:scale-[1.02] active:scale-95">
+                    <button type="submit" class="w-full bg-linear-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-bold py-3.5 rounded-xl shadow-lg transform transition hover:scale-[1.02] active:scale-95">
                         Crear Cuenta
                     </button>
                 </div>

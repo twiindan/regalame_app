@@ -118,13 +118,13 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center">
-                    <a href="/" class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-violet-500 flex items-center">
+                    <a href="/" class="text-2xl font-bold bg-clip-text text-transparent bg-linear-to-r from-pink-500 to-violet-500 flex items-center">
                         <i class="ph-fill ph-gift mr-2 text-pink-500"></i>Regálame
                     </a>
                 </div>
                 <form action="/catalog" method="GET" class="hidden md:block flex-1 max-w-xs mx-6">
                     <input type="search" name="q" placeholder="Buscar productos..."
-                           class="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-indigo-400">
+                           class="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-hidden focus:border-indigo-400">
                 </form>
                 <div class="flex items-center space-x-4">
                     <div class="hidden md:flex space-x-4 mr-4 border-r border-white/10 pr-4">
@@ -144,11 +144,11 @@
     </nav>
 
     <!-- Content -->
-    <main class="flex-grow container mx-auto px-4 pt-24 pb-12">
+    <main class="grow container mx-auto px-4 pt-24 pb-12">
         
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
     <div class="text-center mb-8 mt-4">
-        <h1 class="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 mb-3">Top Ventas &amp; Ideas</h1>
+        <h1 class="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-linear-to-r from-emerald-400 via-teal-400 to-cyan-400 mb-3">Top Ventas &amp; Ideas</h1>
     </div>
 
     <form method="GET" action="/bestsellers"
@@ -159,7 +159,7 @@
         <div class="flex flex-col md:flex-row gap-3">
             <label class="sr-only" for="catalog-q">Buscar productos</label>
             <input id="catalog-q" type="search" name="q" value="" placeholder="Buscar productos..."
-                   class="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-gray-200 placeholder-gray-500 focus:outline-none focus:border-indigo-400">
+                   class="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-gray-200 placeholder-gray-500 focus:outline-hidden focus:border-indigo-400">
             <label class="sr-only" for="catalog-sort">Ordenar por</label>
             <select id="catalog-sort" name="sort" class="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-gray-200">
                 <option value="relevance" selected>Relevancia</option>
@@ -196,13 +196,13 @@
                 <img src="img-a1.jpg" alt="Café molido" loading="lazy" class="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110">
                 
                 <div class="absolute top-2 right-2">
-                    <span class="text-xs font-bold text-indigo-900 bg-indigo-100/90 px-2 py-1 rounded-md shadow-sm backdrop-blur-sm">Alimentación y bebidas</span>
+                    <span class="text-xs font-bold text-indigo-900 bg-indigo-100/90 px-2 py-1 rounded-md shadow-xs backdrop-blur-xs">Alimentación y bebidas</span>
                 </div>
-                <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 pt-8">
+                <div class="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 to-transparent p-3 pt-8">
                     <span class="text-lg font-bold text-white drop-shadow-md">10.0 €</span>
                 </div>
             </div>
-            <div class="p-4 flex flex-col flex-grow">
+            <div class="p-4 flex flex-col grow">
                 <h3 class="font-bold text-gray-100 mb-2 leading-tight line-clamp-2 min-h-[2.5rem]" title="Café molido">Café molido</h3>
                 <div class="mt-auto pt-4 flex gap-3">
                     <a href="https://www.amazon.es/dp/A1?tag=tu_tag_defecto-21" target="_blank" rel="sponsored nofollow noopener"
@@ -225,13 +225,13 @@
                 <img src="img-a2.jpg" alt="Cafetera express" loading="lazy" class="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110">
                 
                 <div class="absolute top-2 right-2">
-                    <span class="text-xs font-bold text-indigo-900 bg-indigo-100/90 px-2 py-1 rounded-md shadow-sm backdrop-blur-sm">Alimentación y bebidas</span>
+                    <span class="text-xs font-bold text-indigo-900 bg-indigo-100/90 px-2 py-1 rounded-md shadow-xs backdrop-blur-xs">Alimentación y bebidas</span>
                 </div>
-                <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 pt-8">
+                <div class="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 to-transparent p-3 pt-8">
                     <span class="text-lg font-bold text-white drop-shadow-md">100.0 €</span>
                 </div>
             </div>
-            <div class="p-4 flex flex-col flex-grow">
+            <div class="p-4 flex flex-col grow">
                 <h3 class="font-bold text-gray-100 mb-2 leading-tight line-clamp-2 min-h-[2.5rem]" title="Cafetera express">Cafetera express</h3>
                 <div class="mt-auto pt-4 flex gap-3">
                     <a href="https://www.amazon.es/dp/A2?tag=tu_tag_defecto-21" target="_blank" rel="sponsored nofollow noopener"
