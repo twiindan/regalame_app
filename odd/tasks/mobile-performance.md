@@ -84,6 +84,18 @@ venv/bin/python -m pytest -q tests/test_editorial_filtering.py --editorial-updat
 Post-fix measurement: re-run the same Lighthouse mobile runs on `/` and `/catalog` and
 report the before/after delta.
 
+## Native review status (blocked)
+
+The candidate (medium, 13 paths, 262 lines) entered the native review lifecycle
+(`review-39cc1559890b5e38`), the consent envelope was granted, and the `review-reliability`
+lens was selected. The OpenCode reviewer transport then refused to produce a capturable
+result twice (`opencode_reviewer_result_refused`); the exact-lineage STATUS re-offered the
+same bound slot and the one bounded relaunch refused again. Per the review contract the
+retry stopped there: **no PASS is claimed and no review record exists for this candidate**.
+The user chose to proceed with delivery under ordinary repository policy (RDD is
+user-owned). Likely cause recorded for a future attempt: this candidate is the only one
+whose manifest includes a binary path (`static/fonts/inter-latin.woff2`).
+
 ## Delivery and rollback
 
 - Delivery: `single-pr` on `feature/mobile-perf` (base `main` @ `a9ac899`); PR/merge
