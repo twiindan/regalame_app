@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros.html" import ph_duotone_magnifying_glass %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto">
@@ -78,7 +79,7 @@
     <!-- Empty State (Hidden by default) -->
     <div id="no-results" class="hidden text-center py-20">
         <div class="bg-white/5 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
-            <svg class="ph-duotone text-4xl text-gray-500" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M192,112a80,80,0,1,1-80-80A80,80,0,0,1,192,112Z" opacity="0.2"/><path d="M229.66,218.34,179.6,168.28a88.21,88.21,0,1,0-11.32,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"/></svg>
+            {{ ph_duotone_magnifying_glass("text-4xl text-gray-500") }}
         </div>
         <h3 class="text-xl font-bold text-gray-400">No encontramos regalos con ese nombre</h3>
         <p class="text-gray-500 mt-2">Prueba con palabras más generales como "Tech" o "Hogar"</p>

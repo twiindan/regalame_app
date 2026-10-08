@@ -38,7 +38,7 @@ In scope:
 - `templates/base.html`: drop the Play CDN `<script>` + inline `tailwind.config`; link the
   local stylesheet **before** the existing inline `<style>` so custom CSS still wins.
 - `tests/test_assets.py`: regression assertions.
-- Regenerate the nine `tests/baselines/editorial_off_*.html` snapshots.
+- Regenerate the eight `tests/baselines/editorial_off_*.html` snapshots.
 
 Out of scope: Tailwind v4 migration, Phosphor→inline-SVG, catalog document size, Amazon
 image optimization, HTMX self-hosting, GZip middleware.
@@ -60,7 +60,7 @@ image optimization, HTMX self-hosting, GZip middleware.
   "generated — do not edit" banner. `.gitignore` gains the binary cache path.
 - [ ] **T4 — base.html swap.** Remove the Play CDN script and inline config; add the local
   stylesheet link in the same position (before the inline `<style>`).
-- [ ] **T5 — Baselines.** Regenerate the nine `editorial_off_*.html`; confirm the only diff
+- [ ] **T5 — Baselines.** Regenerate the eight `editorial_off_*.html`; confirm the only diff
   is the head asset lines.
 - [ ] **T6 — Full suite + report.** Green test suite; report each command with its observed
   result.
@@ -68,7 +68,7 @@ image optimization, HTMX self-hosting, GZip middleware.
 ## TDD mode and verification checks
 
 **Mode: strict TDD on** (`openspec/config.yaml`). Runner:
-`/Users/toni.robres/Pycharmprojects/regalame_gemini3/venv/bin/python -m pytest`.
+`venv/bin/python -m pytest`.
 
 Checks to run and report (`<command>: <observed result>`):
 
