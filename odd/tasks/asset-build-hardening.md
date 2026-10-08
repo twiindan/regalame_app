@@ -72,7 +72,7 @@ implementation time; they make the build reproducible and detect any later repla
 ## TDD mode and verification checks
 
 **Mode: strict TDD on** (`openspec/config.yaml`). Runner:
-`/Users/toni.robres/Pycharmprojects/regalame_gemini3/venv/bin/python -m pytest`.
+`venv/bin/python -m pytest`.
 
 ```bash
 bash tools/build_tailwind.sh && venv/bin/python tools/build_phosphor_icons.py

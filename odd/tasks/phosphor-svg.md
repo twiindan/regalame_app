@@ -35,7 +35,7 @@ dependency and adds a build dep).
 
 In scope:
 
-- `tools/build_phosphor_icons.sh`: pins the core version, scans `templates/**/*.html` +
+- `tools/build_phosphor_icons.py`: pins the core version, scans `templates/**/*.html` +
   `main.py` for the used `(weight, name)` pairs, downloads each non-duotone SVG to
   `static/icons/<weight>/<name>.svg`, and generates `static/css/phosphor.css`.
 - Generated, committed: `static/icons/**/*.svg` (~41 files) and `static/css/phosphor.css`.
@@ -54,7 +54,7 @@ Out of scope: Tailwind (done), HTMX self-hosting, Amazon images, font tools.
   `@phosphor-icons/web` / `cdn.jsdelivr.net` reference, links `/static/css/phosphor.css`,
   that `static/icons/<weight>/<name>.svg` exists for every non-duotone used icon, and that
   `phosphor.css` contains the matching `.ph-<weight>.ph-<name>` rules.
-- [ ] **T2 — Build script + generated assets.** `tools/build_phosphor_icons.sh` (bash,
+- [ ] **T2 — Build script + generated assets.** `tools/build_phosphor_icons.py` (Python,
   pinned version) produces the icons and the CSS.
 - [ ] **T3 — base.html swap.** Remove the four CDN links; add the local stylesheet.
 - [ ] **T4 — Duotone to inline SVG.** The 8 sites listed below; keep the existing Tailwind
@@ -76,13 +76,13 @@ Out of scope: Tailwind (done), HTMX self-hosting, Amazon images, font tools.
 ## TDD mode and verification checks
 
 **Mode: strict TDD on** (`openspec/config.yaml`). Runner:
-`/Users/toni.robres/Pycharmprojects/regalame_gemini3/venv/bin/python -m pytest`.
+`venv/bin/python -m pytest`.
 
 ```bash
 venv/bin/python -m pytest -q tests/test_assets.py
 venv/bin/python -m pytest -q tests/test_editorial_filtering.py --editorial-update-baselines
 venv/bin/python -m pytest -q --ignore=tests/test_e2e.py
-bash tools/build_phosphor_icons.sh && ls -1 static/icons/*/ | wc -l
+venv/bin/python tools/build_phosphor_icons.py && ls -1 static/icons/*/ | wc -l
 ```
 
 Post-fix measurement (separate step): same mobile Lighthouse A/B as the Tailwind unit
