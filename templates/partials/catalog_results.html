@@ -17,7 +17,7 @@
                 <img src="{{ item.image_url }}" alt="{{ item.title }}" loading="lazy" class="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110">
                 {% else %}
                 <div class="w-full h-full flex items-center justify-center text-gray-400">
-                    <i class="ph-duotone ph-image text-4xl"></i>
+                    <svg class="ph-duotone text-4xl" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M224,56V178.06l-39.72-39.72a8,8,0,0,0-11.31,0L147.31,164,97.66,114.34a8,8,0,0,0-11.32,0L32,168.69V56a8,8,0,0,1,8-8H216A8,8,0,0,1,224,56Z" opacity="0.2"/><path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,16V158.75l-26.07-26.06a16,16,0,0,0-22.63,0l-20,20-44-44a16,16,0,0,0-22.62,0L40,149.37V56ZM40,172l52-52,80,80H40Zm176,28H194.63l-36-36,20-20L216,181.38V200ZM144,100a12,12,0,1,1,12,12A12,12,0,0,1,144,100Z"/></svg>
                 </div>
                 {% endif %}
                 <div class="absolute top-2 right-2">
@@ -59,7 +59,7 @@
     {% else %}
     <div id="no-results" class="text-center py-20">
         <div class="bg-white/5 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
-            <i class="ph-duotone ph-magnifying-glass text-4xl text-gray-500"></i>
+            <svg class="ph-duotone text-4xl text-gray-500" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M192,112a80,80,0,1,1-80-80A80,80,0,0,1,192,112Z" opacity="0.2"/><path d="M229.66,218.34,179.6,168.28a88.21,88.21,0,1,0-11.32,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"/></svg>
         </div>
         <h3 class="text-xl font-bold text-gray-400">
             {% if has_filters %}No hay resultados para tu búsqueda{% else %}No hay productos disponibles{% endif %}

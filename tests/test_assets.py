@@ -8,9 +8,6 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 
-PHOSPHOR_WEIGHTS = ("regular", "bold", "fill", "duotone")
-PHOSPHOR_UNUSED = ("light", "thin")
-
 
 def test_home_self_hosts_inter(client):
     html = client.get("/").text
@@ -19,16 +16,6 @@ def test_home_self_hosts_inter(client):
     assert "fonts.gstatic.com" not in html
     assert "/static/css/fonts.css" in html
     assert "/static/fonts/inter-latin.woff2" in html
-
-
-def test_home_loads_only_used_phosphor_weights(client):
-    html = client.get("/").text
-
-    for weight in PHOSPHOR_WEIGHTS:
-        assert f"/src/{weight}/style.css" in html
-    for weight in PHOSPHOR_UNUSED:
-        assert f"/src/{weight}/style.css" not in html
-    assert "unpkg.com/@phosphor-icons/web" not in html
 
 
 def test_self_hosted_inter_font_exists_and_is_woff2():
@@ -60,3 +47,36 @@ def test_prebuilt_tailwind_css_exists_and_covers_used_utilities():
     assert ".animate-fade-in-up" in css
     assert ".grid-cols-1" in css
     assert r".h-\[500px\]" in css
+
+
+def _used_single_color_icons():
+    import re
+    pattern = re.compile(r'ph(-bold|-fill|-duotone)?\s+ph-([a-z0-9-]+)')
+    used = set()
+    sources = list((BASE_DIR / "templates").rglob("*.html")) + [BASE_DIR / "main.py"]
+    for source in sources:
+        for weight, name in pattern.findall(source.read_text(encoding="utf-8")):
+            weight = weight.lstrip("-") or "regular"
+            if weight != "duotone":
+                used.add((weight, name))
+    return used
+
+
+def test_home_uses_local_phosphor_icons(client):
+    html = client.get("/").text
+
+    assert "@phosphor-icons/web" not in html
+    assert "cdn.jsdelivr.net" not in html
+    assert "/static/css/phosphor.css" in html
+
+
+def test_local_phosphor_icons_cover_every_used_icon():
+    css = (BASE_DIR / "static" / "css" / "phosphor.css").read_text(encoding="utf-8")
+    used = _used_single_color_icons()
+
+    assert len(used) >= 30, f"icon scan seems broken: {sorted(used)}"
+    for weight, name in used:
+        svg = BASE_DIR / "static" / "icons" / weight / f"{name}.svg"
+        assert svg.is_file(), f"missing icon asset: {svg}"
+        selector = f".ph.ph-{name}" if weight == "regular" else f".ph-{weight}.ph-{name}"
+        assert selector in css, f"missing css rule: {selector}"
