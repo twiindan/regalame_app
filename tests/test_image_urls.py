@@ -42,6 +42,23 @@ def test_rewrite_is_idempotent():
     assert amazon_webp_url(once) == once
 
 
+def test_rewrite_when_the_marker_only_appears_in_the_query():
+    # R3-002: the idempotency guard must look at the transform path, not the
+    # whole URL, so a marker in the query/fragment cannot disable the rewrite.
+    url = AC_UL600 + "?cb=_FMwebp_"
+    result = amazon_webp_url(url)
+    assert result != url
+    assert result.endswith("._AC_UL600_SR600,400__FMwebp_.jpg?cb=_FMwebp_")
+
+
+def test_passthrough_when_urlsplit_raises():
+    # R3-001: the only explicit failure path (urlsplit ValueError on a malformed
+    # URL) is exercised here instead of being left unproved.
+    malformed = "http://[::1"
+    assert amazon_webp_url(malformed) == malformed
+    assert amazon_webp_url(malformed) is malformed
+
+
 @pytest.mark.parametrize(
     "value",
     [
