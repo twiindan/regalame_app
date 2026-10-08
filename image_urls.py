@@ -30,9 +30,6 @@ def amazon_webp_url(url):
     image URL; otherwise return it unchanged (no-op)."""
     if not url or not isinstance(url, str):
         return url
-    # Idempotent: never double-append the marker.
-    if _WEBP_MARKER in url:
-        return url
 
     try:
         parts = urlsplit(url)
@@ -40,12 +37,17 @@ def amazon_webp_url(url):
     except ValueError:
         return url
 
+    path = parts.path
+    # Idempotent: only the transform path carries the marker, so a marker that
+    # merely appears in the query or fragment must not disable the rewrite.
+    if _WEBP_MARKER in path:
+        return url
+
     if parts.scheme not in ("http", "https"):
         return url
     if (host or "").lower() not in _AMAZON_IMAGE_HOSTS:
         return url
 
-    path = parts.path
     if "._AC_" not in path or not path.endswith(".jpg"):
         return url
 
