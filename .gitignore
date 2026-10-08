@@ -32,3 +32,9 @@ database.db
 
 # SDD local cache (skill registry index); openspec/ IS tracked on purpose
 .atl/
+
+# Defensive only: Search Console private data must still live outside this repo.
+client_secret_*.json
+search-console-token.json
+search-console-export.json
+.search-console-*
