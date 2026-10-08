@@ -200,6 +200,25 @@ def search_products(session: Session, query: CatalogQuery) -> CatalogResult:
     )
 
 
+def products_by_asins(session: Session, asins: list[str]) -> list:
+    """Return active, editorially visible products for the given ASINs, in order.
+
+    Hand-curated lists carry an explicit ASIN list; unknown, inactive or hidden
+    ASINs are dropped, the caller's order is preserved and duplicates collapse to
+    their first occurrence.
+    """
+    ordered = list(dict.fromkeys(asin for asin in asins if asin))
+    if not ordered:
+        return []
+    filters = [Product.is_active == True, Product.asin.in_(ordered)]  # noqa: E712
+    visibility = editorial_visibility(session)
+    if visibility is not None:
+        filters.append(visibility.general())
+    rows = session.exec(select(Product).where(*filters)).all()
+    by_asin = {product.asin: product for product in rows}
+    return [by_asin[asin] for asin in ordered if asin in by_asin]
+
+
 def list_categories(session: Session) -> list[tuple[str, str]]:
     """Return (display_name, slug) pairs for active products, accent-insensitively sorted.
 
