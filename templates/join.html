@@ -8,7 +8,7 @@
         
         <!-- Decoration -->
         <div class="absolute -top-12 left-1/2 transform -translate-x-1/2">
-            <div class="w-24 h-24 rounded-full bg-gradient-to-br from-pink-500 to-indigo-500 flex items-center justify-center shadow-lg border-4 border-[#0f172a]">
+            <div class="w-24 h-24 rounded-full bg-linear-to-br from-pink-500 to-indigo-500 flex items-center justify-center shadow-lg border-4 border-[#0f172a]">
                 <i class="ph-fill ph-users-three text-4xl text-white"></i>
             </div>
         </div>
@@ -31,10 +31,10 @@
                     <div>
                         <label class="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-wide">Código del Grupo</label>
                         <input type="text" name="code" value="{{ code }}" readonly
-                               class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-center text-2xl font-mono tracking-widest text-pink-400 focus:outline-none cursor-not-allowed">
+                               class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-center text-2xl font-mono tracking-widest text-pink-400 focus:outline-hidden cursor-not-allowed">
                     </div>
 
-                    <button type="submit" class="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-bold py-3.5 rounded-xl shadow-lg transform transition hover:scale-[1.02] flex items-center justify-center">
+                    <button type="submit" class="w-full bg-linear-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-bold py-3.5 rounded-xl shadow-lg transform transition hover:scale-[1.02] flex items-center justify-center">
                         <i class="ph-bold ph-check mr-2"></i> Confirmar y Unirme
                     </button>
                 </form>

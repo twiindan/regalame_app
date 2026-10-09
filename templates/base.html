@@ -120,13 +120,13 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <div class="flex items-center">
-                    <a href="/" class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-violet-500 flex items-center">
+                    <a href="/" class="text-2xl font-bold bg-clip-text text-transparent bg-linear-to-r from-pink-500 to-violet-500 flex items-center">
                         <i class="ph-fill ph-gift mr-2 text-pink-500"></i>Regálame
                     </a>
                 </div>
                 <form action="/catalog" method="GET" class="hidden md:block flex-1 max-w-xs mx-6">
                     <input type="search" name="q" placeholder="Buscar productos..."
-                           class="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-indigo-400">
+                           class="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-hidden focus:border-indigo-400">
                 </form>
                 <div class="flex items-center space-x-4">
                     <div class="hidden md:flex space-x-4 mr-4 border-r border-white/10 pr-4">
@@ -152,7 +152,7 @@
     </nav>
 
     <!-- Content -->
-    <main class="flex-grow container mx-auto px-4 pt-24 pb-12">
+    <main class="grow container mx-auto px-4 pt-24 pb-12">
         {% block content %}{% endblock %}
     </main>
 

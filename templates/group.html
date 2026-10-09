@@ -69,7 +69,7 @@
     <!-- Draw Section -->
     {% if not giftee %}
         {% if is_admin %}
-            <div class="glass-panel rounded-2xl p-8 text-center bg-gradient-to-b from-indigo-900/40 to-transparent border-indigo-500/30">
+            <div class="glass-panel rounded-2xl p-8 text-center bg-linear-to-b from-indigo-900/40 to-transparent border-indigo-500/30">
                 {{ ph_duotone_ticket("text-6xl text-indigo-400 mb-4") }}
                 <h2 class="text-2xl font-bold mb-2">¡Hora del Intercambio!</h2>
                 <p class="text-gray-300 mb-6">Cuando todos estén dentro, pulsa el botón para repartir la suerte.</p>
@@ -91,10 +91,10 @@
     {% else %}
         <!-- RESULTADO DEL SORTEO -->
         <div class="glass-panel rounded-2xl p-1 border-pink-500/50 shadow-pink-900/20 shadow-2xl">
-            <div class="bg-gradient-to-r from-pink-900/40 to-purple-900/40 rounded-xl p-8">
+            <div class="bg-linear-to-r from-pink-900/40 to-purple-900/40 rounded-xl p-8">
                 <h2 class="text-3xl font-bold text-center mb-6">🎁 Tienes que regalar a:</h2>
                 <div class="text-center mb-10">
-                    <span class="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-yellow-200 drop-shadow-sm">
+                    <span class="text-5xl font-extrabold text-transparent bg-clip-text bg-linear-to-r from-pink-400 to-yellow-200 drop-shadow-xs">
                         {{ giftee.name }}
                     </span>
                 </div>
@@ -125,7 +125,7 @@
         {% if my_santa_id %}
         <div class="fixed bottom-6 right-6 z-50">
             <button onclick="openChat({{ my_santa_id }})" 
-                    class="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white px-6 py-4 rounded-full font-bold shadow-2xl shadow-red-900/50 transition-all hover:scale-105 flex items-center gap-3">
+                    class="bg-linear-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white px-6 py-4 rounded-full font-bold shadow-2xl shadow-red-900/50 transition-all hover:scale-105 flex items-center gap-3">
                 <span class="text-2xl">🎅</span>
                 <span class="hidden md:inline">Chat con mi Santa</span>
             </button>
@@ -144,7 +144,7 @@
                 <li>
                     <a href="/p/{{ member.id }}" class="group/item block p-3 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 transition-all">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-400 to-green-400 flex items-center justify-center font-bold text-black shadow-lg group-hover/item:scale-110 transition-transform">
+                            <div class="w-10 h-10 rounded-full bg-linear-to-tr from-blue-400 to-green-400 flex items-center justify-center font-bold text-black shadow-lg group-hover/item:scale-110 transition-transform">
                                 {{ member.name[0]|upper }}
                             </div>
                             <div class="flex flex-col">
@@ -184,7 +184,7 @@
             <h3 class="text-lg font-bold mb-4">Invitar por Email</h3>
             <form hx-post="/group/{{ group.id }}/invite" hx-swap="outerHTML" class="space-y-4">
                 <textarea name="emails" rows="3" placeholder="Correos separados por coma..." 
-                          class="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-sm focus:border-indigo-500 outline-none text-white resize-none"></textarea>
+                          class="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-sm focus:border-indigo-500 outline-hidden text-white resize-none"></textarea>
                 <button type="submit" class="w-full glass-btn py-2 rounded-lg text-sm font-medium hover:bg-white/10">
                     Enviar Invitaciones
                 </button>
@@ -206,11 +206,11 @@
                 <form action="/group/{{ group.id }}/update-logistics" method="POST" class="space-y-4 bg-black/20 p-4 rounded-xl">
                     <div>
                         <label class="text-xs text-gray-500 uppercase block mb-1">Presupuesto</label>
-                        <input type="text" name="budget" value="{{ group.budget or '' }}" placeholder="Ej: 30€" class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none">
+                        <input type="text" name="budget" value="{{ group.budget or '' }}" placeholder="Ej: 30€" class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-hidden">
                     </div>
                     <div>
                         <label class="text-xs text-gray-500 uppercase block mb-1">Fecha Evento</label>
-                        <input type="date" name="event_date" value="{{ group.event_date or '' }}" class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-none dark-calendar">
+                        <input type="date" name="event_date" value="{{ group.event_date or '' }}" class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-white text-sm outline-hidden dark-calendar">
                     </div>
                     <button type="submit" class="w-full glass-btn py-2 rounded-lg text-sm font-bold">
                         Guardar Cambios
@@ -224,13 +224,13 @@
                 <h4 class="text-xs font-bold text-red-300 uppercase mb-3">Vetos / Restricciones</h4>
                 <form hx-post="/group/{{ group.id }}/exclusions" hx-target="#exclusion-list" class="space-y-3 bg-black/20 p-4 rounded-xl mb-4">
                     <div class="flex gap-2">
-                         <select name="giver_id" required class="w-1/2 bg-black/20 border border-white/10 rounded-lg px-2 py-2 text-xs text-white outline-none">
+                         <select name="giver_id" required class="w-1/2 bg-black/20 border border-white/10 rounded-lg px-2 py-2 text-xs text-white outline-hidden">
                             <option value="" disabled selected>Quién...</option>
                             {% for member in group.members %}
                                 <option value="{{ member.id }}" class="text-black">{{ member.name }}</option>
                             {% endfor %}
                         </select>
-                         <select name="forbidden_id" required class="w-1/2 bg-black/20 border border-white/10 rounded-lg px-2 py-2 text-xs text-white outline-none">
+                         <select name="forbidden_id" required class="w-1/2 bg-black/20 border border-white/10 rounded-lg px-2 py-2 text-xs text-white outline-hidden">
                             <option value="" disabled selected>...no regala a</option>
                             {% for member in group.members %}
                                 <option value="{{ member.id }}" class="text-black">{{ member.name }}</option>

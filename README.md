@@ -16,7 +16,7 @@ Una aplicación moderna y rápida para organizar el "Amigo Invisible" (Secret Sa
 - **Backend**: Python + [FastAPI](https://fastapi.tiangolo.com/)
 - **Base de Datos**: [SQLModel](https://sqlmodel.tiangolo.com/) (SQLAlchemy + Pydantic)
 - **Frontend**: Jinja2 Templates + [HTMX](https://htmx.org/) (Zero JS approach)
-- **Estilos**: TailwindCSS (via CDN)
+- **Estilos**: TailwindCSS precompilado con el ejecutable standalone (sin Node)
 - **Migraciones**: Alembic
 - **Despliegue**: Preparado para Railway / Render / Heroku
 

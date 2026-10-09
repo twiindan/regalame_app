@@ -15,22 +15,22 @@
             <form action="/create-group" method="POST" class="space-y-4">
                 <div>
                     <input type="text" name="name" required placeholder="Nombre (ej. Familia)" 
-                           class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:border-indigo-500 outline-none text-white placeholder-gray-500 transition-colors">
+                           class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:border-indigo-500 outline-hidden text-white placeholder-gray-500 transition-colors">
                 </div>
                 
                 <!-- Nuevos Campos Logística -->
                 <div class="grid grid-cols-2 gap-2">
                     <input type="text" name="budget" placeholder="Max €" 
-                           class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:border-indigo-500 outline-none text-white placeholder-gray-500 transition-colors"
+                           class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:border-indigo-500 outline-hidden text-white placeholder-gray-500 transition-colors"
                            title="Presupuesto máximo">
                     
                     <input type="date" name="event_date" 
-                           class="w-full bg-black/20 border border-white/10 rounded-xl px-2 py-2.5 text-sm focus:border-indigo-500 outline-none text-white placeholder-gray-500 transition-colors dark-calendar">
+                           class="w-full bg-black/20 border border-white/10 rounded-xl px-2 py-2.5 text-sm focus:border-indigo-500 outline-hidden text-white placeholder-gray-500 transition-colors dark-calendar">
                 </div>
 
                 <div>
                     <input type="text" name="emails" placeholder="Emails (separados por coma)" 
-                           class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:border-indigo-500 outline-none text-white placeholder-gray-500 transition-colors">
+                           class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:border-indigo-500 outline-hidden text-white placeholder-gray-500 transition-colors">
                 </div>
 
                 <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-indigo-900/30 transition-all hover:scale-[1.02]">
@@ -41,7 +41,7 @@
             <div class="mt-6 pt-6 border-t border-white/10">
                  <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">¿Tienes un código?</h4>
                  <form onsubmit="event.preventDefault(); window.location.href='/join/'+this.code.value" class="flex gap-2">
-                     <input type="text" name="code" placeholder="CÓDIGO" class="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-sm text-white font-mono uppercase placeholder-gray-600 focus:border-gray-500 outline-none">
+                     <input type="text" name="code" placeholder="CÓDIGO" class="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-sm text-white font-mono uppercase placeholder-gray-600 focus:border-gray-500 outline-hidden">
                      <button type="submit" class="bg-white/10 hover:bg-white/20 px-3 rounded-xl transition-colors"><i class="ph-bold ph-arrow-right"></i></button>
                  </form>
             </div>
@@ -84,7 +84,7 @@
             <form hx-post="/friends" hx-target="#friends-list" hx-swap="beforeend" _="on htmx:afterRequest reset() me" class="mb-4">
                 <div class="relative">
                     <input type="email" name="email" required placeholder="Añadir por email..." 
-                           class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2 text-sm focus:border-indigo-500 outline-none text-white placeholder-gray-600 transition-colors">
+                           class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2 text-sm focus:border-indigo-500 outline-hidden text-white placeholder-gray-600 transition-colors">
                     <button type="submit" class="absolute right-2 top-1.5 text-indigo-400 hover:text-white p-1 rounded-lg transition-colors">
                         <i class="ph-bold ph-plus"></i>
                     </button>
@@ -121,15 +121,15 @@
             <form hx-post="/wishes" hx-target="#wishlist-container" hx-swap="beforeend" 
                   class="flex gap-3 mb-10"
                   _="on htmx:afterRequest reset() me">
-                <div class="relative flex-grow group">
+                <div class="relative grow group">
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <i class="ph-bold ph-link text-gray-500 group-focus-within:text-pink-500 transition-colors"></i>
                     </div>
                     <input type="text" name="content" required 
                            placeholder="Pega un enlace de Amazon o escribe tu deseo..." 
-                           class="w-full bg-black/20 border border-white/10 rounded-xl pl-11 pr-5 py-4 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 outline-none text-white transition-all placeholder-gray-500">
+                           class="w-full bg-black/20 border border-white/10 rounded-xl pl-11 pr-5 py-4 focus:border-pink-500 focus:ring-1 focus:ring-pink-500 outline-hidden text-white transition-all placeholder-gray-500">
                 </div>
-                <button type="submit" class="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white px-8 rounded-xl font-bold shadow-lg shadow-pink-900/20 transition-all hover:scale-105 flex items-center whitespace-nowrap">
+                <button type="submit" class="bg-linear-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white px-8 rounded-xl font-bold shadow-lg shadow-pink-900/20 transition-all hover:scale-105 flex items-center whitespace-nowrap">
                     <i class="ph-bold ph-plus mr-2"></i> Añadir
                 </button>
             </form>
@@ -142,7 +142,7 @@
             </div>
 
             {% if not user.wishes %}
-            <div id="empty-state" class="flex-grow flex flex-col items-center justify-center text-gray-500 py-12">
+            <div id="empty-state" class="grow flex flex-col items-center justify-center text-gray-500 py-12">
                 {{ ph_duotone_gift("text-6xl mb-4 opacity-30") }}
                 <p>Tu lista está vacía. ¡Añade algo para empezar!</p>
             </div>
@@ -169,13 +169,13 @@
                         <!-- Image -->
                         <div class="h-40 overflow-hidden relative bg-white">
                              <img src="{{ (item.image_url or '') | amazon_webp }}" alt="{{ item.title }}" loading="lazy" class="w-full h-full object-contain p-2">
-                             <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                                 <span class="text-xs font-bold text-white bg-green-600 px-2 py-0.5 rounded-full shadow-sm">{{ item.price_raw or 'N/A' }}</span>
+                             <div class="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 to-transparent p-2">
+                                 <span class="text-xs font-bold text-white bg-green-600 px-2 py-0.5 rounded-full shadow-xs">{{ item.price_raw or 'N/A' }}</span>
                              </div>
                         </div>
                         <!-- Body -->
-                        <div class="p-3 flex flex-col flex-grow">
-                            <h4 class="font-bold text-sm text-gray-200 mb-2 line-clamp-2 leading-tight flex-grow" title="{{ item.title }}">{{ item.title }}</h4>
+                        <div class="p-3 flex flex-col grow">
+                            <h4 class="font-bold text-sm text-gray-200 mb-2 line-clamp-2 leading-tight grow" title="{{ item.title }}">{{ item.title }}</h4>
                             <div class="flex gap-2 mt-2">
                                 <a href="{{ amazon_link(item.url) }}" target="_blank" rel="sponsored nofollow noopener" class="flex-1 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-500 text-xs font-bold py-2 px-2 rounded-lg text-center transition-colors">
                                     <i class="ph-bold ph-amazon-logo"></i>
@@ -212,13 +212,13 @@
                         <!-- Image -->
                         <div class="h-40 overflow-hidden relative bg-white">
                             <img src="{{ (item.image_url or '') | amazon_webp }}" alt="{{ item.title }}" loading="lazy" class="w-full h-full object-contain p-2">
-                             <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                                 <span class="text-xs font-bold text-white bg-green-600 px-2 py-0.5 rounded-full shadow-sm">{{ item.price_raw or 'N/A' }}</span>
+                             <div class="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 to-transparent p-2">
+                                 <span class="text-xs font-bold text-white bg-green-600 px-2 py-0.5 rounded-full shadow-xs">{{ item.price_raw or 'N/A' }}</span>
                              </div>
                         </div>
                         <!-- Body -->
-                        <div class="p-3 flex flex-col flex-grow">
-                            <h4 class="font-bold text-sm text-gray-200 mb-2 line-clamp-2 leading-tight flex-grow" title="{{ item.title }}">{{ item.title }}</h4>
+                        <div class="p-3 flex flex-col grow">
+                            <h4 class="font-bold text-sm text-gray-200 mb-2 line-clamp-2 leading-tight grow" title="{{ item.title }}">{{ item.title }}</h4>
                             <div class="flex gap-2 mt-2">
                                  <a href="{{ amazon_link(item.url) }}" target="_blank" rel="sponsored nofollow noopener" class="flex-1 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-500 text-xs font-bold py-2 px-2 rounded-lg text-center transition-colors">
                                     <i class="ph-bold ph-amazon-logo"></i>
@@ -256,13 +256,13 @@
                         <!-- Image -->
                         <div class="h-40 overflow-hidden relative bg-white">
                             <img src="{{ (item.image_url or '') | amazon_webp }}" alt="{{ item.title }}" loading="lazy" class="w-full h-full object-contain p-2">
-                             <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                                 <span class="text-xs font-bold text-white bg-red-600 px-2 py-0.5 rounded-full shadow-sm">{{ item.price_raw or 'N/A' }}</span>
+                             <div class="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 to-transparent p-2">
+                                 <span class="text-xs font-bold text-white bg-red-600 px-2 py-0.5 rounded-full shadow-xs">{{ item.price_raw or 'N/A' }}</span>
                              </div>
                         </div>
                         <!-- Body -->
-                        <div class="p-3 flex flex-col flex-grow">
-                            <h4 class="font-bold text-sm text-gray-200 mb-2 line-clamp-2 leading-tight flex-grow" title="{{ item.title }}">{{ item.title }}</h4>
+                        <div class="p-3 flex flex-col grow">
+                            <h4 class="font-bold text-sm text-gray-200 mb-2 line-clamp-2 leading-tight grow" title="{{ item.title }}">{{ item.title }}</h4>
                             <div class="flex gap-2 mt-2">
                                  <a href="{{ amazon_link(item.url) }}" target="_blank" rel="sponsored nofollow noopener" class="flex-1 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-500 text-xs font-bold py-2 px-2 rounded-lg text-center transition-colors">
                                     <i class="ph-bold ph-amazon-logo"></i>

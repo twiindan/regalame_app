@@ -63,6 +63,19 @@ def test_prebuilt_tailwind_css_exists_and_covers_used_utilities():
     assert r".h-\[500px\]" in css
 
 
+def test_prebuilt_tailwind_css_is_generated_from_v4_tokens():
+    """The templates use v4-only utility names (bg-linear-*, outline-hidden,
+    shadow-xs); the committed sheet must therefore be a v4 build, not a stale
+    v3 artifact. These tokens do not exist in any v3-generated sheet, so a
+    stale artifact fails here even though the v3-compatible substrings above
+    would still pass."""
+    css = (BASE_DIR / "static" / "css" / "tailwind.css").read_text(encoding="utf-8")
+
+    assert ".bg-linear-to-r" in css
+    assert ".outline-hidden" in css
+    assert ".shadow-xs" in css
+
+
 def _js_toggled_class_tokens():
     """Class tokens applied at runtime by inline JS (classList/className)."""
     tokens = set()

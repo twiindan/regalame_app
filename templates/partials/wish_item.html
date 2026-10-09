@@ -3,11 +3,11 @@
     
     <!-- Status Badge (Absolute) -->
     {% if wish.reserved_by_id and wish.reserved_by_id != user.id %}
-        <div class="absolute top-2 right-2 bg-red-500/80 text-white text-xs px-2 py-1 rounded-md backdrop-blur-sm shadow-sm z-10 font-bold uppercase tracking-wider">
+        <div class="absolute top-2 right-2 bg-red-500/80 text-white text-xs px-2 py-1 rounded-md backdrop-blur-xs shadow-xs z-10 font-bold uppercase tracking-wider">
             Reservado
         </div>
     {% elif wish.reserved_by_id == user.id %}
-        <div class="absolute top-2 right-2 bg-green-500/80 text-white text-xs px-2 py-1 rounded-md backdrop-blur-sm shadow-sm z-10 font-bold uppercase tracking-wider">
+        <div class="absolute top-2 right-2 bg-green-500/80 text-white text-xs px-2 py-1 rounded-md backdrop-blur-xs shadow-xs z-10 font-bold uppercase tracking-wider">
             Reservado por ti
         </div>
     {% endif %}
@@ -18,13 +18,13 @@
         <img src="{{ wish.image_url | amazon_webp }}" alt="{{ wish.title }}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500">
     </div>
     {% else %}
-    <div class="h-24 w-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center opacity-50 group-hover:opacity-70 transition-opacity">
+    <div class="h-24 w-full bg-linear-to-br from-gray-800 to-gray-900 flex items-center justify-center opacity-50 group-hover:opacity-70 transition-opacity">
         {{ ph_duotone_gift("text-4xl text-gray-600") }}
     </div>
     {% endif %}
 
     <!-- Content -->
-    <div class="p-4 flex flex-col flex-grow">
+    <div class="p-4 flex flex-col grow">
         <h4 class="font-semibold text-white mb-1 line-clamp-2 min-h-[1.5em]">{{ wish.title }}</h4>
         
         <div class="mt-auto pt-4 space-y-2">

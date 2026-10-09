@@ -22,13 +22,13 @@
                 </div>
                 {% endif %}
                 <div class="absolute top-2 right-2">
-                    <span class="text-xs font-bold text-indigo-900 bg-indigo-100/90 px-2 py-1 rounded-md shadow-sm backdrop-blur-sm">{{ item.category }}</span>
+                    <span class="text-xs font-bold text-indigo-900 bg-indigo-100/90 px-2 py-1 rounded-md shadow-xs backdrop-blur-xs">{{ item.category }}</span>
                 </div>
-                <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 pt-8">
+                <div class="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 to-transparent p-3 pt-8">
                     <span class="text-lg font-bold text-white drop-shadow-md">{{ item.price_raw or "Sin precio" }}</span>
                 </div>
             </div>
-            <div class="p-4 flex flex-col flex-grow">
+            <div class="p-4 flex flex-col grow">
                 <h3 class="font-bold text-gray-100 mb-2 leading-tight line-clamp-2 min-h-[2.5rem]" title="{{ item.title }}">{{ item.title }}</h3>
                 <div class="mt-auto pt-4 flex gap-3">
                     <a href="{{ amazon_link(item.url) }}" target="_blank" rel="sponsored nofollow noopener"
