@@ -163,4 +163,18 @@ upstream `Gentleman-Programming/gentle-ai#5195`.
 
 ## Next step
 The candidate is released and unreviewed. Push / PR / merge are the user's decision
-under ordinary repository policy. The feature doc is still untracked on `main`.
+under ordinary repository policy.
+
+## Delivery (PR slices)
+All five branches are pushed and their PRs are open; CI (`Clean install + test suite`)
+is green on each.
+
+| PR | Head → Base | Holds |
+|----|-------------|-------|
+| #72 | `docs/seo-improvements` → `main` | This tracker. |
+| #73 | `feat/seo-sitemap-robots` → `main` | Commit `8113af5` (sitemap + robots). |
+| #74 | `feat/seo-htmx-local` → `main` | Commit `62a213f` (self-host htmx). |
+| #75 | `feat/seo-rich-results` → `feat/seo-htmx-local` | Commit `7fdf08c` (structured data + breadcrumbs). |
+| #76 | `feat/seo-category-content` → `feat/seo-rich-results` | Commit `5eb3ef0` (category content). |
+
+Merge order: #74 → #75 → #76 (the T2→T3→T4 chain); #72 and #73 are independent.
