@@ -294,6 +294,106 @@ def test_indexable_catalog_pages_have_self_canonical(client, catalog_seed, path)
     assert not soup.find("meta", attrs={"name": "robots"})
 
 
+# --- Per-page structured data (T3) ---
+
+BLOG_GUIDE_SLUG = "regalos-amigo-invisible-10-euros"
+BREADCRUMB_NAV_LABEL = "Migas de pan"
+
+
+def _json_ld(soup):
+    return [json.loads(script.string) for script in soup.find_all(
+        "script", attrs={"type": "application/ld+json"}
+    )]
+
+
+def _schema_of_type(schemas, type_name):
+    return next(item for item in schemas if item["@type"] == type_name)
+
+
+def _breadcrumb_nav(soup):
+    return soup.find("nav", attrs={"aria-label": BREADCRUMB_NAV_LABEL})
+
+
+@pytest.mark.parametrize("path", ["/", "/amigo-invisible", "/catalog", "/blog",
+                                   "/ideas/alimentacion-y-bebidas",
+                                   f"/blog/{BLOG_GUIDE_SLUG}"])
+def test_every_json_ld_block_is_valid_json(client, catalog_seed, path):
+    soup = page(client, path)
+    scripts = soup.find_all("script", attrs={"type": "application/ld+json"})
+    assert scripts
+    for script in scripts:
+        assert isinstance(json.loads(script.string), dict)
+
+
+def test_home_emits_website_and_organization_schema(client):
+    from main import public_origin
+
+    soup = page(client, "/")
+    schemas = _json_ld(soup)
+    website = _schema_of_type(schemas, "WebSite")
+    organization = _schema_of_type(schemas, "Organization")
+    assert website["name"] == "Regálame"
+    action = website["potentialAction"]
+    assert action["@type"] == "SearchAction"
+    assert action["target"]["urlTemplate"] == (
+        public_origin() + "/catalog?q={search_term_string}"
+    )
+    assert organization["name"] == "Regálame"
+    assert organization["url"].startswith(public_origin())
+    assert all(item["@type"] != "FAQPage" for item in schemas)
+
+
+def test_blog_post_emits_blogposting_and_matching_breadcrumbs(client):
+    from main import public_origin
+
+    post = next(p for p in BLOG_POSTS if p["slug"] == BLOG_GUIDE_SLUG)
+    soup = page(client, f"/blog/{BLOG_GUIDE_SLUG}")
+    assert soup.find("meta", property="og:type")["content"] == "article"
+    schemas = _json_ld(soup)
+    blogposting = _schema_of_type(schemas, "BlogPosting")
+    assert blogposting["headline"] == post["title"]
+    assert blogposting["mainEntityOfPage"] == public_origin() + f"/blog/{BLOG_GUIDE_SLUG}"
+    assert blogposting["author"]["@type"] == "Organization"
+    assert blogposting["publisher"]["@type"] == "Organization"
+    # No real publish date exists in the post data, so it must not be fabricated.
+    assert "datePublished" not in blogposting
+    assert "dateModified" not in blogposting
+
+    breadcrumbs = _schema_of_type(schemas, "BreadcrumbList")
+    assert [entry["name"] for entry in breadcrumbs["itemListElement"]] == [
+        "Inicio", "Blog", post["title"]
+    ]
+
+    nav = _breadcrumb_nav(soup)
+    assert nav is not None
+    text = nav.get_text(" ", strip=True)
+    assert "Inicio" in text and "Blog" in text and post["title"] in text
+
+
+def test_category_emits_collectionpage_itemlist_and_breadcrumbs(client, catalog_seed):
+    soup = page(client, "/ideas/alimentacion-y-bebidas")
+    schemas = _json_ld(soup)
+    collection = _schema_of_type(schemas, "CollectionPage")
+    item_list = collection["mainEntity"]
+    assert item_list["@type"] == "ItemList"
+    entries = item_list["itemListElement"]
+    assert entries
+    assert [entry["position"] for entry in entries] == list(range(1, len(entries) + 1))
+    assert "Café molido" in [entry["name"] for entry in entries]
+    assert all(entry["url"] for entry in entries)
+
+    breadcrumbs = _schema_of_type(schemas, "BreadcrumbList")
+    assert [entry["name"] for entry in breadcrumbs["itemListElement"]] == [
+        "Inicio", "Guía de regalos", "Alimentación y bebidas"
+    ]
+
+    nav = _breadcrumb_nav(soup)
+    assert nav is not None
+    text = nav.get_text(" ", strip=True)
+    assert "Inicio" in text and "Guía de regalos" in text
+    assert "Alimentación y bebidas" in text
+
+
 @pytest.mark.parametrize("path", ["/blog", "/bestsellers", "/trends", "/most-desired"])
 def test_indexable_pages_use_the_configured_origin(client, catalog_seed, monkeypatch, path):
     monkeypatch.setenv("DOMAIN_URL", "https://landing.example/")

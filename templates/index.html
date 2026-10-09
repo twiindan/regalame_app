@@ -3,6 +3,34 @@
 {% block title %}Crea y comparte tu lista de regalos | Regálame{% endblock %}
 {% block description %}Crea tu lista de regalos y compártela con amigos y familia. Guarda tus deseos para cumpleaños, Navidad o un intercambio de amigo invisible.{% endblock %}
 
+{% block extra_schema %}
+<script type="application/ld+json">
+{{ {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Regálame",
+    "url": public_origin() ~ "/",
+    "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": public_origin() ~ "/catalog?q={search_term_string}",
+        },
+        "query-input": "required name=search_term_string",
+    },
+} | tojson }}
+</script>
+<script type="application/ld+json">
+{{ {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Regálame",
+    "url": public_origin() ~ "/",
+    "logo": public_origin() ~ "/static/og-image-default.jpg",
+} | tojson }}
+</script>
+{% endblock %}
+
 {% block content %}
 <div class="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] gap-12 px-4">
     

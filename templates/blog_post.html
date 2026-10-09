@@ -3,6 +3,25 @@
 
 {% block title %}{{ post.title }} | Regálame{% endblock %}
 {% block description %}{{ post.description }}{% endblock %}
+{% block og_type %}article{% endblock %}
+
+{% block extra_schema %}
+{% set blogposting = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": post.title,
+    "description": post.description,
+    "mainEntityOfPage": social_url(canonical_url),
+    "author": {"@type": "Organization", "name": "Regálame"},
+    "publisher": {"@type": "Organization", "name": "Regálame"},
+} %}
+{% if og_image %}{% set _ = blogposting.update({"image": og_image}) %}{% endif %}
+{% if post.date_published %}{% set _ = blogposting.update({"datePublished": post.date_published}) %}{% endif %}
+{% if post.date_modified %}{% set _ = blogposting.update({"dateModified": post.date_modified}) %}{% endif %}
+<script type="application/ld+json">
+{{ blogposting | tojson }}
+</script>
+{% endblock %}
 
 {% block content %}
 <style>
@@ -12,6 +31,13 @@
 </style>
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+    {% set crumbs = [
+        {"label": "Inicio", "url": "/"},
+        {"label": "Blog", "url": "/blog"},
+        {"label": post.title, "url": canonical_url},
+    ] %}
+    {% include "partials/breadcrumbs.html" %}
+
     <!-- Back Link -->
     <a href="/blog" class="inline-flex items-center text-gray-400 hover:text-white mb-8 transition-colors">
         <i class="ph-bold ph-arrow-left mr-2"></i> Volver al Blog
