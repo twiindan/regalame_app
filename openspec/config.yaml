@@ -3,7 +3,7 @@ schema: spec-driven
 context: |
   Project: regalame_app (Regálame — Secret Santa MVP with Amazon affiliate monetization).
   Stack: Python 3.13, FastAPI 0.124, SQLModel 0.0.27 / SQLAlchemy 2.0, Alembic 1.17, Pydantic 2.12, Uvicorn/Gunicorn.
-  Frontend: Jinja2 server-side rendering + HTMX, TailwindCSS via CDN (no Node, no bundler).
+  Frontend: Jinja2 server-side rendering + HTMX, TailwindCSS precompiled with the standalone executable (no Node, no bundler).
   Architecture: modern monolith. Routes in main.py, models in models.py, engine/session in database.py, business logic in services.py, catalog in catalog.py + jobs/ + scraper/.
   Testing: pytest 8.2.2 + httpx TestClient against SQLite in-memory (StaticPool) via tests/conftest.py. CI ignores tests/test_e2e.py (Playwright, deliberately not a dependency).
   Conventions: keep business logic in services.py, thin routes, FastAPI dependency injection for DB sessions; pinned requirements baseline is intentional (sqlmodel datetime TZ regression).

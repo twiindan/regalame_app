@@ -8,7 +8,7 @@
 <div class="max-w-3xl mx-auto">
     
     <div class="text-center mb-12 animate-fade-in-up">
-        <div class="w-24 h-24 mx-auto rounded-full bg-gradient-to-tr from-pink-500 to-violet-500 flex items-center justify-center text-4xl font-bold mb-4 shadow-2xl relative">
+        <div class="w-24 h-24 mx-auto rounded-full bg-linear-to-tr from-pink-500 to-violet-500 flex items-center justify-center text-4xl font-bold mb-4 shadow-2xl relative">
             {{ profile_user.name[0]|upper }}
             {% if current_user and current_user.id != profile_user.id %}
                 <div class="absolute -bottom-2 -right-2">
@@ -59,7 +59,7 @@
     </div>
 
     {% if not current_user %}
-    <div class="mt-12 text-center glass-panel rounded-2xl p-8 bg-gradient-to-t from-pink-900/20">
+    <div class="mt-12 text-center glass-panel rounded-2xl p-8 bg-linear-to-t from-pink-900/20">
         <h3 class="text-xl font-bold mb-2">¿Tú también quieres recibir regalos acertados?</h3>
         <p class="text-gray-400 mb-6">Crea tu propia lista y organiza sorteos con amigos.</p>
         <a href="/" class="bg-white text-black font-bold px-8 py-3 rounded-xl hover:bg-gray-200 transition-colors">
@@ -84,7 +84,7 @@
             <input type="hidden" name="current_url" id="share-url-input">
             
             <input type="email" name="email" required placeholder="ejemplo@correo.com" 
-                   class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-pink-500 outline-none text-white placeholder-gray-500 transition-colors">
+                   class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-pink-500 outline-hidden text-white placeholder-gray-500 transition-colors">
             
             <div class="flex gap-2">
                 <button type="button" onclick="document.getElementById('modal-email').close()" class="flex-1 glass-btn py-2.5 rounded-xl text-sm font-medium hover:bg-white/10">

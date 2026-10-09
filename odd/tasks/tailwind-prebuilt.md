@@ -91,6 +91,14 @@ Post-fix measurement (separate step): re-run the same Lighthouse mobile runs on 
 
 ## Progress
 
-- [ ] T1-T6.
+- [x] T1-T6 — delivered: `templates/base.html` loads no Play CDN, it links the committed
+  prebuilt `/static/css/tailwind.css`; asset tests guard this.
 - [ ] Lighthouse after-measurement.
 - [ ] Commit / PR — user-owned, pending explicit go-ahead.
+
+## Follow-up delivered
+
+The v4 migration this work unit deferred (line "Out of scope: Tailwind v4 migration") was
+delivered in `odd/tasks/tailwind-v4.md`: the toolchain moved to the v4.3.3 standalone binary,
+the config is now CSS-first (`static/css/tailwind.src.css`, `tailwind.config.js` deleted),
+and the renamed utilities are applied across the templates. The v3 pin above is historical.

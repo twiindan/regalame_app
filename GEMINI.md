@@ -10,7 +10,7 @@ STACK TECNOLÓGICO OBLIGATORIO:
 2. Base de Datos: SQLModel (sobre SQLite para desarrollo).
 3. Templating: Jinja2 (Server Side Rendering).
 4. Frontend Interactivo: HTMX (para AJAX sin escribir JavaScript).
-5. Estilos: TailwindCSS (vía CDN, sin compilación Node.js).
+5. Estilos: TailwindCSS precompilado con el ejecutable standalone (sin Node.js).
 6. Testing: Pytest.
 
 ESTRUCTURA DE ARCHIVOS DESEADA:
@@ -20,7 +20,7 @@ root/
 ├── database.py        # Configuración de engine y sesión
 ├── services.py        # Lógica de negocio (Sorteo, Generador de Links Amazon)
 ├── templates/         # Carpetas de HTML
-│   ├── base.html      # Layout principal (incluye script de HTMX y Tailwind CDN)
+│   ├── base.html      # Layout principal (incluye script de HTMX y CSS de Tailwind precompilado)
 │   ├── index.html     # Landing page
 │   └── partials/      # Fragmentos HTML para respuestas de HTMX
 └── requirements.txt   # Dependencias
