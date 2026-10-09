@@ -21,6 +21,7 @@ from services import (
     record_conversion
 )
 from catalog import CatalogQuery, search_products, list_categories
+from seo_content import category_faq, category_guide, related_posts
 from email_utils import send_invitation_email, send_wishlist_share_email
 from image_urls import amazon_webp_url
 from urllib.parse import urlencode
@@ -518,6 +519,9 @@ async def category_seo_page(
         category_slug.replace("-", " ").title(),
     )
     context["other_categories"] = [c for c in context["categories"] if c[1] != category_slug]
+    context["category_guide"] = category_guide(context["category_name"])
+    context["category_faq"] = category_faq(context["category_name"])
+    context["related_posts"] = related_posts(context["category_name"])
     context["canonical_url"] = (
         f"/ideas/{category_slug}?page={parsed_page}" if parsed_page > 1 else f"/ideas/{category_slug}"
     )

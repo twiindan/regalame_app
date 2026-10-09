@@ -29,6 +29,23 @@
     },
 } | tojson }}
 </script>
+{% if category_faq %}
+{% set faq_entities = [] %}
+{% for item in category_faq %}
+    {% set _ = faq_entities.append({
+        "@type": "Question",
+        "name": item.q,
+        "acceptedAnswer": {"@type": "Answer", "text": item.a},
+    }) %}
+{% endfor %}
+<script type="application/ld+json">
+{{ {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": faq_entities,
+} | tojson }}
+</script>
+{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -51,6 +68,42 @@
     </div>
 
     {% include "partials/catalog_results.html" %}
+
+    <section class="max-w-4xl mx-auto mt-12" aria-labelledby="category-guide-title">
+        <h2 id="category-guide-title" class="text-2xl font-bold text-gray-200 mb-4">
+            {{ category_guide.title }}
+        </h2>
+        <p class="text-gray-300 leading-relaxed mb-6">{{ category_guide.intro }}</p>
+        <ul class="list-disc list-inside space-y-2 text-gray-300">
+            {% for tip in category_guide.tips %}
+            <li>{{ tip }}</li>
+            {% endfor %}
+        </ul>
+    </section>
+
+    <section class="max-w-4xl mx-auto mt-12 border-t border-white/10 pt-12" aria-labelledby="category-faq-title">
+        <h2 id="category-faq-title" class="text-2xl font-bold text-gray-200 mb-6">Preguntas frecuentes</h2>
+        <div class="space-y-4">
+            {% for item in category_faq %}
+            <div class="bg-white/5 border border-white/10 rounded-2xl p-6">
+                <h3 class="text-lg font-semibold text-gray-200 mb-2">{{ item.q }}</h3>
+                <p class="text-gray-300 leading-relaxed">{{ item.a }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="max-w-4xl mx-auto mt-12 border-t border-white/10 pt-12" aria-labelledby="category-related-title">
+        <h2 id="category-related-title" class="text-2xl font-bold text-gray-200 mb-6">Sigue con estas guías</h2>
+        <div class="grid grid-cols-1 gap-4">
+            {% for post in related_posts %}
+            <a href="/blog/{{ post.slug }}"
+               class="bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl p-6 transition-all hover:-translate-y-0.5">
+                <span class="text-gray-200 font-semibold">{{ post.title }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
 
     <div class="border-t border-white/10 pt-12 mt-12">
         <h3 class="text-2xl font-bold text-center mb-8 text-gray-200">Otras categorías populares</h3>
