@@ -23,6 +23,21 @@ _JS_CLASS_NAME = re.compile(r"""className\s*=\s*(['"])(.*?)\1""")
 _STRING_LITERAL = re.compile(r"""(['"])(.*?)\1""")
 
 
+def test_home_self_hosts_htmx(client):
+    html = client.get("/").text
+
+    assert "unpkg.com" not in html
+    assert "/static/js/htmx.min.js" in html
+
+
+def test_vendored_htmx_asset_exists():
+    asset = BASE_DIR / "static" / "js" / "htmx.min.js"
+
+    assert asset.is_file()
+    assert asset.stat().st_size > 0
+    assert "htmx" in asset.read_text(encoding="utf-8")
+
+
 def test_home_self_hosts_inter(client):
     html = client.get("/").text
 
