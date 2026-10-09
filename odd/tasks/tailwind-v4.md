@@ -124,6 +124,27 @@ No commit/push/PR unless requested.
   v3-compatible substrings above would still pass.
 - Full suite: **536 passed**.
 
+## Lighthouse A/B (v3.4.17 @ 5358a76 vs v4.3.3 @ ef8cec7)
+
+Same-session interleaved A/B, medians of 3, Lighthouse 13.5.0 default mobile
+(Slow 4G + 4x CPU throttling), local uvicorn WITHOUT compression (so the CSS
+delta appears at full raw size), each arm serving its own committed assets.
+Both arms already include the Amazon-WebP change (#68/#69), so the only delta
+is the Tailwind major version.
+
+| | home v3 | home v4 | catálogo v3 | catálogo v4 |
+| --- | --- | --- | --- | --- |
+| Performance | 98 | **97** | 95 | **93** |
+| FCP | 1744 ms | 1803 ms | 2188 ms | 2257 ms |
+| LCP | 1953 ms | 2253 ms | 2403 ms | 2703 ms |
+| TBT / CLS | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| Peso | 132 KB | 158 KB | 361 KB | 386 KB |
+
+The +25-26 KB is the UNCOMPRESSED raw CSS delta; production serves Brotli via
+Cloudflare, where the measured delta is 8,410 vs 6,478 B ≈ **+1.9 KB real**.
+Verdict: −1/-2 Lighthouse points under worst-case (uncompressed) transfer, no
+TBT/CLS change; item-6 wins (home 75→97, catalog 63→94) are preserved.
+
 ## Native review outcome (RDD, no receipt — documented)
 
 - First transaction (`review-da8a3be20d303f68`, full 37-path candidate): START
