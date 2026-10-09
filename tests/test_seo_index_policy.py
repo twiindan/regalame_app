@@ -1,5 +1,6 @@
 import pytest
 from bs4 import BeautifulSoup
+from xml.etree import ElementTree
 
 
 def _robots_content(html):
@@ -81,3 +82,26 @@ def test_sitemap_excludes_profiles_but_keeps_landings(
     assert "/amigo-invisible" in text
     assert "/ideas/alimentacion-y-bebidas" in text
     assert "/blog/" in text
+
+
+CATALOG_LANDINGS = ["/blog", "/bestsellers", "/trends", "/most-desired"]
+
+
+@pytest.mark.parametrize("landing", CATALOG_LANDINGS)
+def test_sitemap_lists_catalog_landings_exactly_once(client, monkeypatch, landing):
+    monkeypatch.delenv("DOMAIN_URL", raising=False)
+    response = client.get("/sitemap.xml")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/xml")
+    root = ElementTree.fromstring(response.text)
+    locs = [item.text for item in root.findall("{*}url/{*}loc")]
+    assert locs.count(f"https://regalame.app{landing}") == 1
+
+
+@pytest.mark.parametrize("landing", ["/", "/amigo-invisible", *CATALOG_LANDINGS])
+def test_robots_allows_the_public_landings(client, landing):
+    response = client.get("/robots.txt")
+    assert response.status_code == 200
+    directives = [line.strip() for line in response.text.splitlines()]
+    assert f"Disallow: {landing}" not in directives
+    assert f"Disallow: {landing}/" not in directives

@@ -133,6 +133,18 @@ async def sitemap_xml(session: Session = Depends(get_session)):
         <priority>0.9</priority>
     </url>
 """)
+
+    # Catalog landings that are indexable on their own. No <lastmod> is emitted:
+    # there is no per-URL modification timestamp for these routes, so any date
+    # would be fabricated rather than derived from real data.
+    for landing in ("/blog", "/bestsellers", "/trends", "/most-desired"):
+        urls.append(f"""
+        <url>
+            <loc>{domain}{landing}</loc>
+            <changefreq>daily</changefreq>
+            <priority>0.8</priority>
+        </url>
+        """)
     
     # Categorías SEO (Programmatic SEO)
     categories = list_categories(session)
