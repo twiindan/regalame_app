@@ -7,8 +7,39 @@
 {% if next_page %}<link rel="next" href="{{ base_path }}?page={{ next_page }}">{% endif %}
 {% endblock %}
 
+{% block extra_schema %}
+{% set item_list = [] %}
+{% for item in result.items %}
+    {% set _ = item_list.append({
+        "@type": "ListItem",
+        "position": loop.index,
+        "name": item.title,
+        "url": item.url,
+    }) %}
+{% endfor %}
+<script type="application/ld+json">
+{{ {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "Top Regalos de " ~ category_name,
+    "url": social_url(canonical_url),
+    "mainEntity": {
+        "@type": "ItemList",
+        "itemListElement": item_list,
+    },
+} | tojson }}
+</script>
+{% endblock %}
+
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+    {% set crumbs = [
+        {"label": "Inicio", "url": "/"},
+        {"label": "Guía de regalos", "url": "/bestsellers"},
+        {"label": category_name, "url": base_path},
+    ] %}
+    {% include "partials/breadcrumbs.html" %}
+
     <div class="text-center mb-12 mt-4">
         <span class="text-indigo-400 text-sm font-bold tracking-widest uppercase mb-2 block">Guía de Regalos</span>
         <h1 class="text-4xl md:text-6xl font-extrabold text-transparent bg-clip-text bg-linear-to-r from-indigo-400 via-purple-400 to-pink-400 mb-6 drop-shadow-xs leading-tight">

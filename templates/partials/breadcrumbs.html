@@ -1,0 +1,29 @@
+{#- Shared visible breadcrumbs plus a matching Schema.org BreadcrumbList.
+    Expects a `crumbs` list of {"label": str, "url": str} in root-to-leaf order. -#}
+{% set crumb_items = [] %}
+{% for crumb in crumbs %}
+    {% set entry = {
+        "@type": "ListItem",
+        "position": loop.index,
+        "name": crumb.label,
+        "item": social_url(crumb.url),
+    } %}
+    {% set _ = crumb_items.append(entry) %}
+{% endfor %}
+<nav aria-label="Migas de pan" class="flex justify-center mb-6">
+    <ol class="flex flex-wrap items-center justify-center gap-2 text-sm text-gray-400">
+        {% for crumb in crumbs %}
+        <li class="flex items-center gap-2">
+            {% if not loop.last %}
+            <a href="{{ crumb.url }}" class="hover:text-white transition-colors">{{ crumb.label }}</a>
+            <span class="text-gray-600" aria-hidden="true">/</span>
+            {% else %}
+            <span class="text-gray-300" aria-current="page">{{ crumb.label }}</span>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ol>
+</nav>
+<script type="application/ld+json">
+{{ {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": crumb_items} | tojson }}
+</script>
