@@ -403,3 +403,81 @@ def test_indexable_pages_use_the_configured_origin(client, catalog_seed, monkeyp
             "https://landing.example" + path
         ]
     assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [path]
+
+
+# --- Category landing content depth (T4) ---
+
+CATEGORY_SLUG = "alimentacion-y-bebidas"
+CATEGORY_NAME = "Alimentación y bebidas"
+PRICE_GUIDE_SLUGS = {
+    "regalos-amigo-invisible-10-euros",
+    "regalos-baratos-menos-20-euros",
+}
+FORBIDDEN_COPY = ["con ia", "inteligencia artificial", "acertar siempre", "4.8"]
+
+
+def test_category_page_renders_guide_faq_and_related_guides(client, catalog_seed):
+    soup = page(client, f"/ideas/{CATEGORY_SLUG}")
+    main_text = soup.main.get_text(" ", strip=True)
+
+    assert f"Cómo elegir un regalo de {CATEGORY_NAME}" in main_text
+    assert "Preguntas frecuentes" in main_text
+    assert "Sigue con estas guías" in main_text
+
+    guide_links = {
+        anchor["href"]
+        for anchor in soup.main.find_all("a", href=True)
+        if anchor["href"].startswith("/blog/")
+    }
+    assert guide_links & {f"/blog/{slug}" for slug in PRICE_GUIDE_SLUGS}
+
+
+def test_category_page_emits_faqpage_json_ld(client, catalog_seed):
+    soup = page(client, f"/ideas/{CATEGORY_SLUG}")
+    schemas = _json_ld(soup)
+    assert any(item["@type"] == "CollectionPage" for item in schemas)
+
+    faq = _schema_of_type(schemas, "FAQPage")
+    assert faq["@context"] == "https://schema.org"
+    entities = faq["mainEntity"]
+    assert 2 <= len(entities) <= 3
+    for entry in entities:
+        assert entry["@type"] == "Question"
+        assert entry["name"]
+        answer = entry["acceptedAnswer"]
+        assert answer["@type"] == "Answer"
+        assert answer["text"]
+
+    rendered = f"{soup.main.get_text(' ', strip=True)} {json.dumps(faq)}".lower()
+    for phrase in FORBIDDEN_COPY:
+        assert phrase not in rendered
+
+
+def test_related_guides_prefer_a_matching_category():
+    from seo_content import related_posts
+
+    matching = related_posts("Electrónica")
+    assert matching == [{
+        "title": "Lo más viral en Electrónica y Gadgets",
+        "slug": "top-tendencias-tecnologia-2025",
+    }]
+    fallback = related_posts(CATEGORY_NAME)
+    assert {entry["slug"] for entry in fallback} <= PRICE_GUIDE_SLUGS
+    assert fallback
+
+
+def test_faqpage_is_confined_to_category_landings(client, catalog_seed):
+    for path in ["/", "/amigo-invisible", "/catalog", "/blog",
+                 "/blog/regalos-amigo-invisible-10-euros"]:
+        soup = page(client, path)
+        assert all(item["@type"] != "FAQPage" for item in _json_ld(soup)), path
+
+
+def test_category_page_unknown_slug_keeps_existing_404_policy(client, catalog_seed):
+    response = client.get("/ideas/categoria-inexistente")
+    assert response.status_code == 404
+    soup = BeautifulSoup(response.text, "html.parser")
+    assert not soup.find("link", rel="canonical")
+    robots = soup.find("meta", attrs={"name": "robots"})
+    assert robots and "noindex" in robots["content"]
+    assert all(item["@type"] != "FAQPage" for item in _json_ld(soup))
