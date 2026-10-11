@@ -15,7 +15,7 @@ from sqlalchemy import case, delete, func, update
 from sqlmodel import Session, select
 
 from curation import editorial_visibility, visible_category_slugs
-from models import Product, ProductList, utcnow_naive
+from models import EditorialGateState, Product, ProductList, utcnow_naive
 
 DEFAULT_PER_PAGE = 24
 MAX_PER_PAGE = 60
@@ -269,6 +269,74 @@ def deactivate_absent_products(session: Session, list_keys: list[str]) -> int:
     )
     session.commit()
     return len(absent)
+
+
+def _editorial_gate_updated_at(session: Session) -> Optional[datetime]:
+    """``updated_at`` of the single editorial gate row, or None when absent."""
+    return session.exec(
+        select(EditorialGateState.updated_at)
+        .order_by(EditorialGateState.updated_at.desc())
+        .limit(1)
+    ).first()
+
+
+def _newest_timestamp(*candidates: Optional[datetime]) -> Optional[datetime]:
+    timestamps = [value for value in candidates if value is not None]
+    return max(timestamps) if timestamps else None
+
+
+def catalog_lastmod(session: Session) -> Optional[datetime]:
+    """Real freshness timestamp for aggregate catalog surfaces.
+
+    Used by the sitemap for /bestsellers, /trends and /most-desired. Derived
+    from MAX(Product.updated_at) over active products (editorially filtered
+    exactly like the pages render them). Under ``enforce`` it is floored by
+    the last editorial gate evaluation: a gate flip changes what every catalog
+    surface shows. Under ``off`` no editorial table is read, matching the
+    module's zero-editorial-SQL invariant. All columns are naive UTC, so the
+    result is naive UTC too.
+
+    Returns None when no timestamp exists; callers must omit <lastmod> rather
+    than fabricate a date. Editorial-decision reclassifications that leave
+    Product.updated_at untouched are deliberately not tracked.
+    """
+    statement = select(func.max(Product.updated_at)).where(
+        Product.is_active == True  # noqa: E712
+    )
+    visibility = editorial_visibility(session)
+    if visibility is not None:
+        statement = statement.where(visibility.general())
+    # The gate floor applies only under `enforce`: under `off` this module must
+    # issue no SQL against the editorial tables at all.
+    return _newest_timestamp(
+        session.exec(statement).one(),
+        _editorial_gate_updated_at(session) if visibility is not None else None,
+    )
+
+
+def category_lastmod(session: Session, slug: str) -> Optional[datetime]:
+    """Real freshness timestamp for one /ideas/{slug} landing.
+
+    Uses the same visibility the landing renders: context-category visibility
+    under ``enforce``, or the plain category filter under ``off`` — so a product
+    joining or leaving the page moves its lastmod. Under ``enforce`` it is
+    floored by the last editorial gate evaluation; under ``off`` no editorial
+    table is read. All columns are naive UTC.
+
+    Returns None when no timestamp exists; callers must omit <lastmod>.
+    """
+    statement = select(func.max(Product.updated_at)).where(
+        Product.is_active == True  # noqa: E712
+    )
+    visibility = editorial_visibility(session)
+    if visibility is not None:
+        statement = statement.where(visibility.context_category(slug))
+    else:
+        statement = statement.where(Product.category_slug == slug)
+    return _newest_timestamp(
+        session.exec(statement).one(),
+        _editorial_gate_updated_at(session) if visibility is not None else None,
+    )
 
 
 def _utcnaive_from_timestamp(timestamp: float) -> datetime:

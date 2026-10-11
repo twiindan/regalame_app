@@ -147,6 +147,7 @@ def catalog_seed_fixture(session: Session):
             price_numeric=price,
             price_raw=f"{price} €" if price is not None else "N/A",
             scraped_at=when,
+            updated_at=when,
         )
 
     products = [
