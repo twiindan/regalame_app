@@ -18,7 +18,7 @@ from security import get_password_hash, verify_password
 from services import (
     scrape_metadata, generate_amazon_link, perform_draw,
     get_blog_posts_list, get_blog_post_detail, get_blog_posts_with_covers,
-    record_conversion
+    group_blog_products, record_conversion
 )
 from catalog import CatalogQuery, search_products, list_categories
 from seo_content import category_faq, category_guide, related_posts
@@ -567,6 +567,7 @@ async def blog_post_detail(
         "user": user,
         "post": post,
         "items": products,
+        "sections": group_blog_products(products),
         "amazon_link": generate_amazon_link,
         "title": post["title"],
         "canonical_url": f"/blog/{slug}",

@@ -11,6 +11,7 @@
     "@type": "BlogPosting",
     "headline": post.title,
     "description": post.description,
+    "url": social_url(canonical_url),
     "mainEntityOfPage": social_url(canonical_url),
     "author": {"@type": "Organization", "name": "Regálame"},
     "publisher": {"@type": "Organization", "name": "Regálame"},
@@ -21,6 +22,23 @@
 <script type="application/ld+json">
 {{ blogposting | tojson }}
 </script>
+{% if post.faq %}
+{% set faq_entities = [] %}
+{% for entry in post.faq %}
+    {% set _ = faq_entities.append({
+        "@type": "Question",
+        "name": entry.q,
+        "acceptedAnswer": {"@type": "Answer", "text": entry.a},
+    }) %}
+{% endfor %}
+<script type="application/ld+json">
+{{ {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": faq_entities,
+} | tojson }}
+</script>
+{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -66,11 +84,18 @@
     </aside>
 {% endif %}
 
-    <!-- Products Grid -->
+    <!-- Product Sections: thematic <h2> groups over the curated grid -->
     {% if items %}
-    <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-fade-in-up">
-        {% for item in items %}
-        <div class="product-card glass-panel rounded-2xl overflow-hidden hover:bg-white/10 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-indigo-900/20 group flex flex-col {% if loop.index > 12 %}hidden{% endif %}">
+    {% set ns = namespace(shown=0) %}
+    {% for section in sections %}
+    <section class="mb-12" aria-labelledby="section-{{ loop.index }}">
+        <h2 id="section-{{ loop.index }}" class="text-2xl md:text-3xl font-bold text-white mb-6 leading-tight">
+            {{ section['title'] }}
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-fade-in-up">
+        {% for item in section['items'] %}
+        {% set ns.shown = ns.shown + 1 %}
+        <div class="product-card glass-panel rounded-2xl overflow-hidden hover:bg-white/10 transition-all hover:-translate-y-1 hover:shadow-2xl hover:shadow-indigo-900/20 group flex flex-col {% if ns.shown > 12 %}hidden{% endif %}">
             
             <!-- Image Area -->
             <div class="relative h-48 overflow-hidden bg-white p-4">
@@ -123,7 +148,9 @@
             </div>
         </div>
         {% endfor %}
-    </div>
+        </div>
+    </section>
+    {% endfor %}
 
     <!-- Load More Button -->
     {% if items|length > 12 %}
