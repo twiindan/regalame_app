@@ -255,6 +255,60 @@ def get_blog_posts_list():
     """
     return BLOG_POSTS
 
+PRICE_SECTION_BOUNDS = (
+    (10.0, "Menos de 10 €"),
+    (20.0, "Entre 10 y 20 €"),
+    (50.0, "Entre 20 y 50 €"),
+    (None, "Más de 50 €"),
+)
+
+
+def group_blog_products(products):
+    """Group curated blog products into thematic sections for <h2> headings.
+
+    Lists that mix several categories (e.g. a hand-curated Christmas guide)
+    group by category in first-appearance order; single-category lists group
+    by price tier so the page exposes more than one <h2>. Products without a
+    numeric price fall into a trailing "Precio variable" section. Returns a
+    list of {"title", "items"} in render order; an empty product list yields
+    no sections and the template renders its curated empty state.
+    """
+    if not products:
+        return []
+
+    categories = []
+    for item in products:
+        if item.category and item.category not in categories:
+            categories.append(item.category)
+    if len(categories) > 1:
+        return [
+            {
+                "title": category,
+                "items": [p for p in products if p.category == category],
+            }
+            for category in categories
+        ]
+
+    tiered = [{"title": title, "items": []} for _, title in PRICE_SECTION_BOUNDS]
+    variable = {"title": "Precio variable", "items": []}
+    for item in products:
+        price = item.price_numeric
+        if price is None:
+            variable["items"].append(item)
+            continue
+        for (bound, _), section in zip(PRICE_SECTION_BOUNDS, tiered):
+            if bound is not None and price < bound:
+                section["items"].append(item)
+                break
+        else:
+            tiered[-1]["items"].append(item)
+
+    sections = [section for section in tiered if section["items"]]
+    if variable["items"]:
+        sections.append(variable)
+    return sections
+
+
 def get_blog_post_detail(session: Session, slug: str):
     """
     Busca un post por slug y resuelve sus productos desde el catálogo.
