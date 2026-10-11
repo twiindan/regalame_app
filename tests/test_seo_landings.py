@@ -110,6 +110,37 @@ def test_shared_metadata_is_valid_and_does_not_invent_claims(client, path):
         assert unsupported not in claims
 
 
+def test_base_emits_website_and_organization_entity_schema(client):
+    for path in ["/", "/blog", "/catalog"]:
+        items = _entity_schema_items(page(client, path))
+        types = [item["@type"] for item in items]
+        assert types.count("WebSite") == 1
+        assert types.count("Organization") == 1
+        website = next(item for item in items if item["@type"] == "WebSite")
+        organization = next(item for item in items if item["@type"] == "Organization")
+        assert website["name"] == "Regálame"
+        assert website["url"] == "https://regalame.app/"
+        assert website["potentialAction"]["@type"] == "SearchAction"
+        assert organization["name"] == "Regálame"
+        assert organization["url"] == "https://regalame.app/"
+        assert organization["logo"] == "https://regalame.app/static/og-image-default.jpg"
+
+
+def test_entity_schema_uses_the_configured_origin(client, monkeypatch):
+    monkeypatch.setenv("DOMAIN_URL", "https://landing.example/")
+    items = _entity_schema_items(page(client, "/"))
+    urls = [item["url"] for item in items if item["@type"] in ("WebSite", "Organization")]
+    assert urls == ["https://landing.example/", "https://landing.example/"]
+
+
+def _entity_schema_items(soup):
+    schemas = [
+        json.loads(script.string)
+        for script in soup.find_all("script", attrs={"type": "application/ld+json"})
+    ]
+    return [item for schema in schemas for item in (schema.get("@graph") or [schema])]
+
+
 @pytest.mark.parametrize("path,noindex", [("/catalog", True),
                                          ("/trends?q=regalo&page=2", True)])
 def test_unrelated_pages_keep_canonical_and_noindex_policy(client, path, noindex):
@@ -123,12 +154,20 @@ def test_unrelated_pages_keep_canonical_and_noindex_policy(client, path, noindex
     assert bool(robots and "noindex" in robots["content"]) == noindex
 
 
-def test_category_retains_its_existing_relative_canonical(client, catalog_seed):
+def test_category_emits_absolute_canonical(client, catalog_seed):
     soup = page(client, "/ideas/alimentacion-y-bebidas")
     assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [
-        "/ideas/alimentacion-y-bebidas"
+        "https://regalame.app/ideas/alimentacion-y-bebidas"
     ]
     assert "noindex" not in str(soup.head)
+
+
+@pytest.mark.parametrize("path", ["/blog", "/blog/regalos-amigo-invisible-10-euros"])
+def test_indexable_pages_emit_exactly_one_absolute_canonical(client, catalog_seed, path):
+    soup = page(client, path)
+    canonicals = soup.find_all("link", rel="canonical")
+    assert len(canonicals) == 1
+    assert canonicals[0]["href"] == f"https://regalame.app{path}"
 
 
 def test_default_social_image_is_a_real_asset_emitted_with_dimensions(client):
@@ -235,7 +274,9 @@ def test_blog_index_has_self_canonical_and_identity(client):
     from main import public_origin
 
     soup = page(client, "/blog")
-    assert [item["href"] for item in soup.find_all("link", rel="canonical")] == ["/blog"]
+    assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [
+        public_origin() + "/blog"
+    ]
     for prop in ["og:url", "twitter:url"]:
         assert [item["content"] for item in soup.find_all("meta", property=prop)] == [
             public_origin() + "/blog"
@@ -248,7 +289,7 @@ def test_blog_post_has_self_canonical_and_identity(client, slug):
 
     soup = page(client, f"/blog/{slug}")
     assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [
-        f"/blog/{slug}"
+        public_origin() + f"/blog/{slug}"
     ]
     for prop in ["og:url", "twitter:url"]:
         assert [item["content"] for item in soup.find_all("meta", property=prop)] == [
@@ -290,7 +331,9 @@ def test_blog_post_lets_an_absolute_hero_override_og_image(client, monkeypatch):
 @pytest.mark.parametrize("path", ["/bestsellers", "/trends", "/most-desired"])
 def test_indexable_catalog_pages_have_self_canonical(client, catalog_seed, path):
     soup = page(client, path)
-    assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [path]
+    assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [
+        "https://regalame.app" + path
+    ]
     assert not soup.find("meta", attrs={"name": "robots"})
 
 
@@ -402,7 +445,9 @@ def test_indexable_pages_use_the_configured_origin(client, catalog_seed, monkeyp
         assert [item["content"] for item in soup.find_all("meta", property=prop)] == [
             "https://landing.example" + path
         ]
-    assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [path]
+    assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [
+        "https://landing.example" + path
+    ]
 
 
 # --- Category landing content depth (T4) ---
