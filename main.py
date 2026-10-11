@@ -21,7 +21,7 @@ from services import (
     group_blog_products, record_conversion
 )
 from catalog import CatalogQuery, search_products, list_categories
-from seo_content import category_faq, category_guide, related_posts
+from seo_content import amigo_invisible_faq, category_faq, category_guide, related_posts
 from email_utils import send_invitation_email, send_wishlist_share_email
 from image_urls import amazon_webp_url
 from urllib.parse import urlencode
@@ -192,6 +192,7 @@ async def amigo_invisible(request: Request, user: Optional[User] = Depends(get_c
     return templates.TemplateResponse(request, "amigo_invisible.html", {
         "user": user,
         "canonical_url": public_origin() + "/amigo-invisible",
+        "faq_items": amigo_invisible_faq(),
     })
 
 @app.post("/register", response_class=HTMLResponse)

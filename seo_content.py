@@ -1,4 +1,5 @@
-"""Category-aware pSEO content for the ``/ideas/{slug}`` landings.
+"""Category-aware pSEO content for the ``/ideas/{slug}`` landings, plus the
+FAQ content for the ``/amigo-invisible`` organizer landing.
 
 Everything here is generic and factual: guidance derived from the category
 name plus neutral answers that avoid invented numbers, ratings or superlative
@@ -62,6 +63,71 @@ def category_faq(name):
             "a": (
                 "Sí, siempre que respetes el límite de precio acordado en el "
                 "grupo. Revisa el importe pactado antes de elegir la opción."
+            ),
+        },
+    ]
+
+
+def amigo_invisible_faq():
+    """Return 6 neutral ``{"q", "a"}`` pairs for the ``/amigo-invisible`` landing.
+
+    Every answer describes only verified app behavior: admin-run draws with at
+    least two participants, per-participant visibility of assignments, required
+    accounts, public wishlist profiles, admin-managed exclusions and the
+    orientative budget. No invented features, numbers or guarantees.
+    """
+    return [
+        {
+            "q": "¿Qué es el amigo invisible online?",
+            "a": (
+                "Es un intercambio de regalos en el que un sorteo asigna a cada "
+                "participante a quién debe regalar. En Regálame creas un grupo, "
+                "invitas a los participantes y el sorteo se realiza dentro de la "
+                "aplicación."
+            ),
+        },
+        {
+            "q": "¿Cómo se hace el sorteo para que nadie sepa quién regala a quién?",
+            "a": (
+                "El administrador inicia el sorteo con al menos dos participantes "
+                "y la asignación es aleatoria: nadie se asigna a sí mismo. Cada "
+                "persona consulta su asignación iniciando sesión en la "
+                "aplicación; los resultados no se envían por WhatsApp ni por "
+                "correo electrónico."
+            ),
+        },
+        {
+            "q": "¿Hace falta que todos los participantes tengan cuenta?",
+            "a": (
+                "Sí. Cada participante necesita una cuenta y debe iniciar sesión "
+                "para unirse al grupo con el enlace de invitación y consultar su "
+                "asignación y las listas de deseos."
+            ),
+        },
+        {
+            "q": "¿Cómo se comparte la lista de deseos?",
+            "a": (
+                "Cada participante añade sus deseos desde su cuenta, con enlaces "
+                "o texto. Las listas públicas se pueden ver sin cuenta a través "
+                "del enlace del perfil, y también se pueden compartir por correo "
+                "electrónico. Para reservar un regalo hay que iniciar sesión."
+            ),
+        },
+        {
+            "q": "¿Cómo se gestionan los vetos o exclusiones?",
+            "a": (
+                "Antes del sorteo, el administrador puede indicar pares de "
+                "personas que no pueden regalarse entre sí. El sorteo respeta "
+                "esas exclusiones, aunque demasiadas restricciones pueden impedir "
+                "encontrar una combinación válida."
+            ),
+        },
+        {
+            "q": "¿Se puede fijar un presupuesto?",
+            "a": (
+                "Sí. Al crear el grupo, el administrador indica el nombre, la "
+                "fecha y un presupuesto. Es orientativo: la aplicación no controla "
+                "cuánto gasta cada persona."
             ),
         },
     ]
