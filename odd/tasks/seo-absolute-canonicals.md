@@ -54,9 +54,11 @@ Acceptance:
 
 ### T3 — Verification and work-unit commit
 
-- [ ] Full suite `python -m pytest --ignore=tests/test_e2e.py` green.
-- [ ] One commit `feat(seo): ...` on `feat/seo-absolute-canonicals`; no push, no PR.
+- [x] Full suite `python -m pytest --ignore=tests/test_e2e.py` green (577 passed).
+- [x] One commit `feat(seo): ...` on `feat/seo-absolute-canonicals`; no push, no PR.
 
 ## Evidence
 
-(commit hash recorded after T3)
+- Work-unit commit: `38f5d84e4d3c8c59fd57c619ffdc92ac72e88dee` — `feat(seo): emit absolute canonical URLs and site-wide brand entity schema` (14 files: base.html, index.html, 3 test files, 8 golden baselines, this doc).
+- Suite: 577 passed, 0 failed (`--ignore=tests/test_e2e.py`); baselines regenerated with `--editorial-update-baselines` and diff reviewed (absolute canonicals + entity scripts only).
+- Follow-up candidate (out of scope): absolute URLs in `blog_post.html` BreadcrumbList items.
