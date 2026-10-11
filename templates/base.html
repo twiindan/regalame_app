@@ -8,7 +8,7 @@
     <title>{% block title %}Regálame - Tu Lista de Deseos y Amigo Invisible{% endblock %}</title>
     <meta name="description" content="{% block description %}Crea y comparte listas de regalos con amigos y familia. Organiza grupos de amigo invisible y consulta los deseos de los participantes.{% endblock %}">
 {% if canonical_url %}
-    <link rel="canonical" href="{{ canonical_url }}">
+    <link rel="canonical" href="{{ social_url(canonical_url) }}">
 {% endif %}
     
     <!-- Schema.org Structured Data -->
@@ -25,6 +25,31 @@
         "priceCurrency": "EUR"
       },
       "description": "Crea y comparte listas de regalos con amigos y familia. Organiza grupos de amigo invisible y consulta los deseos de los participantes."
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Regálame",
+      "url": "{{ public_origin() }}/",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "{{ public_origin() }}/catalog?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Regálame",
+      "url": "{{ public_origin() }}/",
+      "logo": "{{ public_origin() }}/static/og-image-default.jpg"
     }
     </script>{% block extra_schema %}{% endblock %}
     

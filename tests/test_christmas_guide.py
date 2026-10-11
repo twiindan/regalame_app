@@ -172,7 +172,7 @@ def test_christmas_guide_renders_a_curated_product(client, session):
     assert len(soup.find_all("h1")) == 1
     assert soup.h1.get_text(" ", strip=True) == "Los regalos más deseados para Navidad"
     assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [
-        f"/blog/{NEW_SLUG}"
+        f"https://regalame.app/blog/{NEW_SLUG}"
     ]
     assert asin in response.text
 
