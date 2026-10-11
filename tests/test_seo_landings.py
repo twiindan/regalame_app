@@ -70,6 +70,39 @@ def test_organizer_explains_actual_workflow_and_limits(client):
         assert phrase in text
 
 
+def test_amigo_invisible_landing_renders_faq(client):
+    soup = page(client, "/amigo-invisible")
+    heading = soup.main.find("h2", string="Preguntas frecuentes")
+    assert heading is not None
+    questions = heading.find_parent("section").find_all("h3")
+    assert 4 <= len(questions) <= 6
+    text = soup.main.get_text(" ", strip=True)
+    for phrase in ["al menos dos participantes",
+                   "no se envían por WhatsApp ni por correo electrónico",
+                   "necesita una cuenta"]:
+        assert phrase in text
+
+
+def test_amigo_invisible_emits_faqpage_json_ld(client):
+    soup = page(client, "/amigo-invisible")
+    schemas = _json_ld(soup)
+    faq = _schema_of_type(schemas, "FAQPage")
+    assert faq["@context"] == "https://schema.org"
+    entities = faq["mainEntity"]
+    assert 4 <= len(entities) <= 6
+    rendered_questions = [
+        item.get_text(" ", strip=True)
+        for item in soup.main.find("h2", string="Preguntas frecuentes")
+        .find_parent("section").find_all("h3")
+    ]
+    for entry in entities:
+        assert entry["@type"] == "Question"
+        assert entry["name"] in rendered_questions
+        answer = entry["acceptedAnswer"]
+        assert answer["@type"] == "Answer"
+        assert answer["text"]
+
+
 @pytest.mark.parametrize("slug", [post["slug"] for post in BLOG_POSTS])
 def test_only_relevant_blog_post_links_to_organizer(client, slug):
     soup = page(client, f"/blog/{slug}")
@@ -91,7 +124,8 @@ def test_landings_opt_in_to_clean_configured_identity(client, monkeypatch, domai
     assert "noindex" not in str(soup.head)
 
 
-@pytest.mark.parametrize("path", ["/", "/amigo-invisible", "/catalog", "/blog"])
+# WU4 intent change: /amigo-invisible now emits FAQPage JSON-LD on purpose.
+@pytest.mark.parametrize("path", ["/", "/catalog", "/blog"])
 def test_shared_metadata_is_valid_and_does_not_invent_claims(client, path):
     soup = page(client, path)
     schemas = [json.loads(script.string) for script in soup.find_all(
@@ -520,8 +554,8 @@ def test_related_guides_prefer_a_matching_category():
 
 
 def test_faqpage_is_confined_to_category_landings(client, catalog_seed):
-    for path in ["/", "/amigo-invisible", "/catalog", "/blog",
-                 "/blog/regalos-amigo-invisible-10-euros"]:
+    # WU4 intent change: /amigo-invisible now emits FAQPage JSON-LD on purpose.
+    for path in ["/", "/catalog", "/blog", "/blog/regalos-amigo-invisible-10-euros"]:
         soup = page(client, path)
         assert all(item["@type"] != "FAQPage" for item in _json_ld(soup)), path
 

@@ -3,6 +3,26 @@
 {% block title %}Amigo invisible online: organiza tu sorteo | Regálame{% endblock %}
 {% block description %}Organiza tu amigo invisible: crea un grupo, invita a los participantes y realiza el sorteo. Cada participante necesita una cuenta y puede compartir su lista de deseos.{% endblock %}
 
+{% block extra_schema %}
+{% if faq_items %}
+{% set faq_entities = [] %}
+{% for item in faq_items %}
+    {% set _ = faq_entities.append({
+        "@type": "Question",
+        "name": item.q,
+        "acceptedAnswer": {"@type": "Answer", "text": item.a},
+    }) %}
+{% endfor %}
+<script type="application/ld+json">
+{{ {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": faq_entities,
+} | tojson }}
+</script>
+{% endif %}
+{% endblock %}
+
 {% block content %}
 <div class="max-w-3xl mx-auto space-y-10">
     <header class="text-center">
@@ -19,6 +39,18 @@
             <li><strong class="text-white">Realiza el sorteo.</strong> El administrador lo inicia con al menos dos participantes; nadie se asigna a sí mismo. Las restricciones pueden impedir que se encuentre una combinación válida.</li>
             <li><strong class="text-white">Consulta las listas de deseos.</strong> Después del sorteo, entra en el grupo para ver a quién regalas y sus deseos. Los resultados se consultan en la aplicación, no se envían por WhatsApp o email.</li>
         </ol>
+    </section>
+
+    <section class="glass-panel rounded-2xl p-8" aria-labelledby="amigo-invisible-faq-title">
+        <h2 id="amigo-invisible-faq-title" class="text-2xl font-bold mb-6">Preguntas frecuentes</h2>
+        <div class="space-y-4">
+            {% for item in faq_items %}
+            <div>
+                <h3 class="text-lg font-semibold text-gray-200 mb-2">{{ item.q }}</h3>
+                <p class="text-gray-300 leading-relaxed">{{ item.a }}</p>
+            </div>
+            {% endfor %}
+        </div>
     </section>
 
     <section class="glass-panel rounded-2xl p-8">
