@@ -33,8 +33,17 @@ FAQPage schema when a post defines FAQ data. No push, no PR.
 
 ## Evidence
 
-- T1/T2/T3/T4/T5: commit `35d56bd` — `feat/seo-blog-h2-sections: group blog
-  products into thematic h2 sections and complete post schema`
-  (5 files changed, 232 insertions, 2 deletions).
-- Test results at commit time: 461 passed, 3 skipped (full suite);
-  `pytest tests/ -k blog` → 12 passed.
+- T1–T5: commit `ebf0c9a` — `feat(seo): group blog products into thematic h2
+  sections and complete post schema` (6 files changed, 381 insertions(+),
+  10 deletions(-)).
+- Test results at commit time: full suite `pytest tests/ --ignore=tests/test_e2e.py`
+  → 573 passed; `pytest tests/ -k blog` → 70 passed. test_e2e.py excluded:
+  pre-existing env limitation (playwright + live server not available).
+- `tests/baselines/editorial_off_blog.html` regenerated intentionally with
+  `--editorial-update-baselines` (new h2 section markup + BlogPosting url).
+- Native review preflight (gentle_review inspect): blocked —
+  `package-local-binary-missing`; no lineage created, no mutation. Install
+  with `node scripts/install-gentle-ai.mjs` from the gentle-pi package dir
+  if native review is wanted for this candidate.
+- Follow-up: no post in blog_config defines `faq` or `date_published`; the
+  FAQPage hook is tested but emits nothing until FAQ data is authored.
