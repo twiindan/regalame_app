@@ -406,6 +406,12 @@ def test_blog_post_emits_blogposting_and_matching_breadcrumbs(client):
     assert [entry["name"] for entry in breadcrumbs["itemListElement"]] == [
         "Inicio", "Blog", post["title"]
     ]
+    # Google wants absolute URLs in structured data; the partial must normalize
+    # every crumb through social_url(), never emit the relative input URLs.
+    assert all(
+        entry["item"].startswith(public_origin() + "/")
+        for entry in breadcrumbs["itemListElement"]
+    )
 
     nav = _breadcrumb_nav(soup)
     assert nav is not None
@@ -424,6 +430,8 @@ def test_category_emits_collectionpage_itemlist_and_breadcrumbs(client, catalog_
     assert [entry["position"] for entry in entries] == list(range(1, len(entries) + 1))
     assert "Café molido" in [entry["name"] for entry in entries]
     assert all(entry["url"] for entry in entries)
+    # ItemList product URLs are Amazon affiliate links: always absolute.
+    assert all(entry["url"].startswith("https://") for entry in entries)
 
     breadcrumbs = _schema_of_type(schemas, "BreadcrumbList")
     assert [entry["name"] for entry in breadcrumbs["itemListElement"]] == [
