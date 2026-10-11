@@ -20,7 +20,7 @@ from services import (
     get_blog_posts_list, get_blog_post_detail, get_blog_posts_with_covers,
     group_blog_products, record_conversion
 )
-from catalog import CatalogQuery, search_products, list_categories
+from catalog import CatalogQuery, search_products, list_categories, category_lastmod, catalog_lastmod
 from seo_content import amigo_invisible_faq, category_faq, category_guide, related_posts
 from email_utils import send_invitation_email, send_wishlist_share_email
 from image_urls import amazon_webp_url
@@ -113,6 +113,19 @@ Disallow: /join/
 
 Sitemap: {domain}/sitemap.xml"""
 
+def _sitemap_lastmod(value: Optional[datetime]) -> str:
+    """W3C sitemap <lastmod> value from a naive-UTC timestamp.
+
+    The model columns are naive UTC (see ``models.utcnow_naive``), so the
+    value is rendered with an explicit ``Z`` suffix. Returns '' when there is
+    no reliable timestamp: callers then omit the element instead of emitting a
+    fabricated date.
+    """
+    if value is None:
+        return ""
+    return value.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 @app.get("/sitemap.xml", response_class=HTMLResponse)
 async def sitemap_xml(session: Session = Depends(get_session)):
     domain = public_origin()
@@ -135,26 +148,32 @@ async def sitemap_xml(session: Session = Depends(get_session)):
     </url>
 """)
 
-    # Catalog landings that are indexable on their own. No <lastmod> is emitted:
-    # there is no per-URL modification timestamp for these routes, so any date
-    # would be fabricated rather than derived from real data.
+    # Catalog landings that are indexable on their own. <lastmod> is emitted
+    # only where a real modification timestamp exists: aggregate catalog pages
+    # derive it from Product.updated_at / the editorial gate state; /blog has
+    # no publication dates in its config, so no date is fabricated there.
+    aggregate_lastmod = _sitemap_lastmod(catalog_lastmod(session))
     for landing in ("/blog", "/bestsellers", "/trends", "/most-desired"):
+        lastmod = "" if landing == "/blog" else aggregate_lastmod
+        lastmod_xml = f"\n            <lastmod>{lastmod}</lastmod>" if lastmod else ""
         urls.append(f"""
         <url>
             <loc>{domain}{landing}</loc>
             <changefreq>daily</changefreq>
-            <priority>0.8</priority>
+            <priority>0.8</priority>{lastmod_xml}
         </url>
         """)
     
     # Categorías SEO (Programmatic SEO)
     categories = list_categories(session)
     for _, slug in categories:
+        lastmod = _sitemap_lastmod(category_lastmod(session, slug))
+        lastmod_xml = f"\n            <lastmod>{lastmod}</lastmod>" if lastmod else ""
         urls.append(f"""
         <url>
             <loc>{domain}/ideas/{slug}</loc>
             <changefreq>daily</changefreq>
-            <priority>0.9</priority>
+            <priority>0.9</priority>{lastmod_xml}
         </url>
         """)
 
