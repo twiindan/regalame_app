@@ -9,6 +9,7 @@ import json
 import pytest
 from bs4 import BeautifulSoup
 
+from blog_config import BLOG_POSTS
 from catalog import normalize_text
 from models import Product
 
@@ -204,8 +205,18 @@ def test_blog_post_emits_blogposting_with_absolute_url(client, catalog_seed):
     assert posting["mainEntityOfPage"].startswith("https://")
 
 
-def test_blog_post_faqpage_absent_without_faq_data(client, catalog_seed):
-    response = client.get("/blog/regalos-amigo-invisible-10-euros")
+def test_blog_post_faqpage_absent_without_faq_data(client, catalog_seed,
+                                                   monkeypatch):
+    import services
+
+    monkeypatch.setattr(services, "BLOG_POSTS", [{
+        "slug": "no-faq-probe",
+        "title": "Probe",
+        "description": "Probe",
+        "criteria": {"category": "Electrónica"},
+        "hero_image": None,
+    }])
+    response = client.get("/blog/no-faq-probe")
     schemas = _json_ld(BeautifulSoup(response.text, "html.parser"))
 
     assert all(s["@type"] != "FAQPage" for s in schemas)
@@ -237,3 +248,49 @@ def test_blog_post_faqpage_rendered_when_post_defines_faq(client, catalog_seed,
         "¿Puedo devolver un regalo?",
     ]
     assert all(q["acceptedAnswer"]["@type"] == "Answer" for q in questions)
+
+
+# --------------------------------------------------------------------------- #
+# Per-post FAQPage activation and visible FAQ rendering
+# --------------------------------------------------------------------------- #
+
+def _faq_section(soup):
+    """Return the visible FAQ section, or None when it is not rendered."""
+    for section in soup.find_all("section"):
+        h2 = section.find("h2")
+        if h2 and h2.get_text(strip=True) == "Preguntas frecuentes":
+            return section
+    return None
+
+
+@pytest.mark.parametrize("post", BLOG_POSTS, ids=lambda p: p["slug"])
+def test_blog_post_emits_faqpage_matching_config(client, catalog_seed, post):
+    response = client.get(f"/blog/{post['slug']}")
+    assert response.status_code == 200
+    schemas = _json_ld(BeautifulSoup(response.text, "html.parser"))
+
+    faq_pages = [s for s in schemas if s["@type"] == "FAQPage"]
+    assert len(faq_pages) == 1
+    questions = faq_pages[0]["mainEntity"]
+    expected = post["faq"]
+    assert [q["name"] for q in questions] == [entry["q"] for entry in expected]
+    for question, entry in zip(questions, expected):
+        assert question["@type"] == "Question"
+        assert question["acceptedAnswer"]["@type"] == "Answer"
+        assert question["acceptedAnswer"]["text"] == entry["a"]
+        assert question["acceptedAnswer"]["text"].strip()
+
+
+@pytest.mark.parametrize("post", BLOG_POSTS, ids=lambda p: p["slug"])
+def test_blog_post_faq_visible_matches_schema(client, catalog_seed, post):
+    response = client.get(f"/blog/{post['slug']}")
+    assert response.status_code == 200
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    section = _faq_section(soup)
+    assert section is not None, "the FAQ section must be visible on the page"
+    headings = [h3.get_text(strip=True) for h3 in section.find_all("h3")]
+    paragraphs = [p.get_text(strip=True) for p in section.find_all("p")]
+    for entry in post["faq"]:
+        assert entry["q"] in headings
+        assert entry["a"] in paragraphs
