@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from typing import Optional
+import logging
 import os
 import uuid
 import base64
@@ -32,6 +33,8 @@ from urllib.parse import urlencode
 # internal-only (the dashboard uses it directly via CatalogQuery); exposing it
 # would let each page request re-shuffle, producing duplicate or missing items.
 PUBLIC_SORTS = {"relevance", "price_asc", "price_desc", "newest"}
+
+logger = logging.getLogger(__name__)
 
 # --- Configuración Inicial ---
 @asynccontextmanager
@@ -199,7 +202,13 @@ async def sitemap_xml(session: Session = Depends(get_session)):
     # only where a real modification timestamp exists: aggregate catalog pages
     # derive it from Product.updated_at / the editorial gate state; /blog has
     # no publication dates in its config, so no date is fabricated there.
-    aggregate_lastmod = _sitemap_lastmod(catalog_lastmod(session))
+    # lastmod is freshness metadata only: a failing query must never take the
+    # whole sitemap down. Degrade to no <lastmod> and keep every URL served.
+    try:
+        aggregate_lastmod = _sitemap_lastmod(catalog_lastmod(session))
+    except Exception:
+        logger.exception("sitemap lastmod failed")
+        aggregate_lastmod = ""
     for landing in ("/blog", "/bestsellers", "/trends", "/most-desired"):
         lastmod = "" if landing == "/blog" else aggregate_lastmod
         lastmod_xml = f"\n            <lastmod>{lastmod}</lastmod>" if lastmod else ""
@@ -214,7 +223,11 @@ async def sitemap_xml(session: Session = Depends(get_session)):
     # Categorías SEO (Programmatic SEO)
     categories = list_categories(session)
     for _, slug in categories:
-        lastmod = _sitemap_lastmod(category_lastmod(session, slug))
+        try:
+            lastmod = _sitemap_lastmod(category_lastmod(session, slug))
+        except Exception:
+            logger.exception("sitemap lastmod failed")
+            lastmod = ""
         lastmod_xml = f"\n            <lastmod>{lastmod}</lastmod>" if lastmod else ""
         urls.append(f"""
         <url>
