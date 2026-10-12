@@ -309,7 +309,7 @@ def catalog_lastmod(session: Session) -> Optional[datetime]:
     # The gate floor applies only under `enforce`: under `off` this module must
     # issue no SQL against the editorial tables at all.
     return _newest_timestamp(
-        session.exec(statement).one(),
+        session.exec(statement).first(),
         _editorial_gate_updated_at(session) if visibility is not None else None,
     )
 
@@ -334,7 +334,7 @@ def category_lastmod(session: Session, slug: str) -> Optional[datetime]:
     else:
         statement = statement.where(Product.category_slug == slug)
     return _newest_timestamp(
-        session.exec(statement).one(),
+        session.exec(statement).first(),
         _editorial_gate_updated_at(session) if visibility is not None else None,
     )
 
