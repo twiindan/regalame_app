@@ -412,6 +412,19 @@ def _catalog_context(
     )
     result = search_products(session, query)
 
+    # Social preview: the first product with an absolute image URL represents
+    # the listing. Relative paths are ignored (crawlers could not fetch them),
+    # mirroring the blog-post hero pattern; no URL is ever invented here.
+    og_image = next(
+        (
+            item.image_url
+            for item in result.items
+            if item.image_url and item.image_url.startswith(("http://", "https://"))
+        ),
+        None,
+    )
+    og_image_alt = f"Ideas de regalo: {title}" if og_image else None
+
     params = {}
     if query.q:
         params["q"] = query.q
@@ -476,6 +489,8 @@ def _catalog_context(
         "noindex": noindex,
         "canonical_url": None if noindex else base_path,
         "amazon_link": generate_amazon_link,
+        "og_image": og_image,
+        "og_image_alt": og_image_alt,
     }
 
 
@@ -598,6 +613,8 @@ async def category_seo_page(
         (name for name, slug in context["categories"] if slug == category_slug),
         category_slug.replace("-", " ").title(),
     )
+    if context.get("og_image"):
+        context["og_image_alt"] = f"Ideas de regalo: {context['category_name']}"
     context["other_categories"] = [c for c in context["categories"] if c[1] != category_slug]
     context["category_guide"] = category_guide(context["category_name"])
     context["category_faq"] = category_faq(context["category_name"])
