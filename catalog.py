@@ -280,8 +280,23 @@ def _editorial_gate_updated_at(session: Session) -> Optional[datetime]:
     ).first()
 
 
+def _as_naive_utc(value: datetime) -> datetime:
+    """Naive UTC from any datetime (naive passes through untouched).
+
+    Postgres TIMESTAMP columns come back timezone-aware on some deployments
+    (TIMESTAMPTZ or a session timezone), while the model's naive columns and
+    ``utcnow_naive`` are offset-naive. Comparing them directly raises
+    ``TypeError: can't compare offset-naive and offset-aware datetimes`` —
+    the production 500 behind the sitemap's missing lastmod. Every timestamp
+    is normalized here before comparison or rendering.
+    """
+    if value.tzinfo is None:
+        return value
+    return value.astimezone(timezone.utc).replace(tzinfo=None)
+
+
 def _newest_timestamp(*candidates: Optional[datetime]) -> Optional[datetime]:
-    timestamps = [value for value in candidates if value is not None]
+    timestamps = [_as_naive_utc(value) for value in candidates if value is not None]
     return max(timestamps) if timestamps else None
 
 
