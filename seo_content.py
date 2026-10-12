@@ -74,6 +74,14 @@ def _generic_faq(name):
 CATEGORY_CONTENT = {
     "electronica": {
         "name": "Electrónica",
+        "meta": {
+            "title": "Ideas de regalo en electrónica: cómo acertar | Regálame",
+            "description": (
+                "Ideas de regalo en electrónica para cumpleaños y amigo invisible: "
+                "compara modelos y accesorios según los dispositivos que ya usa "
+                "quien lo recibe."
+            ),
+        },
         "intro": (
             "Un regalo de electrónica acierta cuando encaja con los dispositivos "
             "que la otra persona ya utiliza. Antes de decidirte, comprueba la "
@@ -118,6 +126,14 @@ CATEGORY_CONTENT = {
     },
     "belleza": {
         "name": "Belleza",
+        "meta": {
+            "title": "Ideas de regalo en belleza y cuidado personal | Regálame",
+            "description": (
+                "Regalos de belleza y cuidado personal para cumpleaños o amigo "
+                "invisible: sets, cosmética y detalles elegidos según el tipo de "
+                "piel y su rutina."
+            ),
+        },
         "intro": (
             "En belleza, el acierto depende de la piel, el cabello y la rutina "
             "de quien lo recibe. Un mismo producto puede ser perfecto para una "
@@ -163,6 +179,14 @@ CATEGORY_CONTENT = {
     },
     "hogar-y-cocina": {
         "name": "Hogar y cocina",
+        "meta": {
+            "title": "Qué regalar en hogar y cocina: selección 2026 | Regálame",
+            "description": (
+                "Qué regalar en hogar y cocina: objetos útiles para el día a día, "
+                "regalos originales para estrenar casa o detalles prácticos para "
+                "cumpleaños."
+            ),
+        },
         "intro": (
             "En hogar y cocina, el regalo útil es el que se integra en la casa "
             "y en la rutina de quien lo recibe. Antes de decidirte, piensa en "
@@ -207,6 +231,14 @@ CATEGORY_CONTENT = {
     },
     "moda": {
         "name": "Moda",
+        "meta": {
+            "title": "Regalar ropa y accesorios sin fallar en la talla | Regálame",
+            "description": (
+                "Ideas para regalar ropa y accesorios acertando con la talla: "
+                "básicos atemporales para cumpleaños y regalos originales para "
+                "quien cuida su estilo."
+            ),
+        },
         "intro": (
             "Regalar ropa o accesorios exige acertar con tallas, estilos y "
             "forma de vestir. Lo que funciona en una persona no encaja en otra: "
@@ -252,6 +284,14 @@ CATEGORY_CONTENT = {
     },
     "juguetes-y-juegos": {
         "name": "Juguetes y juegos",
+        "meta": {
+            "title": "Regalos de juguetes y juegos por edad e interés | Regálame",
+            "description": (
+                "Regalos de juguetes y juegos elegidos por edad e intereses: "
+                "juegos de mesa para el amigo invisible y ideas de cumpleaños que "
+                "se usan de verdad."
+            ),
+        },
         "intro": (
             "En juguetes, la clave está en la edad y los intereses de quien va "
             "a jugar. La edad recomendada por el fabricante no es un detalle "
@@ -299,6 +339,14 @@ CATEGORY_CONTENT = {
     },
     "deportes-y-aire-libre": {
         "name": "Deportes y aire libre",
+        "meta": {
+            "title": "Regalos para deportistas según su disciplina | Regálame",
+            "description": (
+                "Regalos para deportistas según su disciplina y nivel: material de "
+                "running, gimnasio o montaña como regalo de cumpleaños o un detalle "
+                "original."
+            ),
+        },
         "intro": (
             "En deporte, el regalo útil depende de la disciplina concreta y del "
             "nivel de quien lo practica: no es lo mismo equipar a alguien que "
@@ -343,6 +391,14 @@ CATEGORY_CONTENT = {
     },
     "libros": {
         "name": "Libros",
+        "meta": {
+            "title": "Regalar libros: cómo elegir el título adecuado | Regálame",
+            "description": (
+                "Ideas para regalar libros acertando con géneros y formatos: "
+                "novedades, ediciones cuidadas y clásicos para cumpleaños, amigo "
+                "invisible o Navidad."
+            ),
+        },
         "intro": (
             "Un libro es un regalo muy personal: acierta cuando conecta con los "
             "géneros y autores que ya se leen. Si conoces sus gustos, una "
@@ -389,6 +445,14 @@ CATEGORY_CONTENT = {
     },
     "alimentacion-y-bebidas": {
         "name": "Alimentación y bebidas",
+        "meta": {
+            "title": "Regalos de comida y bebida con identidad | Regálame",
+            "description": (
+                "Regalos de comida y bebida con identidad: cestas, especialidades "
+                "regionales y detalles originales para cumpleaños, cenas de "
+                "empresa o amigo invisible."
+            ),
+        },
         "intro": (
             "La comida y la bebida son regalos de consumo inmediato, así que el "
             "acierto depende de los gustos y, sobre todo, de las alergias, "
@@ -435,6 +499,14 @@ CATEGORY_CONTENT = {
     },
     "videojuegos": {
         "name": "Videojuegos",
+        "meta": {
+            "title": "Regalos gamer según su consola o su PC | Regálame",
+            "description": (
+                "Regalos de videojuegos sin fallos: elige según su consola u "
+                "ordenador, con juegos, tarjetas digitales y accesorios para "
+                "cumpleaños o amigo invisible."
+            ),
+        },
         "intro": (
             "En videojuegos, el regalo depende sobre todo de la plataforma y "
             "del tipo de juego que disfruta la otra persona. Un juego de la "
@@ -479,6 +551,14 @@ CATEGORY_CONTENT = {
     },
     "productos-para-mascotas": {
         "name": "Productos para mascotas",
+        "meta": {
+            "title": "Regalos para perros, gatos y sus dueños | Regálame",
+            "description": (
+                "Regalos para mascotas según especie y tamaño: juguetes, camas y "
+                "accesorios para perros y gatos, un detalle original o un regalo "
+                "de cumpleaños."
+            ),
+        },
         "intro": (
             "Regalar a una mascota es, en la práctica, regalar a su dueño: el "
             "acierto depende de la especie, el tamaño y la etapa de vida del "
@@ -523,6 +603,14 @@ CATEGORY_CONTENT = {
     },
     "bebe": {
         "name": "Bebé",
+        "meta": {
+            "title": "Qué regalar a un bebé según su etapa | Regálame",
+            "description": (
+                "Qué regalar a un bebé según su etapa de desarrollo: textil, "
+                "higiene y productos seguros para recién nacidos, o un detalle "
+                "práctico para los padres."
+            ),
+        },
         "intro": (
             "En regalos de bebé, la seguridad manda: materiales certificados, "
             "productos adaptados a la edad y diseño pensado para los más "
@@ -567,6 +655,14 @@ CATEGORY_CONTENT = {
     },
     "informatica": {
         "name": "Informática",
+        "meta": {
+            "title": "Regalos de informática: accesorios útiles | Regálame",
+            "description": (
+                "Regalos de informática útiles para el trabajo y el estudio: "
+                "teclados, ratones y accesorios compatibles, ideas para "
+                "cumpleaños o amigo invisible."
+            ),
+        },
         "intro": (
             "En informática, el regalo útil sale de entender para qué sirve el "
             "equipo: trabajo, estudio, creación o juego. La compatibilidad con "
@@ -635,6 +731,24 @@ def category_guide(name):
         "intro": entry["intro"],
         "tips": list(entry["tips"]),
     }
+
+
+def category_meta(name):
+    """Return ``{"title", "description"}`` SEO meta for ``name``.
+
+    Only categories whose ``CATEGORY_CONTENT`` entry declares a ``meta``
+    field return specific copy; everything else (unknown category, entry
+    without ``meta``) returns ``None`` so the template keeps the generic
+    title/description pattern. Titles stay within 70 chars and descriptions
+    within 160 (enforced by tests/test_category_meta.py).
+    """
+    entry = _content_for(name)
+    if entry is None:
+        return None
+    meta = entry.get("meta")
+    if not meta:
+        return None
+    return {"title": meta["title"], "description": meta["description"]}
 
 
 def category_faq(name):

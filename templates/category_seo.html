@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 
-{% block title %}Las Mejores Ideas de Regalo para {{ category_name }} (2026) | Regálame{% endblock %}
-{% block description %}Encuentra el regalo perfecto en nuestra selección de {{ category_name }}. Comparativa de precios y tendencias para el Amigo Invisible y cumpleaños.{% endblock %}
+{% set meta = category_meta(category_name) %}
+{% block title %}{% if meta %}{{ meta.title }}{% else %}Las Mejores Ideas de Regalo para {{ category_name }} (2026) | Regálame{% endif %}{% endblock %}
+{% block description %}{% if meta %}{{ meta.description }}{% else %}Encuentra el regalo perfecto en nuestra selección de {{ category_name }}. Comparativa de precios y tendencias para el Amigo Invisible y cumpleaños.{% endif %}{% endblock %}
 {% block extra_head %}
 {% if prev_page %}<link rel="prev" href="{{ base_path }}?page={{ prev_page }}">{% endif %}
 {% if next_page %}<link rel="next" href="{{ base_path }}?page={{ next_page }}">{% endif %}
