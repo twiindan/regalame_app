@@ -24,7 +24,13 @@ from services import (
     group_blog_products, record_conversion
 )
 from catalog import CatalogQuery, search_products, list_categories, category_lastmod, catalog_lastmod
-from seo_content import amigo_invisible_faq, category_faq, category_guide, related_posts
+from seo_content import (
+    amigo_invisible_faq,
+    category_faq,
+    category_guide,
+    category_meta,
+    related_posts,
+)
 from email_utils import send_invitation_email, send_wishlist_share_email
 from image_urls import amazon_webp_url
 from urllib.parse import urlencode
@@ -132,6 +138,10 @@ def social_url(canonical_url) -> str:
 
 templates.env.globals["public_origin"] = public_origin
 templates.env.globals["social_url"] = social_url
+# SEO plumbing for the /ideas/{slug} landings: the template resolves the
+# per-category meta (title/description) itself; the route handlers stay
+# untouched. Returns None for categories without meta (generic fallback).
+templates.env.globals["category_meta"] = category_meta
 
 # Rewrite Amazon image URLs to their WebP variant at render time only.
 templates.env.filters["amazon_webp"] = amazon_webp_url
