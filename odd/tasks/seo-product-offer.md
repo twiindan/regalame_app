@@ -23,15 +23,20 @@ price emit no `offers` at all (never invent a price).
 
 ## Tasks
 
-- [ ] T1 — RED: `tests/test_product_schema.py` parses JSON-LD from a category
+- [x] T1 — RED: `tests/test_product_schema.py` parses JSON-LD from a category
       landing with priced products (Product + Offer with price + EUR), from a
       product without price (no offers, nothing invented), image omitted when
       missing, no ratings/reviews, and JSON always parseable.
-- [ ] T2 — GREEN: enrich `templates/category_seo.html` ItemList with
+- [x] T2 — GREEN: enrich `templates/category_seo.html` ItemList with
       `Product`/`Offer` items following existing `tojson` conventions.
-- [ ] T3 — Full suite green: `./venv/bin/python -m pytest tests/ -q --ignore=tests/test_e2e.py`.
-- [ ] T4 — Work-unit commit `feat(seo): ...`.
+- [x] T3 — Full suite green: `./venv/bin/python -m pytest tests/ -q --ignore=tests/test_e2e.py`.
+- [x] T4 — Work-unit commit `feat(seo): ...`.
 
 ## Evidence
 
-(pending)
+- RED observed: 6/6 new tests failed before the template change (ListItem
+  lacked `item`).
+- GREEN: 6/6 passed after enriching the ItemList in `category_seo.html`.
+- Full suite: 630 passed (with regenerated baseline; diff reviewed — only the
+  expected Product/Offer JSON-LD addition in `editorial_off_ideas.html`).
+- Commit: `78dbda7` — `feat(seo): emit Product+Offer JSON-LD on category landings`.
