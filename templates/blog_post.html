@@ -174,6 +174,20 @@
     </div>
     {% endif %}
 
+    {% if post.faq %}
+    <section class="max-w-4xl mx-auto mt-12 border-t border-white/10 pt-12" aria-labelledby="blog-faq-title">
+        <h2 id="blog-faq-title" class="text-2xl font-bold text-gray-200 mb-6">Preguntas frecuentes</h2>
+        <div class="space-y-4">
+            {% for item in post.faq %}
+            <div class="bg-white/5 border border-white/10 rounded-2xl p-6">
+                <h3 class="text-lg font-semibold text-gray-200 mb-2">{{ item.q }}</h3>
+                <p class="text-gray-300 leading-relaxed">{{ item.a }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
     <!-- Toast Notification -->
     <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-full shadow-2xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-2 font-bold pointer-events-none">
         <i class="ph-bold ph-check-circle text-xl"></i>

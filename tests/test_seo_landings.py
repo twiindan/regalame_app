@@ -555,7 +555,8 @@ def test_related_guides_prefer_a_matching_category():
 
 def test_faqpage_is_confined_to_category_landings(client, catalog_seed):
     # WU4 intent change: /amigo-invisible now emits FAQPage JSON-LD on purpose.
-    for path in ["/", "/catalog", "/blog", "/blog/regalos-amigo-invisible-10-euros"]:
+    # WU6 intent change: blog posts with an authored `faq` emit it too.
+    for path in ["/", "/catalog", "/blog"]:
         soup = page(client, path)
         assert all(item["@type"] != "FAQPage" for item in _json_ld(soup)), path
 
