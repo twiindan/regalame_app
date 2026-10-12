@@ -6,10 +6,12 @@ import base64
 from datetime import datetime, date
 
 from fastapi import FastAPI, Depends, Request, Form, HTTPException, status, BackgroundTasks
+from fastapi.routing import APIRoute
 from fastapi.responses import HTMLResponse, RedirectResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.routing import Match
 from sqlmodel import Session, select, or_
 
 from database import create_db_and_tables, get_session
@@ -39,7 +41,52 @@ async def lifespan(app: FastAPI):
     create_db_and_tables()
     yield
 
+class HeadOnGetAPIRoute(APIRoute):
+    """Serve HEAD on GET routes without touching the OpenAPI schema.
+
+    FastAPI (unlike Starlette core) does not add HEAD to GET routes, so
+    crawler validators and uptime monitors get 405 from every HTML page.
+    We keep ``self.methods`` as ``{"GET"}`` (FastAPI's OpenAPI generator
+    iterates ``route.methods`` unfiltered, so adding HEAD there would leak
+    HEAD operations into the schema) and instead accept HEAD at the
+    matching/handling level. The handler always runs as GET; the response
+    body is dropped while every header, including Content-Length, is
+    preserved (RFC 9110 HEAD semantics).
+    """
+
+    def matches(self, scope):
+        match, child_scope = super().matches(scope)
+        if (
+            match is Match.PARTIAL
+            and scope["type"] == "http"
+            and scope["method"] == "HEAD"
+            and "GET" in self.methods
+        ):
+            return Match.FULL, child_scope
+        return match, child_scope
+
+    async def handle(self, scope, receive, send):
+        if (
+            scope["type"] == "http"
+            and scope["method"] == "HEAD"
+            and "GET" in self.methods
+        ):
+            scope = dict(scope, method="GET")
+
+            async def send_without_body(message):
+                if message["type"] == "http.response.body" and message.get("body"):
+                    message = dict(message, body=b"")
+                await send(message)
+
+            await self.app(scope, receive, send_without_body)
+            return
+        await super().handle(scope, receive, send)
+
+
 app = FastAPI(lifespan=lifespan)
+# All routes are registered after this line, so every @app.get route picks
+# up HEAD support. See HeadOnGetAPIRoute for why this is not route.methods.
+app.router.route_class = HeadOnGetAPIRoute
 
 # Configurar SessionMiddleware (usar variable de entorno para producción)
 SECRET_KEY = os.getenv("SECRET_KEY", "super-secret-key-change-me")
