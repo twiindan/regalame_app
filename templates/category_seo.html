@@ -10,11 +10,27 @@
 {% block extra_schema %}
 {% set item_list = [] %}
 {% for item in result.items %}
+    {% set product = {
+        "@type": "Product",
+        "name": item.title,
+    } %}
+    {% if item.image_url %}
+        {% set _ = product.update({"image": item.image_url}) %}
+    {% endif %}
+    {% if item.price_numeric is not none %}
+        {% set _ = product.update({"offers": {
+            "@type": "Offer",
+            "price": item.price_numeric,
+            "priceCurrency": "EUR",
+            "url": item.url,
+        }}) %}
+    {% endif %}
     {% set _ = item_list.append({
         "@type": "ListItem",
         "position": loop.index,
         "name": item.title,
         "url": item.url,
+        "item": product,
     }) %}
 {% endfor %}
 <script type="application/ld+json">
