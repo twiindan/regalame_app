@@ -140,11 +140,11 @@ para el SERP de marca):
 
 | Sitio | Fecha envío | Estado | URL ficha |
 |-------|-------------|--------|-----------|
-| AlternativeTo | | pendiente | |
-| SourceForge | | pendiente | |
-| GetApp/Capterra | | pendiente | |
-| Launching Next | | pendiente | |
+| AlternativeTo | 2026-10-13 | enviado, en revisión | |
+| SourceForge | 2026-10-13 | enviado, en revisión | |
+| GetApp/Capterra | — | descartado (exige cuenta business) | |
+| Launching Next | 2026-10-13 | enviado, cola ~4 meses | |
 | SaaSHub | | pendiente | |
-| Google Business | | pendiente | |
+| Google Business | 2026-10-13 | en verificación | |
 | GitHub org | | pendiente | |
 | LinkedIn | | pendiente | |
