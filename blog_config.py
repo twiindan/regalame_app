@@ -100,7 +100,7 @@ BLOG_POSTS = [
 
     # --- ESTILO DE VIDA Y HOGAR ---
     {
-        "slug": "top-tendencias-tecnologia-2025",
+        "slug": "mejores-gadgets-tecnologia",
         "title": "Lo más viral en Electrónica y Gadgets",
         "description": "Desde auriculares hasta domótica. Descubre la tecnología que está marcando tendencia este año.",
         "criteria": {

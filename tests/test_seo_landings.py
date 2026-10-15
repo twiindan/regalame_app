@@ -546,7 +546,7 @@ def test_related_guides_prefer_a_matching_category():
     matching = related_posts("Electrónica")
     assert matching == [{
         "title": "Lo más viral en Electrónica y Gadgets",
-        "slug": "top-tendencias-tecnologia-2025",
+        "slug": "mejores-gadgets-tecnologia",
     }]
     fallback = related_posts(CATEGORY_NAME)
     assert {entry["slug"] for entry in fallback} <= PRICE_GUIDE_SLUGS

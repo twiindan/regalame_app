@@ -143,6 +143,13 @@ templates.env.globals["social_url"] = social_url
 # untouched. Returns None for categories without meta (generic fallback).
 templates.env.globals["category_meta"] = category_meta
 
+def current_year() -> int:
+    """Footer copyright year, evaluated at render time (never stale)."""
+    return datetime.now().year
+
+
+templates.env.globals["current_year"] = current_year
+
 # Rewrite Amazon image URLs to their WebP variant at render time only.
 templates.env.filters["amazon_webp"] = amazon_webp_url
 
@@ -653,6 +660,13 @@ async def blog_index(
         "title": "Blog de Ideas y Regalos",
         "canonical_url": "/blog",
     })
+
+# 301: the tech guide's slug became evergreen (mejores-gadgets-tecnologia);
+# keep the old yearly URL alive for accumulated link equity. Registered
+# before /blog/{slug} so the explicit path wins the match.
+@app.get("/blog/top-tendencias-tecnologia-2025")
+async def blog_post_legacy_tech_slug():
+    return RedirectResponse(url="/blog/mejores-gadgets-tecnologia", status_code=301)
 
 @app.get("/blog/{slug}", response_class=HTMLResponse)
 async def blog_post_detail(
