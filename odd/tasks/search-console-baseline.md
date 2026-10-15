@@ -124,3 +124,26 @@ venv/bin/python -m jobs.search_console --help
   budget. Delivered PR/commit scope is user-owned; this document records the actual counts.
 - The recovered CLI bytes were native-reviewed and approved in a prior session; the commit
   boundary is `009a849`. The WU-A extension is a new candidate.
+
+
+## Ejecución real (2026-10-15)
+
+Primera exportación completa del baseline contra `sc-domain:regalame.app`,
+ejecutada localmente con el CLI (`jobs.search_console`) y sesión OAuth
+`webmasters.readonly` dedicada (token privado en `~/.regalame-search-console/`,
+fuera del repo). Ventana: 2026-07-17 → 2026-10-14 (90 días), `dataState=final`.
+
+Resultados (no sensibles, agregados):
+
+- Totales: 7 clicks / 253 impresiones / CTR 2.8% / posición media 13.1.
+- Consultas: todo es marca o variantes de marca ("regalame" 87 impresiones,
+  pos 17.8; resto: typos y variantes). Cero consultas no-marca: el dominio
+  aún no aparece para "amigo invisible", "lista de deseos", etc.
+- Páginas: la home concentra 247/253 impresiones. Blog con impresiones de
+  cola pero 0 clicks. /amigo-invisible sin impresiones registradas.
+- Tendencia mensual (clicks/imps): jul 3/73, ago 1/128, sep 2/28, oct 1/24.
+
+Lectura: punto de partida prácticamente nulo fuera de la marca, consistente
+con el diagnóstico de autoridad. Este es el baseline contra el que medir el
+efecto del refresh navideño y la fase 0 de backlinks. Re-ejecutar el export
+tras Navidad (ene 2027) para comparación.
