@@ -5,6 +5,8 @@ Roadmap item 4 of the persisted roadmap `seo/next-improvements-roadmap`
 extended with the Christmas campaign content work the user requested on
 2026-11-02. Design spec:
 `docs/superpowers/specs/2026-11-02-amigo-invisible-seo-campaign-design.md`.
+Implementation plan:
+`docs/superpowers/plans/2026-11-02-amigo-invisible-seo-campaign.md`.
 This is the only ODD planning artifact for this feature.
 
 ## Objective, problem, and why
