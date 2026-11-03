@@ -709,11 +709,11 @@ def test_render_markdown_formats_floats_compactly():
     assert "5.181818181818182" not in md
 ```
 
-(b) Knob pass-through pinning test (V2 and V3 must receive `min_impressions`; "regalos navidad" — pos 3.0, ctr 0.025, 200 impr — would otherwise appear in V3):
+(b) Knob pass-through pinning test (V2 and V3 must receive `min_impressions`; the literal must exceed every `_mix()` impressions value — "regalos navidad" has 200, so 100 is unsatisfiable; 1000 works):
 
 ```python
 def test_render_markdown_passes_thresholds_to_views():
-    md = render_markdown(_mix(), site="s", start="d1", end="d2", min_impressions=100)
+    md = render_markdown(_mix(), site="s", start="d1", end="d2", min_impressions=1000)
     assert md.count("No data") == 2  # V2 and V3 empty; V1 and V4 still render
 ```
 
@@ -747,7 +747,7 @@ def test_fetch_rows_raises_after_exhausting_retries():
     assert sleeps == [1, 2, 4]
 ```
 
-With (e) the GREEN expectation for Task 6 becomes **17 passed**.
+With (e) the GREEN expectation for Task 6 becomes **18 passed** (14 existing + 4 new; **19** after the quality-review readiness fixes, which added `test_fetch_rows_surfaces_api_error_body` and gave `_FakeResponse` a `text` property). Those readiness fixes also added `tools/gsc_client_secret.json` to `.gitignore` and made `fetch_rows` wrap `raise_for_status()` re-raising `RuntimeError("GSC API error (status): first 500 chars of body")`.
 
 - [ ] **Step 2: Run to verify RED**
 
