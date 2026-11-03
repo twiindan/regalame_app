@@ -59,6 +59,15 @@
         </p>
     </div>
 
+    {%- for section in post.get("guide", []) %}
+    <section class="glass-panel rounded-2xl p-8 mb-8">
+        <h2 class="text-2xl font-bold mb-4">{{ section.heading }}</h2>
+        {% for paragraph in section.paragraphs %}
+        <p class="text-gray-300 leading-relaxed mb-3">{{ paragraph }}</p>
+        {% endfor %}
+    </section>
+    {%- endfor %}
+
 {% if post.organizer_aside %}
     <aside class="glass-panel rounded-2xl p-6 mb-8 text-center">
         <p class="text-gray-300 mb-2">¿También necesitas organizar el intercambio de Navidad?</p>
