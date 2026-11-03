@@ -18,6 +18,64 @@ BLOG_POSTS = [
         },
         "hero_image": None
     },
+    {
+        "slug": "como-organizar-amigo-invisible",
+        "title": "Cómo organizar un amigo invisible paso a paso",
+        "description": "Los pasos concretos para montar el intercambio: fijar presupuesto y fecha, invitar al grupo, hacer el sorteo y consultar las listas de deseos.",
+        "organizer_aside": True,
+        "guide": [
+            {"heading": "Cómo funciona el amigo invisible", "paragraphs": [
+                "El amigo invisible (o amigo secreto) es un intercambio en el que cada participante regala a una sola persona asignada al azar, sin que esta sepa quién le regaló. El sorteo se hace una vez y cada quien prepara su regalo para la fecha acordada.",
+                "En Regálame el sorteo impide que alguien se asigne a sí mismo y permite configurar vetos, útiles cuando dos personas no deberían regalarse entre sí.",
+            ]},
+            {"heading": "Antes del sorteo: presupuesto, fecha y grupo", "paragraphs": [
+                "Acordad primero el presupuesto máximo: es la regla que evita situaciones incómodas. Después fijad la fecha del intercambio y dejad margen para que cada quien piense su regalo.",
+                "Cread el grupo en Regálame, indicad nombre, fecha y presupuesto, y compartid el enlace de invitación por WhatsApp o email. Cada participante se une con su cuenta.",
+            ]},
+            {"heading": "El día del intercambio", "paragraphs": [
+                "Antes de abrir los regalos, cada participante puede repasar la lista de deseos de su asignado: es la referencia más fiable para acertar. Los resultados del sorteo se consultan dentro de la aplicación, nunca se comparten por chat.",
+            ]},
+        ],
+        "hero_image": None,
+    },
+    {
+        "slug": "reglas-del-amigo-invisible",
+        "title": "Reglas del amigo invisible: cómo se juega",
+        "description": "Las reglas básicas del amigo invisible, las variantes más habituales y cómo evitar los malentendidos típicos del intercambio.",
+        "organizer_aside": True,
+        "guide": [
+            {"heading": "Las reglas básicas", "paragraphs": [
+                "Presupuesto pactado por todos y respeto estricto del secreto: nadie revela a quién le toca regalar hasta el día del intercambio. El sorteo debe ser aleatorio y excluir la autoasignación.",
+                "Quien no pueda participar debe decirlo antes del sorteo: después suele implicar repetir todo el proceso.",
+            ]},
+            {"heading": "Variantes habituales", "paragraphs": [
+                "Vetos (parejas o enemistades que no deben tocarse), temáticas (productos hechos a mano, libros, locales) o límites de precio por tramos. En grupos grandes, un intervalo de entrega más ancho evita prisas.",
+                "La lista de deseos opcional es la variante más útil: el regalo sigue siendo sorpresa, pero acierta. En Regálame cada participante puede publicar la suya.",
+            ]},
+        ],
+        "hero_image": None,
+    },
+    {
+        "slug": "frases-para-el-amigo-invisible",
+        "title": "Frases para el amigo invisible: para el grupo, el papelito y el regalo",
+        "description": "Frases cortas para invitar al grupo, para el papel del sorteo y para acompañar el regalo, con tono directo y sin cursilerías.",
+        "organizer_aside": True,
+        "guide": [
+            {"heading": "Para invitar al grupo", "paragraphs": [
+                "\"Nos falta la mejor parte del plan: el amigo invisible. Entra en el grupo y elige tu lista de deseos.\" · \"Presupuesto ajustado, sorpresas aseguradas: apúntate al intercambio.\"",
+                "\"Si el año pasado te tocó el regalo aburrido, este año toca mejorar: apúntate y pon ideas en tu lista.\"",
+            ]},
+            {"heading": "Para el papelito o la dedicatoria", "paragraphs": [
+                "\"De alguien invisible con mucho gusto.\" · \"Elegido al azar, acertado de verdad.\" · \"El secreto me lo llevo, el regalo te lo llevo a ti.\"",
+                "\"Que no se nota quién fue, pero que se nota que acerté.\" · \"Regalo con vuestra lista por delante: no fallé.\"",
+            ]},
+            {"heading": "Con humor (sin pasarse)", "paragraphs": [
+                "\"Tu amigo invisible te conoce mejor de lo que crees... o tuvimos suerte.\" · \"He respetado el presupuesto. El gusto no tenía límite.\"",
+                "\"Del anonimato más elegante: ni un pista, ni un fallo.\"",
+            ]},
+        ],
+        "hero_image": None,
+    },
 
     # --- PRECIO / PRESUPUESTO ---
     {

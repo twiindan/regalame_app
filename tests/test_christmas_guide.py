@@ -189,3 +189,36 @@ def test_christmas_guide_does_not_show_the_organizer_aside(client):
 
     assert soup.main.find("a", href="/amigo-invisible") is None
 
+
+# --------------------------------------------------------------------------- #
+# WU-4 — informational amigo-invisible guides (text-only, guide + aside)
+# --------------------------------------------------------------------------- #
+
+NEW_GUIDE_SLUGS = [
+    "como-organizar-amigo-invisible",
+    "reglas-del-amigo-invisible",
+    "frases-para-el-amigo-invisible",
+]
+
+
+@pytest.mark.parametrize("slug", NEW_GUIDE_SLUGS, ids=NEW_GUIDE_SLUGS)
+def test_informational_guide_renders_with_organizer_aside(client, slug):
+    from blog_config import BLOG_POSTS
+
+    response = client.get(f"/blog/{slug}")
+
+    assert response.status_code == 200
+    post = next(p for p in BLOG_POSTS if p["slug"] == slug)
+    soup = BeautifulSoup(response.text, "html.parser")
+    assert len(soup.find_all("h1")) == 1
+    assert soup.h1.get_text(" ", strip=True) == post["title"]
+    assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [
+        f"/blog/{slug}"
+    ]
+    assert len(soup.find_all("h2")) >= 2
+    assert soup.main.find("a", href="/amigo-invisible") is not None
+
+    sitemap = client.get("/sitemap.xml")
+    assert sitemap.status_code == 200
+    assert f"/blog/{slug}" in sitemap.text
+
