@@ -273,6 +273,24 @@ Observed results: (to be recorded per task)
   the new block and the untouched title assertion). Subset
   `venv/bin/python -m pytest tests/ -q -k "seo or christmas or editorial"`
   -> `160 passed, 426 deselected`; no golden baseline touched.
+- Plan task 9: organizer aside driven by a per-post config flag. RED
+  `venv/bin/python -m pytest tests/test_seo_landings.py -v -k aside` ->
+  `1 failed, 63 deselected` (`test_organizer_aside_matches_config_flag`:
+  `AssertionError: regalos-amigo-invisible-10-euros` — the flag-less config
+  contradicted the hard-coded aside on the 10-euros page). GREEN
+  `venv/bin/python -m pytest tests/test_seo_landings.py
+  tests/test_editorial_filtering.py -v` -> `96 passed`, including the Task 8
+  quality-review amendment appended to
+  `test_organizer_landing_has_visible_faq_and_faqpage_schema` (FAQPage
+  `mainEntity` cardinality pinned at 3 and rendered answer paragraphs pinned
+  equal to each question's `acceptedAnswer.text`); golden baseline
+  `test_off_mode_matches_golden_baseline[blog]` untouched (aside output
+  byte-identical — flag-driven, same markup). Jinja dict-attribute
+  assumption held: `post.organizer_aside` on a flag-less dict resolves
+  falsy (no aside), so no `post.get()` fallback was needed. Extra suite
+  `venv/bin/python -m pytest tests/test_christmas_guide.py -v` -> `14
+  passed` (`test_christmas_guide_does_not_show_the_organizer_aside` stays
+  green: no flag, no aside).
 
 ## Review workload and delivery
 
@@ -333,5 +351,10 @@ are harmless.
       FAQPage-exclusion assertions aligned with the T4 mandate (evidence
       under Observed results) (`templates/amigo_invisible.html`,
       `tests/test_seo_landings.py`).
+- [x] Plan task 9 — organizer aside driven by a per-post `organizer_aside`
+      config flag (hard-coded slug check removed; FAQ test strengthened with
+      answer byte-identity + schema cardinality per the Task 8 quality
+      review; evidence under Observed results) (`blog_config.py`,
+      `templates/blog_post.html`, `tests/test_seo_landings.py`).
 - [ ] T2..T8 implementation.
 - [ ] T9 December re-measure.
