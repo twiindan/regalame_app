@@ -374,6 +374,50 @@ Observed results: (to be recorded per task)
   regression; it is not in the task's known-environmental-failures list and
   is left for the parent to triage. Commit `7a987e2`.
 
+- Task 12 bugfix: criteria-less posts. Bug evidence: at HEAD `dc75888` the
+  informational posts (no `criteria` key: `como-organizar-amigo-invisible`,
+  `reglas-del-amigo-invisible`, `frases-para-el-amigo-invisible`) rendered the
+  WHOLE catalog below the guide — `GET /blog/como-organizar-amigo-invisible`
+  rendered 3679 product cards (verified empirically by the parent on the real
+  catalog); the unit seed reproduces it as `get_blog_post_detail` returning all
+  3 seeded products for a criteria-less post. Root cause: the task 12 else-branch
+  `slugs = [None]` whole-catalog fallback, designed for max_price-only posts,
+  also fired for posts with no criteria at all, and criteria-less posts consumed
+  images in the covers de-dup. RED `venv/bin/python -m pytest
+  tests/test_catalog.py -v -k "criterialess or distinct_images"` -> `2 failed`:
+  new `test_get_blog_post_detail_criterialess_post_has_no_products` (assert
+  `products == []` got the 3-product catalog) and the pre-existing covers-dedup
+  failure (`assert 'img-cheap-1.jpg' == 'img-cheap-2.jpg'`). New max_price guard
+  test `test_get_blog_post_detail_max_price_only_post_keeps_catalog_search`
+  (no such test existed) passes pre- and post-fix, pinning the historical
+  whole-catalog behavior for `regalos-baratos-menos-20-euros`. First fix
+  attempt scoped the `[None]` fallback to max_price-only posts and regressed 6
+  `tests/test_christmas_guide.py` probe tests — verified NOT pre-existing by
+  restoring HEAD's else-branch byte-identically (`git diff services.py` empty)
+  and re-running: `7 passed` with the same `-k` selector. Those probes
+  monkeypatch `services.BLOG_POSTS` with posts that HAVE a `criteria` key
+  (`{}` or `{"limit": N}`) and pin the old whole-catalog semantics; after
+  `post.get("criteria", {})` the code cannot distinguish them from
+  no-criteria-key posts, so a max_price-only scoping and the suite's ALL-green
+  criterion were mutually exclusive. Resolution (parent-approved): both
+  `get_blog_post_detail` and `get_blog_posts_with_covers` now derive
+  `has_criteria = "criteria" in post` BEFORE the `.get("criteria", {})` default
+  and keep the whole-catalog `[None]` fallback for ANY criteria-bearing post
+  without a category filter (limit-cappable; max_price-only posts flow through
+  unchanged), while posts with NO criteria key resolve `slugs = []` —
+  text-only informational guides render no products by design. GREEN
+  `venv/bin/python -m pytest tests/test_catalog.py -v -k "criterialess or
+  distinct_images or accepts_category_list"` -> `3 passed`; full
+  `tests/test_catalog.py` -> `60 passed`. Render sanity (TestClient, in-memory
+  seed): `GET /blog/como-organizar-amigo-invisible` -> status 200,
+  `product-card count == 0`, empty state `No encontramos productos` present,
+  guide heading `Cómo funciona el amigo invisible` present. Regression gate
+  `venv/bin/python -m pytest tests/test_catalog.py
+  tests/test_editorial_filtering.py tests/test_christmas_guide.py
+  tests/test_seo_landings.py tests/test_blog_guide_sections.py -q` ->
+  `177 passed, 0 failed` (the 6 christmas probes pass UNCHANGED). Commit
+  `62c3744`.
+
 ## Review workload and delivery
 
 | Work unit | Authored additions + deletions |
@@ -456,5 +500,11 @@ are harmless.
       posts keep the whole-catalog fallback; two plan-text amendments and one
       pre-existing (non-task) covers-dedup test failure recorded under
       Observed results (`services.py`, `tests/test_catalog.py`).
+- [x] Task 12 bugfix — criteria-less informational posts render no products
+      (criteria-key-presence fallback: whole-catalog search kept for
+      criteria-bearing posts, no products for no-criteria-key posts;
+      RED/GREEN, render sanity and `177 passed` regression gate with the
+      christmas probes unchanged recorded under Observed results)
+      (`services.py`, `tests/test_catalog.py`).
 - [ ] T2..T8 implementation.
 - [ ] T9 December re-measure.
