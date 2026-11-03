@@ -215,7 +215,7 @@ def aggregate_by(rows, key):
 - [ ] **Step 4: Run to verify GREEN**
 
 Run: `venv/bin/python -m pytest tests/test_gsc_report.py -v`
-Expected: PASS (4 tests).
+Expected: PASS (3 tests).
 
 - [ ] **Step 5: Commit**
 
