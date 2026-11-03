@@ -110,3 +110,99 @@ def render_markdown(rows, site, start, end, stems=SEASONAL_STEMS,
         ["page", "clicks", "impressions", "ctr", "position"],
     ))
     return "\n".join(out)
+
+
+import os  # noqa: E402
+import time as time_module  # noqa: E402
+from datetime import date, timedelta  # noqa: E402
+from urllib.parse import quote  # noqa: E402
+
+API_ROOT = "https://searchconsole.googleapis.com/webmasters/v3/sites"
+SCOPES = ["https://www.googleapis.com/auth/webmasters.readonly"]
+DEFAULT_SA_PATH = os.path.join(os.path.dirname(__file__), "gsc_service_account.json")
+
+_SETUP_HINT = (
+    "No service account found at {path}.\n"
+    "Follow docs/gsc-setup-guide.md (Option A, ~10 minutes) and retry."
+)
+
+
+def load_credentials(path=DEFAULT_SA_PATH):
+    """Load service-account credentials; exit with setup guidance when missing."""
+    if not os.path.exists(path):
+        raise SystemExit(_SETUP_HINT.format(path=path))
+    from google.oauth2 import service_account
+    return service_account.Credentials.from_service_account_file(path, scopes=SCOPES)
+
+
+def load_oauth_credentials(client_secret_path=None, token_path=None):
+    """Fallback: installed-app OAuth flow. Testing-mode tokens expire in 7 days."""
+    from pathlib import Path
+    client_secret_path = client_secret_path or os.path.join(
+        os.path.dirname(__file__), "gsc_client_secret.json")
+    token_path = Path(token_path or Path.home() / ".config/regalame/gsc_token.json")
+    from google_auth_oauthlib.flow import InstalledAppFlow
+    flow = InstalledAppFlow.from_client_secrets_file(client_secret_path, SCOPES)
+    token_path.parent.mkdir(parents=True, exist_ok=True)
+    credentials = flow.run_local_server(port=0)
+    token_path.write_text(credentials.to_json())
+    return credentials
+
+
+def _credentials_from_token(token_path):
+    from google.oauth2.credentials import Credentials
+    return Credentials.from_authorized_user_file(str(token_path), SCOPES)
+
+
+def _authed_session(credentials):
+    from google.auth.transport.requests import AuthorizedSession
+    return AuthorizedSession(credentials)
+
+
+def fetch_rows(site_url, credentials, days=90, country="es",
+               transport=None, page_size=25000, sleep=time_module.sleep):
+    """Fetch query x page rows for the last `days` days, filtered by country.
+
+    `transport` is injectable for tests; production uses AuthorizedSession.
+    Retries 429/5xx with 1/2/4s backoff (3 retry attempts), then raises.
+    """
+    end = date.today()
+    start = end - timedelta(days=days)
+    url = f"{API_ROOT}/{quote(site_url, safe='')}/searchAnalytics/query"
+    session = transport if transport is not None else _authed_session(credentials)
+    rows, start_row = [], 0
+    while True:
+        payload = {
+            "startDate": start.isoformat(),
+            "endDate": end.isoformat(),
+            "dimensions": ["query", "page"],
+            "rowLimit": page_size,
+            "startRow": start_row,
+            "dimensionFilterGroups": [{
+                "groupType": "and",
+                "filters": [{"dimension": "country", "operator": "equals",
+                             "expression": country}],
+            }],
+        }
+        response = None
+        # Initial call + 3 retries with 1/2/4s backoff; a 4th consecutive
+        # failure falls through to raise_for_status.
+        for attempt in range(4):
+            response = session.post(url, json=payload)
+            if response.status_code not in (429, 500, 502, 503):
+                break
+            if attempt < 3:
+                sleep(2 ** attempt)
+        response.raise_for_status()
+        data = response.json()
+        batch = data.get("rows", [])
+        for entry in batch:
+            keys = entry["keys"]
+            rows.append({
+                "query": keys[0], "page": keys[1],
+                "clicks": entry["clicks"], "impressions": entry["impressions"],
+                "position": entry["position"],
+            })
+        if len(batch) < page_size:
+            return rows
+        start_row += page_size

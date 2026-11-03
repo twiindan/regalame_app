@@ -133,3 +133,81 @@ def test_render_markdown_renders_rows_with_numbers():
     assert "amigo invisible" in md
     assert "100" in md
     assert "/a" in md
+
+
+from gsc_report import fetch_rows  # noqa: E402
+
+
+class _FakeResponse:
+    def __init__(self, payload, status=200):
+        self._payload = payload
+        self.status_code = status
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise RuntimeError(f"HTTP {self.status_code}")
+
+    def json(self):
+        return self._payload
+
+
+class _FakeTransport:
+    def __init__(self, pages):
+        self.pages = list(pages)
+        self.calls = []
+
+    def post(self, url, json=None):
+        self.calls.append((url, json))
+        return _FakeResponse(self.pages.pop(0))
+
+
+def test_fetch_rows_paginates_until_short_page():
+    page1 = {"rows": [
+        {"keys": ["amigo invisible", "/a"], "clicks": 1, "impressions": 10, "ctr": 0.1, "position": 5.0},
+    ] * 2}
+    page2 = {"rows": [
+        {"keys": ["regalo", "/b"], "clicks": 0, "impressions": 3, "ctr": 0.0, "position": 9.0},
+    ]}
+    transport = _FakeTransport([page1, page2, {"rows": []}])
+    rows = fetch_rows("https://regalame.app/", credentials=object(), days=90,
+                      country="es", transport=transport, page_size=2)
+    assert [r["query"] for r in rows] == ["amigo invisible", "amigo invisible", "regalo"]
+    assert rows[0]["page"] == "/a"
+    # Stop-on-short-page: page2 (1 row < page_size) ends the loop, so the third
+    # provisioned page is an over-fetch canary that must never be consumed.
+    assert len(transport.calls) == 2
+    first_url, first_body = transport.calls[0]
+    assert "searchconsole.googleapis.com" in first_url
+    assert "sites/https%3A%2F%2Fregalame.app%2F" in first_url
+    assert first_body["dimensions"] == ["query", "page"]
+    assert (first_body["startDate"] > first_body["endDate"]) is False  # sanity: start < end
+    assert first_body["dimensionFilterGroups"][0]["filters"][0]["expression"] == "es"
+
+
+def test_fetch_rows_retries_on_429_then_succeeds(monkeypatch):
+    class Flaky:
+        def __init__(self):
+            self.calls = 0
+
+        def post(self, url, json=None):
+            self.calls += 1
+            # 3 consecutive 429s exercise the full 1/2/4s backoff ladder before
+            # the 4th call succeeds (pinned observable: sleeps == [1, 2, 4]).
+            if self.calls <= 3:
+                return _FakeResponse({}, status=429)
+            return _FakeResponse({"rows": [
+                {"keys": ["q", "/p"], "clicks": 0, "impressions": 1, "ctr": 0.0, "position": 1.0},
+            ]})
+
+    sleeps = []
+    transport = Flaky()
+    rows = fetch_rows("https://regalame.app/", credentials=object(), days=7,
+                      country="es", transport=transport, sleep=sleeps.append)
+    assert len(rows) == 1
+    assert sleeps == [1, 2, 4]
+
+
+def test_fetch_rows_empty_property_returns_empty_list():
+    transport = _FakeTransport([{}])
+    assert fetch_rows("s", credentials=object(), days=7, country="es",
+                      transport=transport) == []
