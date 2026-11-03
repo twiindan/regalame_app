@@ -156,6 +156,26 @@ Observed results: (to be recorded per task)
   out); ctr threshold bites (0.10 >= 0.03 out). Amendment status was
   observed pre-emitter as `9 passed`, confirming the new fixture rows broke
   no existing assertion).
+- Plan task 5: `venv/bin/python -m pytest tests/test_gsc_report.py -v`
+  RED `ImportError: cannot import name 'fetch_rows' from 'gsc_report'`
+  (file-level collection error) -> GREEN `14 passed` (service-account auth +
+  paginated fetch with backoff; fake transport only, no network). Three
+  plan-text defects were verified empirically with venv-interpreter probes
+  and minimally amended before RED, each forced by this task's own pinned
+  observables (14 passed; sleeps exactly [1, 2, 4]; "start < end" sanity):
+  (a) the sanity assert chained as `startDate > endDate is False` evaluates
+  as `(a > b) and (b is False)` — unsatisfiable for any string date — and
+  was parenthesized to preserve the commented "start < end" intent
+  (interpreter emitted a SyntaxWarning for the chained `is`); (b) a
+  single-429 fixture can never produce the pinned [1, 2, 4] ladder (probe:
+  the plan's loop yields sleeps == [1]) — the fixture now returns 429 three
+  times then succeeds, and the retry loop is initial call + 3 retries
+  (`range(4)`, sleep after attempts 0-2) so the ladder completes and a 4th
+  consecutive failure falls through to raise; (c) with the plan's
+  short-page stop rule the pagination test makes 2 calls, not 3 (probe: 2) —
+  expected calls amended 3 -> 2, the provisioned third page kept as an
+  over-fetch canary; same expected-count arithmetic slip class already
+  fixed once in plan task 2 (f472f8c).
 
 ## Review workload and delivery
 
@@ -191,6 +211,10 @@ are harmless.
 - [x] Plan task 4 — markdown emitter for the GSC report (`render_markdown`
       + `_table`) + task 3 surviving-mutant coverage amendment
       (`tools/gsc_report.py`, `tests/test_gsc_report.py`).
+- [x] Plan task 5 — GSC service-account auth and paginated fetch with
+      backoff (`load_credentials`, OAuth fallback, `fetch_rows` against a
+      fake transport; three plan-text amendments recorded under Observed
+      results) (`tools/gsc_report.py`, `tests/test_gsc_report.py`).
 - [ ] T2..T8 implementation.
 - [ ] T4 checkpoint (baseline + targets) — recorded here.
 - [ ] T9 December re-measure.
