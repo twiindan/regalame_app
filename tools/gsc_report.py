@@ -162,9 +162,10 @@ def _authed_session(credentials):
     return AuthorizedSession(credentials)
 
 
-def fetch_rows(site_url, credentials, days=90, country="es",
+def fetch_rows(site_url, credentials, days=90, country="esp",
                transport=None, page_size=25000, sleep=time_module.sleep):
-    """Fetch query x page rows for the last `days` days, filtered by country.
+    """Fetch query x page rows for the last `days` days, filtered by country
+    (ISO 3166-1 alpha-3 codes, e.g. `esp` — the API does not use alpha-2).
 
     `transport` is injectable for tests; production uses AuthorizedSession.
     Retries 429/5xx with 1/2/4s backoff (3 retry attempts), then raises.
@@ -224,7 +225,8 @@ def main(argv=None, transport=None, credentials=None):
     parser.add_argument("--site", default=os.environ.get(
         "GSC_SITE_URL", "https://regalame.app/"))
     parser.add_argument("--days", type=int, default=90)
-    parser.add_argument("--country", default="es")
+    parser.add_argument("--country", default="esp",
+                        help="ISO 3166-1 alpha-3 country code (e.g. esp).")
     parser.add_argument("--min-impressions", type=int, default=10)
     parser.add_argument("--ctr-threshold", type=float, default=0.03)
     parser.add_argument("--stems", default=",".join(SEASONAL_STEMS))

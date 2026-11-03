@@ -281,3 +281,10 @@ def test_fetch_rows_surfaces_api_error_body():
 
     with pytest.raises(RuntimeError, match="sufficient permissions"):
         fetch_rows("s", credentials=object(), days=7, country="es", transport=Forbidden())
+
+
+def test_fetch_rows_country_defaults_to_alpha3_esp():
+    transport = _FakeTransport([{"rows": []}])
+    fetch_rows("https://regalame.app/", credentials=object(), days=7, transport=transport)
+    _, body = transport.calls[0]
+    assert body["dimensionFilterGroups"][0]["filters"][0]["expression"] == "esp"
