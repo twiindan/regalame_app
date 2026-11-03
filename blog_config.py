@@ -71,7 +71,7 @@ BLOG_POSTS = [
             ]},
             {"heading": "Con humor (sin pasarse)", "paragraphs": [
                 "\"Tu amigo invisible te conoce mejor de lo que crees... o tuvimos suerte.\" · \"He respetado el presupuesto. El gusto no tenía límite.\"",
-                "\"Del anonimato más elegante: ni un pista, ni un fallo.\"",
+                "\"Del anonimato más elegante: ni una pista, ni un fallo.\"",
             ]},
         ],
         "hero_image": None,
