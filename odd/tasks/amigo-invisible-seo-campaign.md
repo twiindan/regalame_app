@@ -292,6 +292,31 @@ Observed results: (to be recorded per task)
   passed` (`test_christmas_guide_does_not_show_the_organizer_aside` stays
   green: no flag, no aside).
 
+- Plan task 10: optional per-post `guide` sections (heading + paragraphs)
+  rendered between the post header and the organizer aside. RED
+  `venv/bin/python -m pytest tests/test_blog_guide_sections.py -v` ->
+  `1 failed`: status 200 (the fixture post renders), then
+  `assert 'Sección uno' in body` FAILED — feature missing, not an error.
+  `post.get("guide", [])` did NOT raise for guide-less dicts (Jinja dict
+  `.get` resolves fine), so the plan's `or []` fallback was unnecessary.
+  First GREEN run of the three authorized suites gave `1 failed, 46
+  passed`: `test_off_mode_matches_golden_baseline[blog]` drifted even
+  though no current post has `guide`. Root cause: default `Jinja2Templates`
+  has no `trim_blocks`, so with an empty/missing `guide` the bare
+  `{% for %}` / `{% endfor %}` tag lines still render as whitespace lines,
+  changing bytes on every existing blog post. Regenerating the golden was
+  rejected (it would bake whitespace noise into all guide-less posts,
+  contradicting the plan's own "posts without `guide` render nothing new").
+  Minimal amendment honoring the pinned byte-identical observable: Jinja
+  whitespace control on the outer loop tags (`{%- for ... %}` /
+  `{%- endfor %}`), so an absent `guide` emits zero bytes between the
+  header `</div>` and the organizer-aside `{% if %}` line; the inner
+  paragraphs loop stays plan-verbatim (its whitespace only appears inside
+  rendered sections). After the amendment: `venv/bin/python -m pytest
+  tests/test_blog_guide_sections.py tests/test_editorial_filtering.py
+  tests/test_christmas_guide.py -v` -> `47 passed`, blog golden file
+  untouched.
+
 ## Review workload and delivery
 
 | Work unit | Authored additions + deletions |
@@ -356,5 +381,11 @@ are harmless.
       answer byte-identity + schema cardinality per the Task 8 quality
       review; evidence under Observed results) (`blog_config.py`,
       `templates/blog_post.html`, `tests/test_seo_landings.py`).
+- [x] Plan task 10 — optional per-post `guide` sections (text-only
+      heading + paragraphs) rendered between the post header and the
+      organizer aside; one plan-text amendment recorded under Observed
+      results (Jinja whitespace control so guide-less posts stay
+      byte-identical) (`templates/blog_post.html`,
+      `tests/test_blog_guide_sections.py`).
 - [ ] T2..T8 implementation.
 - [ ] T9 December re-measure.
