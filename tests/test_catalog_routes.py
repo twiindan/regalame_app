@@ -74,7 +74,7 @@ def test_ideas_slug_has_canonical(client, catalog_seed):
 def test_ideas_explicit_page_one_canonical_is_clean(client, catalog_seed):
     response = client.get("/ideas/alimentacion-y-bebidas?page=1")
     assert response.status_code == 200
-    assert '<link rel="canonical" href="/ideas/alimentacion-y-bebidas">' in response.text
+    assert '<link rel="canonical" href="https://regalame.app/ideas/alimentacion-y-bebidas">' in response.text
     assert 'href="/ideas/alimentacion-y-bebidas?page=1"' not in response.text
 
 
@@ -207,11 +207,11 @@ def test_ideas_slug_canonical_and_pagination_links(client, session):
     session.commit()
 
     page1 = client.get("/ideas/electronica")
-    assert '<link rel="canonical" href="/ideas/electronica">' in page1.text
+    assert '<link rel="canonical" href="https://regalame.app/ideas/electronica">' in page1.text
     assert 'rel="next"' in page1.text
 
     page2 = client.get("/ideas/electronica?page=2")
-    assert '<link rel="canonical" href="/ideas/electronica?page=2">' in page2.text
+    assert '<link rel="canonical" href="https://regalame.app/ideas/electronica?page=2">' in page2.text
     assert 'rel="prev"' in page2.text
 
 

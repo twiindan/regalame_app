@@ -453,8 +453,8 @@ def test_get_blog_post_detail_unknown_slug(session):
 def test_get_blog_post_detail_category_criteria(session, catalog_seed):
     from services import get_blog_post_detail
 
-    # blog_config post "top-tendencias-tecnologia-2025" has criteria {"category": "Electrónica"}
-    post, products = get_blog_post_detail(session, "top-tendencias-tecnologia-2025")
+    # blog_config post "mejores-gadgets-tecnologia" has criteria {"category": "Electrónica"}
+    post, products = get_blog_post_detail(session, "mejores-gadgets-tecnologia")
     assert post is not None
     assert {p.asin for p in products} == {"B1"}
 

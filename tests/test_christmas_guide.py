@@ -172,7 +172,7 @@ def test_christmas_guide_renders_a_curated_product(client, session):
     assert len(soup.find_all("h1")) == 1
     assert soup.h1.get_text(" ", strip=True) == "Los regalos más deseados para Navidad"
     assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [
-        f"/blog/{NEW_SLUG}"
+        f"https://regalame.app/blog/{NEW_SLUG}"
     ]
     assert asin in response.text
 
@@ -213,7 +213,7 @@ def test_informational_guide_renders_with_organizer_aside(client, slug):
     assert len(soup.find_all("h1")) == 1
     assert soup.h1.get_text(" ", strip=True) == post["title"]
     assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [
-        f"/blog/{slug}"
+        f"https://regalame.app/blog/{slug}"
     ]
     assert len(soup.find_all("h2")) >= 2
     assert soup.main.find("a", href="/amigo-invisible") is not None
@@ -279,7 +279,7 @@ def test_audience_post_renders_curated_products(client, session, slug):
     assert len(soup.find_all("h1")) == 1
     assert soup.h1.get_text(" ", strip=True) == post["title"]
     assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [
-        f"/blog/{slug}"
+        f"https://regalame.app/blog/{slug}"
     ]
     assert soup.find_all(class_="product-card")
     # The seeded curated ASIN must render — pins the items path, not a

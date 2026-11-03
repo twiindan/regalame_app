@@ -1,15 +1,18 @@
 from contextlib import asynccontextmanager
 from typing import Optional
+import logging
 import os
 import uuid
 import base64
 from datetime import datetime, date
 
 from fastapi import FastAPI, Depends, Request, Form, HTTPException, status, BackgroundTasks
+from fastapi.routing import APIRoute
 from fastapi.responses import HTMLResponse, RedirectResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.routing import Match
 from sqlmodel import Session, select, or_
 
 from database import create_db_and_tables, get_session
@@ -18,10 +21,16 @@ from security import get_password_hash, verify_password
 from services import (
     scrape_metadata, generate_amazon_link, perform_draw,
     get_blog_posts_list, get_blog_post_detail, get_blog_posts_with_covers,
-    record_conversion
+    group_blog_products, record_conversion
 )
-from catalog import CatalogQuery, search_products, list_categories
-from seo_content import category_faq, category_guide, related_posts
+from catalog import CatalogQuery, search_products, list_categories, category_lastmod, catalog_lastmod
+from seo_content import (
+    amigo_invisible_faq,
+    category_faq,
+    category_guide,
+    category_meta,
+    related_posts,
+)
 from email_utils import send_invitation_email, send_wishlist_share_email
 from image_urls import amazon_webp_url
 from urllib.parse import urlencode
@@ -31,6 +40,8 @@ from urllib.parse import urlencode
 # would let each page request re-shuffle, producing duplicate or missing items.
 PUBLIC_SORTS = {"relevance", "price_asc", "price_desc", "newest"}
 
+logger = logging.getLogger(__name__)
+
 # --- Configuración Inicial ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -39,7 +50,52 @@ async def lifespan(app: FastAPI):
     create_db_and_tables()
     yield
 
+class HeadOnGetAPIRoute(APIRoute):
+    """Serve HEAD on GET routes without touching the OpenAPI schema.
+
+    FastAPI (unlike Starlette core) does not add HEAD to GET routes, so
+    crawler validators and uptime monitors get 405 from every HTML page.
+    We keep ``self.methods`` as ``{"GET"}`` (FastAPI's OpenAPI generator
+    iterates ``route.methods`` unfiltered, so adding HEAD there would leak
+    HEAD operations into the schema) and instead accept HEAD at the
+    matching/handling level. The handler always runs as GET; the response
+    body is dropped while every header, including Content-Length, is
+    preserved (RFC 9110 HEAD semantics).
+    """
+
+    def matches(self, scope):
+        match, child_scope = super().matches(scope)
+        if (
+            match is Match.PARTIAL
+            and scope["type"] == "http"
+            and scope["method"] == "HEAD"
+            and "GET" in self.methods
+        ):
+            return Match.FULL, child_scope
+        return match, child_scope
+
+    async def handle(self, scope, receive, send):
+        if (
+            scope["type"] == "http"
+            and scope["method"] == "HEAD"
+            and "GET" in self.methods
+        ):
+            scope = dict(scope, method="GET")
+
+            async def send_without_body(message):
+                if message["type"] == "http.response.body" and message.get("body"):
+                    message = dict(message, body=b"")
+                await send(message)
+
+            await self.app(scope, receive, send_without_body)
+            return
+        await super().handle(scope, receive, send)
+
+
 app = FastAPI(lifespan=lifespan)
+# All routes are registered after this line, so every @app.get route picks
+# up HEAD support. See HeadOnGetAPIRoute for why this is not route.methods.
+app.router.route_class = HeadOnGetAPIRoute
 
 # Configurar SessionMiddleware (usar variable de entorno para producción)
 SECRET_KEY = os.getenv("SECRET_KEY", "super-secret-key-change-me")
@@ -82,6 +138,17 @@ def social_url(canonical_url) -> str:
 
 templates.env.globals["public_origin"] = public_origin
 templates.env.globals["social_url"] = social_url
+# SEO plumbing for the /ideas/{slug} landings: the template resolves the
+# per-category meta (title/description) itself; the route handlers stay
+# untouched. Returns None for categories without meta (generic fallback).
+templates.env.globals["category_meta"] = category_meta
+
+def current_year() -> int:
+    """Footer copyright year, evaluated at render time (never stale)."""
+    return datetime.now().year
+
+
+templates.env.globals["current_year"] = current_year
 
 # Rewrite Amazon image URLs to their WebP variant at render time only.
 templates.env.filters["amazon_webp"] = amazon_webp_url
@@ -113,6 +180,19 @@ Disallow: /join/
 
 Sitemap: {domain}/sitemap.xml"""
 
+def _sitemap_lastmod(value: Optional[datetime]) -> str:
+    """W3C sitemap <lastmod> value from a naive-UTC timestamp.
+
+    The model columns are naive UTC (see ``models.utcnow_naive``), so the
+    value is rendered with an explicit ``Z`` suffix. Returns '' when there is
+    no reliable timestamp: callers then omit the element instead of emitting a
+    fabricated date.
+    """
+    if value is None:
+        return ""
+    return value.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 @app.get("/sitemap.xml", response_class=HTMLResponse)
 async def sitemap_xml(session: Session = Depends(get_session)):
     domain = public_origin()
@@ -135,26 +215,42 @@ async def sitemap_xml(session: Session = Depends(get_session)):
     </url>
 """)
 
-    # Catalog landings that are indexable on their own. No <lastmod> is emitted:
-    # there is no per-URL modification timestamp for these routes, so any date
-    # would be fabricated rather than derived from real data.
+    # Catalog landings that are indexable on their own. <lastmod> is emitted
+    # only where a real modification timestamp exists: aggregate catalog pages
+    # derive it from Product.updated_at / the editorial gate state; /blog has
+    # no publication dates in its config, so no date is fabricated there.
+    # lastmod is freshness metadata only: a failing query must never take the
+    # whole sitemap down. Degrade to no <lastmod> and keep every URL served.
+    try:
+        aggregate_lastmod = _sitemap_lastmod(catalog_lastmod(session))
+    except Exception:
+        logger.exception("sitemap lastmod failed")
+        aggregate_lastmod = ""
     for landing in ("/blog", "/bestsellers", "/trends", "/most-desired"):
+        lastmod = "" if landing == "/blog" else aggregate_lastmod
+        lastmod_xml = f"\n            <lastmod>{lastmod}</lastmod>" if lastmod else ""
         urls.append(f"""
         <url>
             <loc>{domain}{landing}</loc>
             <changefreq>daily</changefreq>
-            <priority>0.8</priority>
+            <priority>0.8</priority>{lastmod_xml}
         </url>
         """)
     
     # Categorías SEO (Programmatic SEO)
     categories = list_categories(session)
     for _, slug in categories:
+        try:
+            lastmod = _sitemap_lastmod(category_lastmod(session, slug))
+        except Exception:
+            logger.exception("sitemap lastmod failed")
+            lastmod = ""
+        lastmod_xml = f"\n            <lastmod>{lastmod}</lastmod>" if lastmod else ""
         urls.append(f"""
         <url>
             <loc>{domain}/ideas/{slug}</loc>
             <changefreq>daily</changefreq>
-            <priority>0.9</priority>
+            <priority>0.9</priority>{lastmod_xml}
         </url>
         """)
 
@@ -192,6 +288,7 @@ async def amigo_invisible(request: Request, user: Optional[User] = Depends(get_c
     return templates.TemplateResponse(request, "amigo_invisible.html", {
         "user": user,
         "canonical_url": public_origin() + "/amigo-invisible",
+        "faq_items": amigo_invisible_faq(),
     })
 
 @app.post("/register", response_class=HTMLResponse)
@@ -332,6 +429,19 @@ def _catalog_context(
     )
     result = search_products(session, query)
 
+    # Social preview: the first product with an absolute image URL represents
+    # the listing. Relative paths are ignored (crawlers could not fetch them),
+    # mirroring the blog-post hero pattern; no URL is ever invented here.
+    og_image = next(
+        (
+            item.image_url
+            for item in result.items
+            if item.image_url and item.image_url.startswith(("http://", "https://"))
+        ),
+        None,
+    )
+    og_image_alt = f"Ideas de regalo: {title}" if og_image else None
+
     params = {}
     if query.q:
         params["q"] = query.q
@@ -396,6 +506,8 @@ def _catalog_context(
         "noindex": noindex,
         "canonical_url": None if noindex else base_path,
         "amazon_link": generate_amazon_link,
+        "og_image": og_image,
+        "og_image_alt": og_image_alt,
     }
 
 
@@ -518,6 +630,8 @@ async def category_seo_page(
         (name for name, slug in context["categories"] if slug == category_slug),
         category_slug.replace("-", " ").title(),
     )
+    if context.get("og_image"):
+        context["og_image_alt"] = f"Ideas de regalo: {context['category_name']}"
     context["other_categories"] = [c for c in context["categories"] if c[1] != category_slug]
     context["category_guide"] = category_guide(context["category_name"])
     context["category_faq"] = category_faq(context["category_name"])
@@ -547,6 +661,13 @@ async def blog_index(
         "canonical_url": "/blog",
     })
 
+# 301: the tech guide's slug became evergreen (mejores-gadgets-tecnologia);
+# keep the old yearly URL alive for accumulated link equity. Registered
+# before /blog/{slug} so the explicit path wins the match.
+@app.get("/blog/top-tendencias-tecnologia-2025")
+async def blog_post_legacy_tech_slug():
+    return RedirectResponse(url="/blog/mejores-gadgets-tecnologia", status_code=301)
+
 @app.get("/blog/{slug}", response_class=HTMLResponse)
 async def blog_post_detail(
     request: Request,
@@ -567,6 +688,7 @@ async def blog_post_detail(
         "user": user,
         "post": post,
         "items": products,
+        "sections": group_blog_products(products),
         "amazon_link": generate_amazon_link,
         "title": post["title"],
         "canonical_url": f"/blog/{slug}",

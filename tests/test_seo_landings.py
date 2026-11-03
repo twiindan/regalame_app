@@ -81,6 +81,39 @@ def test_organizer_aside_matches_config_flag(client):
             assert not links, post["slug"]
 
 
+def test_amigo_invisible_landing_renders_faq(client):
+    soup = page(client, "/amigo-invisible")
+    heading = soup.main.find("h2", string="Preguntas frecuentes")
+    assert heading is not None
+    questions = heading.find_parent("section").find_all("h3")
+    assert 4 <= len(questions) <= 6
+    text = soup.main.get_text(" ", strip=True)
+    for phrase in ["al menos dos participantes",
+                   "no se envían por WhatsApp ni por correo electrónico",
+                   "necesita una cuenta"]:
+        assert phrase in text
+
+
+def test_amigo_invisible_emits_faqpage_json_ld(client):
+    soup = page(client, "/amigo-invisible")
+    schemas = _json_ld(soup)
+    faq = _schema_of_type(schemas, "FAQPage")
+    assert faq["@context"] == "https://schema.org"
+    entities = faq["mainEntity"]
+    assert 4 <= len(entities) <= 6
+    rendered_questions = [
+        item.get_text(" ", strip=True)
+        for item in soup.main.find("h2", string="Preguntas frecuentes")
+        .find_parent("section").find_all("h3")
+    ]
+    for entry in entities:
+        assert entry["@type"] == "Question"
+        assert entry["name"] in rendered_questions
+        answer = entry["acceptedAnswer"]
+        assert answer["@type"] == "Answer"
+        assert answer["text"]
+
+
 @pytest.mark.parametrize("domain", ["https://regalame.app", "https://landing.example/"])
 @pytest.mark.parametrize("path", ["/", "/amigo-invisible"])
 def test_landings_opt_in_to_clean_configured_identity(client, monkeypatch, domain, path):
@@ -95,7 +128,8 @@ def test_landings_opt_in_to_clean_configured_identity(client, monkeypatch, domai
     assert "noindex" not in str(soup.head)
 
 
-@pytest.mark.parametrize("path", ["/", "/amigo-invisible", "/catalog", "/blog"])
+# WU4 intent change: /amigo-invisible now emits FAQPage JSON-LD on purpose.
+@pytest.mark.parametrize("path", ["/", "/catalog", "/blog"])
 def test_shared_metadata_is_valid_and_does_not_invent_claims(client, path):
     soup = page(client, path)
     schemas = [json.loads(script.string) for script in soup.find_all(
@@ -117,6 +151,37 @@ def test_shared_metadata_is_valid_and_does_not_invent_claims(client, path):
         assert unsupported not in claims
 
 
+def test_base_emits_website_and_organization_entity_schema(client):
+    for path in ["/", "/blog", "/catalog"]:
+        items = _entity_schema_items(page(client, path))
+        types = [item["@type"] for item in items]
+        assert types.count("WebSite") == 1
+        assert types.count("Organization") == 1
+        website = next(item for item in items if item["@type"] == "WebSite")
+        organization = next(item for item in items if item["@type"] == "Organization")
+        assert website["name"] == "Regálame"
+        assert website["url"] == "https://regalame.app/"
+        assert website["potentialAction"]["@type"] == "SearchAction"
+        assert organization["name"] == "Regálame"
+        assert organization["url"] == "https://regalame.app/"
+        assert organization["logo"] == "https://regalame.app/static/og-image-default.jpg"
+
+
+def test_entity_schema_uses_the_configured_origin(client, monkeypatch):
+    monkeypatch.setenv("DOMAIN_URL", "https://landing.example/")
+    items = _entity_schema_items(page(client, "/"))
+    urls = [item["url"] for item in items if item["@type"] in ("WebSite", "Organization")]
+    assert urls == ["https://landing.example/", "https://landing.example/"]
+
+
+def _entity_schema_items(soup):
+    schemas = [
+        json.loads(script.string)
+        for script in soup.find_all("script", attrs={"type": "application/ld+json"})
+    ]
+    return [item for schema in schemas for item in (schema.get("@graph") or [schema])]
+
+
 @pytest.mark.parametrize("path,noindex", [("/catalog", True),
                                          ("/trends?q=regalo&page=2", True)])
 def test_unrelated_pages_keep_canonical_and_noindex_policy(client, path, noindex):
@@ -130,12 +195,20 @@ def test_unrelated_pages_keep_canonical_and_noindex_policy(client, path, noindex
     assert bool(robots and "noindex" in robots["content"]) == noindex
 
 
-def test_category_retains_its_existing_relative_canonical(client, catalog_seed):
+def test_category_emits_absolute_canonical(client, catalog_seed):
     soup = page(client, "/ideas/alimentacion-y-bebidas")
     assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [
-        "/ideas/alimentacion-y-bebidas"
+        "https://regalame.app/ideas/alimentacion-y-bebidas"
     ]
     assert "noindex" not in str(soup.head)
+
+
+@pytest.mark.parametrize("path", ["/blog", "/blog/regalos-amigo-invisible-10-euros"])
+def test_indexable_pages_emit_exactly_one_absolute_canonical(client, catalog_seed, path):
+    soup = page(client, path)
+    canonicals = soup.find_all("link", rel="canonical")
+    assert len(canonicals) == 1
+    assert canonicals[0]["href"] == f"https://regalame.app{path}"
 
 
 def test_default_social_image_is_a_real_asset_emitted_with_dimensions(client):
@@ -242,7 +315,9 @@ def test_blog_index_has_self_canonical_and_identity(client):
     from main import public_origin
 
     soup = page(client, "/blog")
-    assert [item["href"] for item in soup.find_all("link", rel="canonical")] == ["/blog"]
+    assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [
+        public_origin() + "/blog"
+    ]
     for prop in ["og:url", "twitter:url"]:
         assert [item["content"] for item in soup.find_all("meta", property=prop)] == [
             public_origin() + "/blog"
@@ -255,7 +330,7 @@ def test_blog_post_has_self_canonical_and_identity(client, slug):
 
     soup = page(client, f"/blog/{slug}")
     assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [
-        f"/blog/{slug}"
+        public_origin() + f"/blog/{slug}"
     ]
     for prop in ["og:url", "twitter:url"]:
         assert [item["content"] for item in soup.find_all("meta", property=prop)] == [
@@ -297,7 +372,9 @@ def test_blog_post_lets_an_absolute_hero_override_og_image(client, monkeypatch):
 @pytest.mark.parametrize("path", ["/bestsellers", "/trends", "/most-desired"])
 def test_indexable_catalog_pages_have_self_canonical(client, catalog_seed, path):
     soup = page(client, path)
-    assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [path]
+    assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [
+        "https://regalame.app" + path
+    ]
     assert not soup.find("meta", attrs={"name": "robots"})
 
 
@@ -370,6 +447,12 @@ def test_blog_post_emits_blogposting_and_matching_breadcrumbs(client):
     assert [entry["name"] for entry in breadcrumbs["itemListElement"]] == [
         "Inicio", "Blog", post["title"]
     ]
+    # Google wants absolute URLs in structured data; the partial must normalize
+    # every crumb through social_url(), never emit the relative input URLs.
+    assert all(
+        entry["item"].startswith(public_origin() + "/")
+        for entry in breadcrumbs["itemListElement"]
+    )
 
     nav = _breadcrumb_nav(soup)
     assert nav is not None
@@ -388,6 +471,8 @@ def test_category_emits_collectionpage_itemlist_and_breadcrumbs(client, catalog_
     assert [entry["position"] for entry in entries] == list(range(1, len(entries) + 1))
     assert "Café molido" in [entry["name"] for entry in entries]
     assert all(entry["url"] for entry in entries)
+    # ItemList product URLs are Amazon affiliate links: always absolute.
+    assert all(entry["url"].startswith("https://") for entry in entries)
 
     breadcrumbs = _schema_of_type(schemas, "BreadcrumbList")
     assert [entry["name"] for entry in breadcrumbs["itemListElement"]] == [
@@ -409,7 +494,9 @@ def test_indexable_pages_use_the_configured_origin(client, catalog_seed, monkeyp
         assert [item["content"] for item in soup.find_all("meta", property=prop)] == [
             "https://landing.example" + path
         ]
-    assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [path]
+    assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [
+        "https://landing.example" + path
+    ]
 
 
 # --- Category landing content depth (T4) ---
@@ -466,18 +553,17 @@ def test_related_guides_prefer_a_matching_category():
     matching = related_posts("Electrónica")
     assert matching == [{
         "title": "Lo más viral en Electrónica y Gadgets",
-        "slug": "top-tendencias-tecnologia-2025",
+        "slug": "mejores-gadgets-tecnologia",
     }]
     fallback = related_posts(CATEGORY_NAME)
     assert {entry["slug"] for entry in fallback} <= PRICE_GUIDE_SLUGS
     assert fallback
 
 
-def test_faqpage_does_not_leak_onto_unrelated_pages(client, catalog_seed):
-    # The organizer landing and category landings intentionally emit FAQPage;
-    # unrelated pages must stay FAQPage-free.
-    for path in ["/", "/catalog", "/blog",
-                 "/blog/regalos-amigo-invisible-10-euros"]:
+def test_faqpage_is_confined_to_category_landings(client, catalog_seed):
+    # WU4 intent change: /amigo-invisible now emits FAQPage JSON-LD on purpose.
+    # WU6 intent change: blog posts with an authored `faq` emit it too.
+    for path in ["/", "/catalog", "/blog"]:
         soup = page(client, path)
         assert all(item["@type"] != "FAQPage" for item in _json_ld(soup)), path
 
@@ -505,18 +591,20 @@ def test_organizer_landing_has_visible_faq_and_faqpage_schema(client):
     faq_heading = soup.main.find("h2", string="Preguntas frecuentes")
     assert faq_heading
     questions = [h3.get_text(strip=True) for h3 in faq_heading.find_next("div").find_all("h3")]
-    assert len(questions) == 3
+    assert 4 <= len(questions) <= 6
 
     schemas = _json_ld(soup)
     faq = next(item for item in schemas if item.get("@type") == "FAQPage")
     names = [q["name"] for q in faq["mainEntity"]]
     for question in questions:
         assert question in names
-    assert len(faq["mainEntity"]) == 3
+    # Visible FAQ and schema render from the same faq_items source: they must
+    # stay identical (questions AND answers), whatever the content is.
     answers = soup.main.find("h2", string="Preguntas frecuentes").find_next("div").find_all("p")
     assert [a.get_text(strip=True) for a in answers] == [
         q["acceptedAnswer"]["text"] for q in faq["mainEntity"]
     ]
+    assert len(faq["mainEntity"]) == len(questions) == len(answers)
 
 
 def test_home_links_the_christmas_guide(client):
