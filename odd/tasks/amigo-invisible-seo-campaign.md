@@ -148,6 +148,14 @@ Observed results: (to be recorded per task)
   weighted-average fixture was strengthened to impressions 100/10 so the
   weighted position ≈5.18 is actually pinned, not equal to the unweighted
   mean).
+- Plan task 4: `venv/bin/python -m pytest tests/test_gsc_report.py -v`
+  RED `ImportError: cannot import name 'render_markdown' from 'gsc_report'`
+  (file-level collection error) -> GREEN `11 passed` (markdown emitter +
+  task 3 amendment: half-open window bounds pinned — exactly 5.0 included,
+  exactly 20.0 excluded; `min_impressions` filter bites (impressions 5 < 10
+  out); ctr threshold bites (0.10 >= 0.03 out). Amendment status was
+  observed pre-emitter as `9 passed`, confirming the new fixture rows broke
+  no existing assertion).
 
 ## Review workload and delivery
 
@@ -180,6 +188,9 @@ are harmless.
 - [x] Plan task 3 — GSC report view builders (V1 top queries, V2
       opportunities, V3 low CTR, V4 per-url) + task 2 weighted-average test
       amendment (`tools/gsc_report.py`, `tests/test_gsc_report.py`).
+- [x] Plan task 4 — markdown emitter for the GSC report (`render_markdown`
+      + `_table`) + task 3 surviving-mutant coverage amendment
+      (`tools/gsc_report.py`, `tests/test_gsc_report.py`).
 - [ ] T2..T8 implementation.
 - [ ] T4 checkpoint (baseline + targets) — recorded here.
 - [ ] T9 December re-measure.
