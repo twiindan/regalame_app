@@ -503,12 +503,12 @@ def test_fetch_rows_paginates_until_short_page():
                       country="es", transport=transport, page_size=2)
     assert [r["query"] for r in rows] == ["amigo invisible", "amigo invisible", "regalo"]
     assert rows[0]["page"] == "/a"
-    assert len(transport.calls) == 3
+    assert len(transport.calls) == 2  # stop-on-short-page: the 3rd provisioned page stays unconsumed
     first_url, first_body = transport.calls[0]
     assert "searchconsole.googleapis.com" in first_url
     assert "sites/https%3A%2F%2Fregalame.app%2F" in first_url
     assert first_body["dimensions"] == ["query", "page"]
-    assert first_body["startDate"] > first_body["endDate"] is False  # sanity: start < end
+    assert (first_body["startDate"] > first_body["endDate"]) is False  # sanity: start < end
     assert first_body["dimensionFilterGroups"][0]["filters"][0]["expression"] == "es"
 
 
@@ -519,7 +519,7 @@ def test_fetch_rows_retries_on_429_then_succeeds(monkeypatch):
 
         def post(self, url, json=None):
             self.calls += 1
-            if self.calls == 1:
+            if self.calls <= 3:
                 return _FakeResponse({}, status=429)
             return _FakeResponse({"rows": [
                 {"keys": ["q", "/p"], "clicks": 0, "impressions": 1, "ctr": 0.0, "position": 1.0},
@@ -622,11 +622,11 @@ def fetch_rows(site_url, credentials, days=90, country="es",
             }],
         }
         response = None
-        for attempt in range(3):
+        for attempt in range(4):
             response = session.post(url, json=payload)
             if response.status_code not in (429, 500, 502, 503):
                 break
-            if attempt < 2:
+            if attempt < 3:
                 sleep(2 ** attempt)
         response.raise_for_status()
         data = response.json()
@@ -687,6 +687,67 @@ def test_main_writes_report_and_honors_flags(tmp_path, monkeypatch):
     assert "V1 — Top seasonal queries" in text
     assert "amigo invisible" in text
 ```
+
+**AMENDMENTS from Task 4/5 quality reviews (same commit):**
+
+(a) Float formatting in `_table` — floats render as 2-decimal strings, ints unchanged:
+
+```python
+    for r in rows:
+        lines.append("| " + " | ".join(
+            (f"{r[h]:.2f}" if isinstance(r[h], float) else str(r[h])) for h in headers
+        ) + " |")
+```
+
+Add pinning test:
+
+```python
+def test_render_markdown_formats_floats_compactly():
+    rows = [_row("q", page="/p", clicks=0, impressions=1000, position=5.181818181818182)]
+    md = render_markdown(rows, site="s", start="d1", end="d2")
+    assert "5.18" in md
+    assert "5.181818181818182" not in md
+```
+
+(b) Knob pass-through pinning test (V2 and V3 must receive `min_impressions`; "regalos navidad" — pos 3.0, ctr 0.025, 200 impr — would otherwise appear in V3):
+
+```python
+def test_render_markdown_passes_thresholds_to_views():
+    md = render_markdown(_mix(), site="s", start="d1", end="d2", min_impressions=100)
+    assert md.count("No data") == 2  # V2 and V3 empty; V1 and V4 still render
+```
+
+(c) `fetch_rows` retryable set gains 504: `if response.status_code not in (429, 500, 502, 503, 504):`
+
+(d) `load_oauth_credentials` — protect the token file after writing:
+
+```python
+    token_path.write_text(credentials.to_json())
+    token_path.chmod(0o600)
+```
+
+(e) Retry-exhaustion test (the failure branch of the network layer):
+
+```python
+def test_fetch_rows_raises_after_exhausting_retries():
+    class Always429:
+        def __init__(self):
+            self.calls = 0
+
+        def post(self, url, json=None):
+            self.calls += 1
+            return _FakeResponse({}, status=429)
+
+    sleeps = []
+    transport = Always429()
+    with pytest.raises(RuntimeError):
+        fetch_rows("s", credentials=object(), days=7, country="es",
+                   transport=transport, sleep=sleeps.append)
+    assert transport.calls == 4
+    assert sleeps == [1, 2, 4]
+```
+
+With (e) the GREEN expectation for Task 6 becomes **17 passed**.
 
 - [ ] **Step 2: Run to verify RED**
 
