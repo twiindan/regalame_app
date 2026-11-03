@@ -249,6 +249,30 @@ Observed results: (to be recorded per task)
   passes `country="es"` explicitly and pins pass-through, not the default.
   Changes: `fetch_rows` default `country="esp"` (+ docstring alpha-3 note),
   argparse `--country` default `esp` + help text, guide Notes bullet.
+- Plan task 8: organizer landing visible FAQ + FAQPage schema + `/ideas`
+  anchor. RED `venv/bin/python -m pytest tests/test_seo_landings.py -v -k
+  "category_ideas or visible_faq"` -> `2 failed, 73 deselected`
+  (`test_organizer_landing_links_category_ideas`: `assert None`, no `/ideas`
+  anchor; `test_organizer_landing_has_visible_faq_and_faqpage_schema`:
+  `assert faq_heading` -> `None`). Template change purely additive (36
+  insertions, 0 deletions; title/description/H1 byte-identical per the T4
+  "keep verbatim" decision). Full-file run then showed `2 failed, 73
+  passed`: the only failures were the two pre-campaign FAQPage-exclusion
+  assertions — `test_shared_metadata_is_valid_and_does_not_invent_claims[/amigo-invisible]`
+  at its `assert all(item["@type"] != "FAQPage" ...)` line, and
+  `test_faqpage_is_confined_to_category_landings` -> `AssertionError:
+  /amigo-invisible` — stale against the T4-recorded mandate that the
+  organizer landing emits FAQPage. Minimal amendment observed before GREEN:
+  the exclusion in the metadata test is scoped with
+  `if path != "/amigo-invisible"` (its SoftwareApplication and
+  unsupported-claims checks for that path unchanged), and the confinement
+  test was renamed `test_faqpage_does_not_leak_onto_unrelated_pages` with
+  `/amigo-invisible` removed from its path list (the leak guard for `/`,
+  `/catalog`, `/blog` and the blog post kept). GREEN full file `75 passed`
+  (includes `test_every_json_ld_block_is_valid_json[/amigo-invisible]` on
+  the new block and the untouched title assertion). Subset
+  `venv/bin/python -m pytest tests/ -q -k "seo or christmas or editorial"`
+  -> `160 passed, 426 deselected`; no golden baseline touched.
 
 ## Review workload and delivery
 
@@ -304,5 +328,10 @@ are harmless.
       `docs/gsc-setup-guide.md`).
 - [x] T4 checkpoint — baseline run (sc-domain, esp) + defaults confirmed
       by the user; targets recorded in "T4 targets" above.
+- [x] Plan task 8 — organizer landing visible FAQ (3 Q&As) + matching
+      FAQPage JSON-LD + `/ideas` anchor in the ideas section; two stale
+      FAQPage-exclusion assertions aligned with the T4 mandate (evidence
+      under Observed results) (`templates/amigo_invisible.html`,
+      `tests/test_seo_landings.py`).
 - [ ] T2..T8 implementation.
 - [ ] T9 December re-measure.
