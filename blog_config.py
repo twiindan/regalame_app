@@ -81,9 +81,12 @@ BLOG_POSTS = [
         "title": "Amigo invisible para compañeros de trabajo: ideas que aciertan",
         "description": "Regalos seguros para la oficina: útiles, neutros y dentro del presupuesto típico del intercambio de empresa.",
         "criteria": {
-            "categories": ["Electrónica", "Hogar y cocina", "Libros", "Belleza"],
-            "max_price": 15.0,
-            "limit": 20,
+            "items": [
+                "8425432022", "8410138409", "8449333733", "8468299057",
+                "B00ST2GSRK", "B0B7RQ46LD", "B00M9B66BU", "B0BQ19Y53N",
+                "B0CP4XY9QC", "B0B15JK464", "B07L4WH44F", "B008KO2E4S",
+                "B0CHJ139CY", "B0C6Q1PRRG", "B0B2912ZZ5"
+            ]
         },
         "hero_image": None,
     },
@@ -92,8 +95,12 @@ BLOG_POSTS = [
         "title": "Amigo invisible para niños: regalos que aciertan",
         "description": "Selección de juguetes y libros para intercambios infantiles, con opciones para varios rangos de edad.",
         "criteria": {
-            "categories": ["Juguetes y juegos", "Libros"],
-            "limit": 20,
+            "items": [
+                "8460659666", "B085DTTYP7", "B06XZ9K244", "B005I5M2F8",
+                "B0DM97GPGL", "B0DHSBBV6R", "B00NVDP3ZU", "B0FPXDY3X2",
+                "B07MV3FBWV", "B0BGLTYW59", "B000H6W2GW", "B0DYJXKVJ1",
+                "B0D87L8PKD", "B0CK2B9H51", "8448850610"
+            ]
         },
         "hero_image": None,
     },

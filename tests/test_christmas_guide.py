@@ -234,10 +234,10 @@ NEW_AUDIENCE_SLUGS = [
 
 
 def _seed_audience_products(session):
-    """One visible product per audience post's leading category.
+    """Real-catalog products matching each audience post's curated items.
 
-    The coworkers post filters Electrónica/Hogar/Libros/Belleza at max 15 €,
-    the kids post filters Juguetes y juegos/Libros with no price cap.
+    Seeds the first two ASINs of each post's `criteria["items"]` so the
+    render exercises the hand-curated `products_by_asins` path.
     """
     from datetime import datetime
 
@@ -245,8 +245,10 @@ def _seed_audience_products(session):
     from models import Product
 
     for asin, title, category, slug, price in [
-        ("WORK01", "Powerbank compacta", "Electrónica", "electronica", 12.99),
-        ("KIDS01", "Juego de mesa familiar", "Juguetes y juegos", "juguetes-y-juegos", 19.99),
+        ("8425432022", "El Hombre en busca de Sentido", "Libros", "libros", 12.25),
+        ("B00ST2GSRK", "La Roche Posay Cicaplast", "Belleza", "belleza", 8.99),
+        ("8460659666", "Virus", "Juguetes y juegos", "juguetes-y-juegos", 12.99),
+        ("B0DHSBBV6R", "LEGO Speed Champions Ferrari", "Juguetes y juegos", "juguetes-y-juegos", 21.99),
     ]:
         session.add(Product(
             asin=asin,
@@ -280,6 +282,9 @@ def test_audience_post_renders_curated_products(client, session, slug):
         f"/blog/{slug}"
     ]
     assert soup.find_all(class_="product-card")
+    # The seeded curated ASIN must render — pins the items path, not a
+    # leftover category search.
+    assert post["criteria"]["items"][0] in response.text
 
     sitemap = client.get("/sitemap.xml")
     assert sitemap.status_code == 200

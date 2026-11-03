@@ -596,6 +596,46 @@ def test_get_blog_posts_with_covers_falls_back_when_no_unused_image(session):
     assert posts["regalos-baratos-menos-20-euros"]["hero_image"] == "img-only.jpg"
 
 
+def test_get_blog_posts_with_covers_uses_curated_items(session, monkeypatch):
+    import services
+    from services import get_blog_posts_with_covers
+
+    # Catalog bystander that no curated list selects: a cover must never come
+    # from a whole-catalog search, only from the authored ASINs.
+    bystander = Product(
+        asin="E9", title="Producto no curado", title_normalized=normalize_text("Producto no curado"),
+        image_url="img-bystander.jpg", url="https://www.amazon.es/dp/E9", price_numeric=5.0,
+        price_raw="5,00 €", category="Alimentación y bebidas",
+        category_slug="alimentacion-y-bebidas", scraped_at=datetime(2026, 1, 1),
+    )
+    curated = Product(
+        asin="E2", title="Regalo curado", title_normalized=normalize_text("Regalo curado"),
+        image_url="img-curated.jpg", url="https://www.amazon.es/dp/E2", price_numeric=12.0,
+        price_raw="12,00 €", category="Libros",
+        category_slug="libros", scraped_at=datetime(2026, 1, 1),
+    )
+    session.add_all([bystander, curated])
+    session.commit()
+
+    monkeypatch.setattr(services, "BLOG_POSTS", [
+        {"slug": "items-cover", "title": "T", "description": "D",
+         "criteria": {"items": ["E2"]}, "hero_image": None},
+        {"slug": "items-advance", "title": "T", "description": "D",
+         "criteria": {"items": ["E2", "E9"]}, "hero_image": None},
+        {"slug": "items-fallback", "title": "T", "description": "D",
+         "criteria": {"items": ["E2"]}, "hero_image": None},
+    ])
+
+    posts = {p["slug"]: p for p in get_blog_posts_with_covers(session)}
+
+    # The cover comes from the curated item's product, not the bystander.
+    assert posts["items-cover"]["hero_image"] == "img-curated.jpg"
+    # Dedup: the second card advances to the next curated item's unused image.
+    assert posts["items-advance"]["hero_image"] == "img-bystander.jpg"
+    # Every candidate image already used: fall back to the first item's image.
+    assert posts["items-fallback"]["hero_image"] == "img-curated.jpg"
+
+
 def test_search_treats_percent_as_literal(session, catalog_seed):
     # "a%" survives the 2-char guard; unescaped it would match every title containing "a"
     assert search_products(session, CatalogQuery(q="a%")).total == 0

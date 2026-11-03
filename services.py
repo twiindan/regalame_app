@@ -358,36 +358,48 @@ def get_blog_posts_with_covers(session: Session):
             continue
         has_criteria = "criteria" in post
         criteria = post.get("criteria", {})
-        categories = criteria.get("categories")
-        if isinstance(categories, (list, tuple)) and categories:
-            slugs = [slugify(str(name)) for name in categories]
-        elif "category" in criteria:
-            slugs = [slugify(criteria["category"])]
-        elif has_criteria:
-            # Criteria-bearing post with no category filter: historical
-            # whole-catalog search (limit-cappable, pinned by the
-            # christmas-guide probes; includes max_price-only posts like
-            # regalos-baratos-menos-20-euros).
-            slugs = [None]
-        else:
-            # No criteria key at all: text-only informational guide.
-            # No products by design.
-            slugs = []
+        items = criteria.get("items")
         cover = None
-        for category_slug in slugs:
-            result = search_products(session, CatalogQuery(
-                category_slug=category_slug,
-                max_price=criteria.get("max_price"),
-                page=1,
-                per_page=MAX_PER_PAGE,
-            ))
+        if isinstance(items, (list, tuple)) and items:
+            # Hand-curated ASIN list (same mechanism as the detail view): the
+            # cover comes from the curated products, never a whole-catalog
+            # search that could surface an unrelated product's image.
+            curated = products_by_asins(session, list(items))
             cover = next(
-                (item.image_url for item in result.items
+                (item.image_url for item in curated
                  if item.image_url and item.image_url not in used_images),
                 None,
-            ) or (result.items[0].image_url if result.items else None)
-            if cover:
-                break
+            ) or (curated[0].image_url if curated else None)
+        else:
+            categories = criteria.get("categories")
+            if isinstance(categories, (list, tuple)) and categories:
+                slugs = [slugify(str(name)) for name in categories]
+            elif "category" in criteria:
+                slugs = [slugify(criteria["category"])]
+            elif has_criteria:
+                # Criteria-bearing post with no category filter: historical
+                # whole-catalog search (limit-cappable, pinned by the
+                # christmas-guide probes; includes max_price-only posts like
+                # regalos-baratos-menos-20-euros).
+                slugs = [None]
+            else:
+                # No criteria key at all: text-only informational guide.
+                # No products by design.
+                slugs = []
+            for category_slug in slugs:
+                result = search_products(session, CatalogQuery(
+                    category_slug=category_slug,
+                    max_price=criteria.get("max_price"),
+                    page=1,
+                    per_page=MAX_PER_PAGE,
+                ))
+                cover = next(
+                    (item.image_url for item in result.items
+                     if item.image_url and item.image_url not in used_images),
+                    None,
+                ) or (result.items[0].image_url if result.items else None)
+                if cover:
+                    break
         if cover:
             used_images.add(cover)
         posts.append({**post, "hero_image": cover})
