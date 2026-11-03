@@ -324,6 +324,27 @@ Observed results: (to be recorded per task)
   tests/test_christmas_guide.py -v` -> `47 passed`, blog golden file
   untouched.
 
+- Plan task 11: three text-only informational amigo-invisible guides
+  (`como-organizar-amigo-invisible`, `reglas-del-amigo-invisible`,
+  `frases-para-el-amigo-invisible`) consuming both the task 9
+  `organizer_aside` flag and the task 10 `guide` sections, with copy taken
+  byte-identical from the plan. RED `venv/bin/python -m pytest
+  tests/test_christmas_guide.py -v` -> `3 failed, 14 passed`: each new
+  parametrized case failed with `assert 404 == 200` (posts did not exist);
+  all pre-existing christmas assertions stayed green. GREEN same command ->
+  `17 passed` (single H1 equals the configured title, canonical, at least
+  two `<h2>` guide headings, `/amigo-invisible` aside link present, URL in
+  sitemap.xml; `test_christmas_guide_does_not_show_the_organizer_aside`
+  stays green). Intended golden drift: `venv/bin/python -m pytest
+  tests/test_editorial_filtering.py -q` -> `1 failed, 31 passed` — only
+  `test_off_mode_matches_golden_baseline[sitemap]`. Regenerated with
+  `venv/bin/python -m pytest tests/test_editorial_filtering.py
+  --editorial-update-baselines` -> `32 passed`; `git diff
+  tests/baselines/editorial_off_sitemap.html` shows EXACTLY the three new
+  `<url>` blocks (18 insertions, 0 deletions) — no other golden touched.
+  Re-run `venv/bin/python -m pytest tests/test_editorial_filtering.py
+  tests/test_seo_landings.py -q` -> `99 passed`. Commit `5856d32`.
+
 ## Review workload and delivery
 
 | Work unit | Authored additions + deletions |
@@ -394,5 +415,11 @@ are harmless.
       results (Jinja whitespace control so guide-less posts stay
       byte-identical) (`templates/blog_post.html`,
       `tests/test_blog_guide_sections.py`).
+- [x] Plan task 11 — three text-only informational amigo-invisible guides
+      (organize, rules, phrases) using the task 9 `organizer_aside` flag
+      and the task 10 `guide` sections; sitemap golden regenerated with
+      exactly the three new `<url>` blocks (evidence under Observed
+      results) (`blog_config.py`, `tests/test_christmas_guide.py`,
+      `tests/baselines/editorial_off_sitemap.html`).
 - [ ] T2..T8 implementation.
 - [ ] T9 December re-measure.
