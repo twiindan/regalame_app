@@ -36,3 +36,6 @@ Option A. If you need OAuth:
   property card in Search Console to see which one you have.
 - Reports print to stdout; use `--out tools/reports/gsc-YYYY-MM-DD.md` to
   save (gitignored).
+- `--country` takes ISO 3166-1 alpha-3 codes as the API returns them (`esp` for
+  Spain, `arg` for Argentina); the default is `esp`. Omit the filter entirely is
+  not supported — pass the code you care about.
