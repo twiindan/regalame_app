@@ -342,8 +342,37 @@ Observed results: (to be recorded per task)
   --editorial-update-baselines` -> `32 passed`; `git diff
   tests/baselines/editorial_off_sitemap.html` shows EXACTLY the three new
   `<url>` blocks (18 insertions, 0 deletions) — no other golden touched.
-  Re-run `venv/bin/python -m pytest tests/test_editorial_filtering.py
-  tests/test_seo_landings.py -q` -> `99 passed`. Commit `5856d32`.
+   Re-run `venv/bin/python -m pytest tests/test_editorial_filtering.py
+   tests/test_seo_landings.py -q` -> `99 passed`. Commit `5856d32`.
+
+- Plan task 12: multi-category blog criteria. `criteria.categories` (list of
+  category names) is now resolved with `slugify` into a union search with a
+  shared `limit` and cross-category ASIN de-dup in `get_blog_post_detail`;
+  `get_blog_posts_with_covers` resolves covers from the first category with a
+  visible product; max_price-only posts keep the historical whole-catalog
+  search (`slugs = [None]`); the hero fallback moved into a module-level
+  `_hero` helper. Two plan-text amendments recorded: (a) the plan's RED/GREEN
+  selector `-k multi_cat` matches nothing because the plan names the test
+  `test_get_blog_post_detail_accepts_category_list`; the run used
+  `-k accepts_category_list` instead; (b) the plan's literal
+  `return _hero(post, products)` returns a bare dict from a function whose
+  contract is the 2-tuple `(post, products)` (16 `main.py` callers unpack two
+  values) — first GREEN attempt failed with `ValueError: too many values to
+  unpack (expected 2)`; both exits now return `_hero(post, products),
+  products`, keeping the plan's helper body verbatim. RED
+  `venv/bin/python -m pytest tests/test_catalog.py -v -k accepts_category_list`
+  -> `1 failed`: the categories list was ignored and the whole-catalog
+  fallback leaked `alimentacion-y-bebidas` into the result categories. GREEN
+  same command -> `1 passed` (test seeds a minimal second-category product
+  `T1` in `juguetes-y-juegos` so both requested categories are exercised).
+  Regression gate `venv/bin/python -m pytest tests/test_catalog.py
+  tests/test_editorial_filtering.py tests/test_christmas_guide.py
+  tests/test_seo_landings.py -q` -> `1 failed, 173 passed`: the only failure,
+  `test_get_blog_posts_with_covers_uses_distinct_images_for_overlapping_criteria`,
+  is PRE-EXISTING — reproduced byte-identical at HEAD `c02da2f` in a
+  throwaway `git worktree` (removed afterwards), so it is not a task 12
+  regression; it is not in the task's known-environmental-failures list and
+  is left for the parent to triage. Commit `7a987e2`.
 
 ## Review workload and delivery
 
@@ -421,5 +450,11 @@ are harmless.
       exactly the three new `<url>` blocks (evidence under Observed
       results) (`blog_config.py`, `tests/test_christmas_guide.py`,
       `tests/baselines/editorial_off_sitemap.html`).
+- [x] Plan task 12 — multi-category blog criteria: `criteria.categories`
+      union search with shared `limit` and ASIN de-dup in
+      `get_blog_post_detail`, same slug resolution for covers; max_price-only
+      posts keep the whole-catalog fallback; two plan-text amendments and one
+      pre-existing (non-task) covers-dedup test failure recorded under
+      Observed results (`services.py`, `tests/test_catalog.py`).
 - [ ] T2..T8 implementation.
 - [ ] T9 December re-measure.
