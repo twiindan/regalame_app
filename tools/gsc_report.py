@@ -82,7 +82,9 @@ def _table(rows, headers):
         return "_No data_\n"
     lines = ["| " + " | ".join(headers) + " |", "|" + "---|" * len(headers)]
     for r in rows:
-        lines.append("| " + " | ".join(str(r[h]) for h in headers) + " |")
+        lines.append("| " + " | ".join(
+            (f"{r[h]:.2f}" if isinstance(r[h], float) else str(r[h])) for h in headers
+        ) + " |")
     return "\n".join(lines) + "\n"
 
 
@@ -146,6 +148,7 @@ def load_oauth_credentials(client_secret_path=None, token_path=None):
     token_path.parent.mkdir(parents=True, exist_ok=True)
     credentials = flow.run_local_server(port=0)
     token_path.write_text(credentials.to_json())
+    token_path.chmod(0o600)
     return credentials
 
 
@@ -189,7 +192,7 @@ def fetch_rows(site_url, credentials, days=90, country="es",
         # failure falls through to raise_for_status.
         for attempt in range(4):
             response = session.post(url, json=payload)
-            if response.status_code not in (429, 500, 502, 503):
+            if response.status_code not in (429, 500, 502, 503, 504):
                 break
             if attempt < 3:
                 sleep(2 ** attempt)
@@ -206,3 +209,50 @@ def fetch_rows(site_url, credentials, days=90, country="es",
         if len(batch) < page_size:
             return rows
         start_row += page_size
+
+
+def main(argv=None, transport=None, credentials=None):
+    """CLI entry. `transport`/`credentials` are test injection points."""
+    import argparse
+    parser = argparse.ArgumentParser(description="Search Console report (local CLI).")
+    parser.add_argument("--site", default=os.environ.get(
+        "GSC_SITE_URL", "https://regalame.app/"))
+    parser.add_argument("--days", type=int, default=90)
+    parser.add_argument("--country", default="es")
+    parser.add_argument("--min-impressions", type=int, default=10)
+    parser.add_argument("--ctr-threshold", type=float, default=0.03)
+    parser.add_argument("--stems", default=",".join(SEASONAL_STEMS))
+    parser.add_argument("--limit", type=int, default=50)
+    parser.add_argument("--out", default=None)
+    parser.add_argument("--oauth", action="store_true",
+                        help="Use OAuth flow instead of the service account.")
+    args = parser.parse_args(argv)
+
+    if credentials is None:
+        if args.oauth:
+            token_path = os.path.expanduser("~/.config/regalame/gsc_token.json")
+            credentials = (_credentials_from_token(token_path)
+                           if os.path.exists(token_path)
+                           else load_oauth_credentials())
+        else:
+            credentials = load_credentials()
+
+    rows = fetch_rows(args.site, credentials, days=args.days,
+                      country=args.country, transport=transport)
+    stems = tuple(s.strip().lower() for s in args.stems.split(",") if s.strip())
+    report = render_markdown(rows, site=args.site,
+                             start=(date.today() - timedelta(days=args.days)).isoformat(),
+                             end=date.today().isoformat(),
+                             stems=stems, min_impressions=args.min_impressions,
+                             ctr_threshold=args.ctr_threshold, limit=args.limit)
+    if args.out:
+        os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
+        with open(args.out, "w", encoding="utf-8") as handle:
+            handle.write(report)
+    else:
+        print(report)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

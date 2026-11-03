@@ -211,3 +211,56 @@ def test_fetch_rows_empty_property_returns_empty_list():
     transport = _FakeTransport([{}])
     assert fetch_rows("s", credentials=object(), days=7, country="es",
                       transport=transport) == []
+
+
+def test_render_markdown_formats_floats_compactly():
+    rows = [_row("q", page="/p", clicks=0, impressions=1000, position=5.181818181818182)]
+    md = render_markdown(rows, site="s", start="d1", end="d2")
+    assert "5.18" in md
+    assert "5.181818181818182" not in md
+
+
+def test_render_markdown_passes_thresholds_to_views():
+    # min_impressions=1000, not the plan's 100: every V3 candidate in _mix tops
+    # out at 200 impressions ("regalos navidad"), so 100 leaves V3 non-empty
+    # and the pinned empty-V3 observable unreachable (verified, task 6).
+    md = render_markdown(_mix(), site="s", start="d1", end="d2", min_impressions=1000)
+    assert md.count("No data") == 2  # V2 and V3 empty; V1 and V4 still render
+
+
+def test_fetch_rows_raises_after_exhausting_retries():
+    class Always429:
+        def __init__(self):
+            self.calls = 0
+
+        def post(self, url, json=None):
+            self.calls += 1
+            return _FakeResponse({}, status=429)
+
+    sleeps = []
+    transport = Always429()
+    with pytest.raises(RuntimeError):
+        fetch_rows("s", credentials=object(), days=7, country="es",
+                   transport=transport, sleep=sleeps.append)
+    assert transport.calls == 4
+    assert sleeps == [1, 2, 4]
+
+
+from gsc_report import main  # noqa: E402
+
+
+def test_main_writes_report_and_honors_flags(tmp_path, monkeypatch):
+    out = tmp_path / "report.md"
+    transport = _FakeTransport([{"rows": [
+        {"keys": ["amigo invisible", "/amigo-invisible"],
+         "clicks": 3, "impressions": 40, "ctr": 0.075, "position": 6.0},
+    ]}])
+    code = main([
+        "--site", "https://regalame.app/",
+        "--days", "30",
+        "--out", str(out),
+    ], transport=transport, credentials=object())
+    assert code == 0
+    text = out.read_text()
+    assert "V1 — Top seasonal queries" in text
+    assert "amigo invisible" in text
