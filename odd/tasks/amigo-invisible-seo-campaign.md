@@ -142,6 +142,12 @@ Observed results: (to be recorded per task)
 - Plan task 2: `venv/bin/python -m pytest tests/test_gsc_report.py -v`
   RED `ModuleNotFoundError: No module named 'gsc_report'` -> GREEN
   `3 passed` (pure aggregation + seasonal matcher).
+- Plan task 3: `venv/bin/python -m pytest tests/test_gsc_report.py -v`
+  RED `ImportError: cannot import name 'build_low_ctr' from 'gsc_report'` ->
+  GREEN `9 passed` (4 view builders + task 2 amendment: the degenerate
+  weighted-average fixture was strengthened to impressions 100/10 so the
+  weighted position ≈5.18 is actually pinned, not equal to the unweighted
+  mean).
 
 ## Review workload and delivery
 
@@ -171,6 +177,9 @@ are harmless.
       secret ignores).
 - [x] Plan task 2 — pure GSC row aggregation and seasonal matcher
       (`tools/gsc_report.py`, `tests/test_gsc_report.py`).
+- [x] Plan task 3 — GSC report view builders (V1 top queries, V2
+      opportunities, V3 low CTR, V4 per-url) + task 2 weighted-average test
+      amendment (`tools/gsc_report.py`, `tests/test_gsc_report.py`).
 - [ ] T2..T8 implementation.
 - [ ] T4 checkpoint (baseline + targets) — recorded here.
 - [ ] T9 December re-measure.
