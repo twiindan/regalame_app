@@ -136,6 +136,10 @@ campaign.
 
 Observed results: (to be recorded per task)
 
+- T1: `venv/bin/python -m pip install -r requirements-search-console.txt`
+  succeeded (`Successfully installed requests-2.32.3`). The venv's
+  pre-existing requests 2.32.5 was downgraded to the pinned 2.32.3.
+
 ## Review workload and delivery
 
 | Work unit | Authored additions + deletions |
@@ -160,6 +164,8 @@ are harmless.
       blog/aside/criteria mechanisms mapped.
 - [x] Product decisions: approach A; full scope; credentials guided; SA-first.
 - [x] Design presented and approved (2026-11-02).
-- [ ] T1..T8 implementation.
+- [x] T1 — credential setup + config plumbing (setup guide, local deps,
+      secret ignores).
+- [ ] T2..T8 implementation.
 - [ ] T4 checkpoint (baseline + targets) — recorded here.
 - [ ] T9 December re-measure.
