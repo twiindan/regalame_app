@@ -119,6 +119,30 @@ campaign.
 - Re-run report first week of December; compare against baseline for the
   target queries; record outcome in this document.
 
+## T4 targets (recorded 2026-11-03, confirmed by the user)
+
+Baseline: `tools/reports/gsc-baseline-2026-11-03.md` (sc-domain property,
+country `esp`, 2026-08-05..2026-11-03). The site's search presence is
+brand-only and near zero (~100 impressions, 6 clicks in 90 days; in Spain
+only the home appears: 32 impressions, 0 clicks, avg position 26.44;
+`/amigo-invisible` and the blog have zero Spain impressions). GSC has no
+page-level signal to act on, so the plan's defaults hold:
+
+- **`/amigo-invisible` (Plan task 8):** keep the current title, meta
+  description and H1 verbatim. Additions only: visible FAQ section (3
+  Q&As) with matching FAQPage JSON-LD, and an `/ideas` anchor in the ideas
+  section.
+- **Informational posts (Plan task 11):** titles/slug/copy as written in
+  the plan — "Cómo organizar un amigo invisible paso a paso",
+  "Reglas del amigo invisible: cómo se juega", "Frases para el amigo
+  invisible: para el grupo, el papelito y el regalo".
+- **Audience posts (Plan task 13):** "Amigo invisible para compañeros de
+  trabajo: ideas que aciertan" (multi-category, max_price 15, limit 20) and
+  "Amigo invisible para niños: regalos que aciertan" (Juguetes y juegos +
+  Libros, limit 20), subject to the human review checkpoint.
+- **December comparison:** judge movement against this baseline snapshot;
+  any retuning decided then uses the December report, not intuition.
+
 ## Constraints and conventions
 
 - Business logic stays in pure/report functions; CLI stays thin.
@@ -278,6 +302,7 @@ are harmless.
       alpha-3 (`esp`), verified against the real API (evidence under
       Observed results) (`tools/gsc_report.py`, `tests/test_gsc_report.py`,
       `docs/gsc-setup-guide.md`).
+- [x] T4 checkpoint — baseline run (sc-domain, esp) + defaults confirmed
+      by the user; targets recorded in "T4 targets" above.
 - [ ] T2..T8 implementation.
-- [ ] T4 checkpoint (baseline + targets) — recorded here.
 - [ ] T9 December re-measure.
