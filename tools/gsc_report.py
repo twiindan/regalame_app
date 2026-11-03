@@ -75,3 +75,38 @@ def build_per_url(rows):
     agg = aggregate_by(rows, "page")
     agg.sort(key=lambda a: (-a["impressions"], a["page"]))
     return agg
+
+
+def _table(rows, headers):
+    if not rows:
+        return "_No data_\n"
+    lines = ["| " + " | ".join(headers) + " |", "|" + "---|" * len(headers)]
+    for r in rows:
+        lines.append("| " + " | ".join(str(r[h]) for h in headers) + " |")
+    return "\n".join(lines) + "\n"
+
+
+def render_markdown(rows, site, start, end, stems=SEASONAL_STEMS,
+                    min_impressions=10, ctr_threshold=0.03, limit=50):
+    out = [f"# GSC report — {site} ({start} .. {end})\n"]
+    out.append("## V1 — Top seasonal queries\n")
+    out.append(_table(
+        build_top_queries(rows, stems, limit),
+        ["query", "clicks", "impressions", "ctr", "position"],
+    ))
+    out.append("## V2 — Opportunities (position 5-20)\n")
+    out.append(_table(
+        build_opportunities(rows, min_impressions),
+        ["query", "page", "clicks", "impressions", "position"],
+    ))
+    out.append("## V3 — Low CTR at good position\n")
+    out.append(_table(
+        build_low_ctr(rows, ctr_threshold=ctr_threshold, min_impressions=min_impressions),
+        ["query", "clicks", "impressions", "ctr", "position"],
+    ))
+    out.append("## V4 — Per URL\n")
+    out.append(_table(
+        build_per_url(rows),
+        ["page", "clicks", "impressions", "ctr", "position"],
+    ))
+    return "\n".join(out)
