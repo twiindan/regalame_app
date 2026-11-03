@@ -222,3 +222,66 @@ def test_informational_guide_renders_with_organizer_aside(client, slug):
     assert sitemap.status_code == 200
     assert f"/blog/{slug}" in sitemap.text
 
+
+# --------------------------------------------------------------------------- #
+# WU-5 — audience posts (multi-category curated product lists)
+# --------------------------------------------------------------------------- #
+
+NEW_AUDIENCE_SLUGS = [
+    "amigo-invisible-para-companeros-de-trabajo",
+    "amigo-invisible-para-ninos",
+]
+
+
+def _seed_audience_products(session):
+    """One visible product per audience post's leading category.
+
+    The coworkers post filters Electrónica/Hogar/Libros/Belleza at max 15 €,
+    the kids post filters Juguetes y juegos/Libros with no price cap.
+    """
+    from datetime import datetime
+
+    from catalog import normalize_text
+    from models import Product
+
+    for asin, title, category, slug, price in [
+        ("WORK01", "Powerbank compacta", "Electrónica", "electronica", 12.99),
+        ("KIDS01", "Juego de mesa familiar", "Juguetes y juegos", "juguetes-y-juegos", 19.99),
+    ]:
+        session.add(Product(
+            asin=asin,
+            title=title,
+            title_normalized=normalize_text(title),
+            image_url=f"https://cdn.example/{asin}.jpg",
+            url=f"https://www.amazon.es/dp/{asin}",
+            category=category,
+            category_slug=slug,
+            price_numeric=price,
+            price_raw=f"{price} €",
+            scraped_at=datetime(2026, 1, 1),
+        ))
+    session.commit()
+
+
+@pytest.mark.parametrize("slug", NEW_AUDIENCE_SLUGS, ids=NEW_AUDIENCE_SLUGS)
+def test_audience_post_renders_curated_products(client, session, slug):
+    from blog_config import BLOG_POSTS
+
+    _seed_audience_products(session)
+
+    response = client.get(f"/blog/{slug}")
+
+    assert response.status_code == 200
+    post = next(p for p in BLOG_POSTS if p["slug"] == slug)
+    soup = BeautifulSoup(response.text, "html.parser")
+    assert len(soup.find_all("h1")) == 1
+    assert soup.h1.get_text(" ", strip=True) == post["title"]
+    assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [
+        f"/blog/{slug}"
+    ]
+    assert soup.find_all(class_="product-card")
+
+    sitemap = client.get("/sitemap.xml")
+    assert sitemap.status_code == 200
+    assert f"/blog/{slug}" in sitemap.text
+

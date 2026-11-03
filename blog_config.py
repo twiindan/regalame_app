@@ -76,6 +76,27 @@ BLOG_POSTS = [
         ],
         "hero_image": None,
     },
+    {
+        "slug": "amigo-invisible-para-companeros-de-trabajo",
+        "title": "Amigo invisible para compañeros de trabajo: ideas que aciertan",
+        "description": "Regalos seguros para la oficina: útiles, neutros y dentro del presupuesto típico del intercambio de empresa.",
+        "criteria": {
+            "categories": ["Electrónica", "Hogar y cocina", "Libros", "Belleza"],
+            "max_price": 15.0,
+            "limit": 20,
+        },
+        "hero_image": None,
+    },
+    {
+        "slug": "amigo-invisible-para-ninos",
+        "title": "Amigo invisible para niños: regalos que aciertan",
+        "description": "Selección de juguetes y libros para intercambios infantiles, con opciones para varios rangos de edad.",
+        "criteria": {
+            "categories": ["Juguetes y juegos", "Libros"],
+            "limit": 20,
+        },
+        "hero_image": None,
+    },
 
     # --- PRECIO / PRESUPUESTO ---
     {
