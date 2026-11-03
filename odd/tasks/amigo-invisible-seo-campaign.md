@@ -214,6 +214,17 @@ Observed results: (to be recorded per task)
   `text` property (json.dumps of the payload) — the plan-verbatim GREEN
   implementation reads `response.text`, which the fake lacked, so without
   it the pinned `19 passed` observable was unreachable.
+- Plan task 7: country code fix. Verified empirically against the real API:
+  the Search Console country dimension uses ISO 3166-1 alpha-3 codes (`esp`,
+  `arg`, `chl`), not alpha-2 — the real property has 49 impressions from
+  `esp` in 90 days, while the old `es`-filtered query returned zeros, and a
+  baseline run with `--country esp` works. RED
+  `test_fetch_rows_country_defaults_to_alpha3_esp` FAILED
+  `AssertionError: assert 'es' == 'esp'` -> GREEN `20 passed` (19 existing
+  + 1 new). `test_fetch_rows_paginates_until_short_page` stays green: it
+  passes `country="es"` explicitly and pins pass-through, not the default.
+  Changes: `fetch_rows` default `country="esp"` (+ docstring alpha-3 note),
+  argparse `--country` default `esp` + help text, guide Notes bullet.
 
 ## Review workload and delivery
 
@@ -263,6 +274,10 @@ are harmless.
       (quality-review findings; `_FakeResponse` text amendment recorded
       under Observed results) (`.gitignore`, `tools/gsc_report.py`,
       `tests/test_gsc_report.py`).
+- [x] Plan task 7 — GSC country code fix: default filter uses ISO 3166-1
+      alpha-3 (`esp`), verified against the real API (evidence under
+      Observed results) (`tools/gsc_report.py`, `tests/test_gsc_report.py`,
+      `docs/gsc-setup-guide.md`).
 - [ ] T2..T8 implementation.
 - [ ] T4 checkpoint (baseline + targets) — recorded here.
 - [ ] T9 December re-measure.
