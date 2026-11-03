@@ -272,6 +272,7 @@ def get_blog_post_detail(session: Session, slug: str):
     if not post:
         return None, []
 
+    has_criteria = "criteria" in post
     criteria = post.get("criteria", {})
 
     # Optional cap: a guide with no category/price filter (e.g. the Christmas
@@ -296,11 +297,16 @@ def get_blog_post_detail(session: Session, slug: str):
             slugs = [slugify(str(name)) for name in categories]
         elif "category" in criteria:
             slugs = [slugify(criteria["category"])]
-        else:
-            # No category at all (e.g. max_price-only posts like
-            # regalos-baratos-menos-20-euros): keep the historical
-            # whole-catalog search by passing category_slug=None.
+        elif has_criteria:
+            # Criteria-bearing post with no category filter: historical
+            # whole-catalog search (limit-cappable, pinned by the
+            # christmas-guide probes; includes max_price-only posts like
+            # regalos-baratos-menos-20-euros).
             slugs = [None]
+        else:
+            # No criteria key at all: text-only informational guide.
+            # No products by design.
+            slugs = []
 
         products = []
         seen_asins = set()
@@ -350,14 +356,23 @@ def get_blog_posts_with_covers(session: Session):
             posts.append({**post})
             used_images.add(post["hero_image"])
             continue
+        has_criteria = "criteria" in post
         criteria = post.get("criteria", {})
         categories = criteria.get("categories")
         if isinstance(categories, (list, tuple)) and categories:
             slugs = [slugify(str(name)) for name in categories]
         elif "category" in criteria:
             slugs = [slugify(criteria["category"])]
-        else:
+        elif has_criteria:
+            # Criteria-bearing post with no category filter: historical
+            # whole-catalog search (limit-cappable, pinned by the
+            # christmas-guide probes; includes max_price-only posts like
+            # regalos-baratos-menos-20-euros).
             slugs = [None]
+        else:
+            # No criteria key at all: text-only informational guide.
+            # No products by design.
+            slugs = []
         cover = None
         for category_slug in slugs:
             result = search_products(session, CatalogQuery(

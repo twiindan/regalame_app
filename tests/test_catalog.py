@@ -503,6 +503,34 @@ def test_get_blog_post_detail_accepts_category_list(session, catalog_seed):
         BLOG_POSTS.pop()
 
 
+def test_get_blog_post_detail_criterialess_post_has_no_products(session, catalog_seed):
+    from blog_config import BLOG_POSTS
+    from services import get_blog_post_detail
+
+    BLOG_POSTS.append({
+        "slug": "criterialess-fixture",
+        "title": "Guía sin productos",
+        "description": "prueba",
+        "hero_image": None,
+    })
+    try:
+        post, products = get_blog_post_detail(session, "criterialess-fixture")
+        assert products == []
+        assert post["hero_image"] is None
+    finally:
+        BLOG_POSTS.pop()
+
+
+def test_get_blog_post_detail_max_price_only_post_keeps_catalog_search(session, catalog_seed):
+    from services import get_blog_post_detail
+
+    # The seed has A1 at 10.0 € (<= 20) and A2 at 100.0 €: the historical
+    # whole-catalog search for max_price-only posts must keep returning it.
+    post, products = get_blog_post_detail(session, "regalos-baratos-menos-20-euros")
+    assert post is not None
+    assert {p.asin for p in products} == {"A1"}
+
+
 def test_get_blog_posts_with_covers_resolves_cover(session, catalog_seed):
     from services import get_blog_posts_with_covers
 
