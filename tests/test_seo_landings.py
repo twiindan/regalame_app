@@ -70,11 +70,15 @@ def test_organizer_explains_actual_workflow_and_limits(client):
         assert phrase in text
 
 
-@pytest.mark.parametrize("slug", [post["slug"] for post in BLOG_POSTS])
-def test_only_relevant_blog_post_links_to_organizer(client, slug):
-    soup = page(client, f"/blog/{slug}")
-    links = soup.main.find_all("a", href="/amigo-invisible")
-    assert len(links) == (1 if slug == "regalos-amigo-invisible-10-euros" else 0)
+def test_organizer_aside_matches_config_flag(client):
+    from blog_config import BLOG_POSTS
+    for post in BLOG_POSTS:
+        soup = page(client, f"/blog/{post['slug']}")
+        links = soup.main.find_all("a", href="/amigo-invisible")
+        if post.get("organizer_aside"):
+            assert links, post["slug"]
+        else:
+            assert not links, post["slug"]
 
 
 @pytest.mark.parametrize("domain", ["https://regalame.app", "https://landing.example/"])
@@ -508,3 +512,8 @@ def test_organizer_landing_has_visible_faq_and_faqpage_schema(client):
     names = [q["name"] for q in faq["mainEntity"]]
     for question in questions:
         assert question in names
+    assert len(faq["mainEntity"]) == 3
+    answers = soup.main.find("h2", string="Preguntas frecuentes").find_next("div").find_all("p")
+    assert [a.get_text(strip=True) for a in answers] == [
+        q["acceptedAnswer"]["text"] for q in faq["mainEntity"]
+    ]

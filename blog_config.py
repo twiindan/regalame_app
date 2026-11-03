@@ -27,6 +27,7 @@ BLOG_POSTS = [
         "criteria": {
             "max_price": 10.0
         },
+        "organizer_aside": True,
         "hero_image": None 
     },
     {
