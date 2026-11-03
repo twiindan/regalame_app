@@ -196,7 +196,13 @@ def fetch_rows(site_url, credentials, days=90, country="es",
                 break
             if attempt < 3:
                 sleep(2 ** attempt)
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except Exception as exc:
+            detail = (getattr(response, "text", "") or "")[:500]
+            raise RuntimeError(
+                f"GSC API error ({response.status_code}): {detail}"
+            ) from exc
         data = response.json()
         batch = data.get("rows", [])
         for entry in batch:

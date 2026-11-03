@@ -1,3 +1,4 @@
+import json
 import sys
 import pytest
 from pathlib import Path
@@ -143,6 +144,10 @@ class _FakeResponse:
         self._payload = payload
         self.status_code = status
 
+    @property
+    def text(self):
+        return json.dumps(self._payload)
+
     def raise_for_status(self):
         if self.status_code >= 400:
             raise RuntimeError(f"HTTP {self.status_code}")
@@ -264,3 +269,15 @@ def test_main_writes_report_and_honors_flags(tmp_path, monkeypatch):
     text = out.read_text()
     assert "V1 — Top seasonal queries" in text
     assert "amigo invisible" in text
+
+
+def test_fetch_rows_surfaces_api_error_body():
+    class Forbidden:
+        def post(self, url, json=None):
+            return _FakeResponse(
+                {"error": {"message": "User does not have sufficient permissions"}},
+                status=403,
+            )
+
+    with pytest.raises(RuntimeError, match="sufficient permissions"):
+        fetch_rows("s", credentials=object(), days=7, country="es", transport=Forbidden())
