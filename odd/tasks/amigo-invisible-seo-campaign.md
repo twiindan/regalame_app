@@ -158,6 +158,13 @@ page-level signal to act on, so the plan's defaults hold:
 **Mode: strict TDD on** (`openspec/config.yaml`: `strict_tdd: true`,
 `apply.tdd: true`). Runner: `venv/bin/python -m pytest`.
 
+**Known environmental failures (pre-existing on main @ `917b4e7`, verified
+via a detached temp worktree — NOT campaign regressions):** 8 failures in
+`tests/test_e2e.py` (2, playwright) and `tests/test_scraper.py` +
+`tests/test_refresh_catalog.py` (6, async/ordering). Campaign acceptance for
+full-suite runs: zero NEW failures vs this baseline (568 passed / 8 failed
+observed on the branch).
+
 Observed results: (to be recorded per task)
 
 - T1: `venv/bin/python -m pip install -r requirements-search-console.txt`
