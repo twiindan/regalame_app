@@ -441,9 +441,35 @@ Observed results: (to be recorded per task)
   baseline — the observed delta vs the pre-task suites is exactly the 2 new
   tests, proven by RED collecting 17 -> 19 in test_christmas_guide.py).
   Copy is the user-approved T4 defaults, byte-identical to the plan text.
-  Human product review of the rendered lists PENDING (post-commit;
-  requested swaps would be a follow-up `fix(blog):` criteria tweak — the
-  criteria are plain config). Commit `02dcfaa`.
+   Human product review of the rendered lists PENDING (post-commit;
+   requested swaps would be a follow-up `fix(blog):` criteria tweak — the
+   criteria are plain config). Commit `02dcfaa`.
+- Plan task 13 curation swap: the user reviewed a curated candidate board
+  and APPROVED 15+15 ASINs, so both audience posts switched from the task 12
+  mechanical `criteria.categories`+`limit` to hand-curated
+  `criteria["items"]` (same WU-2 mechanism as the christmas guide; the
+  categories/limit mechanism stays in `services.py` as a live mechanism).
+  Mechanical lists had rendered badly (19/20 batteries for coworkers;
+  costumes + a 136,99 € box for kids). Covers fix (RED first):
+  `get_blog_posts_with_covers` ignored `criteria["items"]` and did a
+  whole-catalog search for items-posts — the christmas card's cover was a
+  random product's image (latent defect). New items branch resolves the
+  cover via `products_by_asins` with the same dedup/fallback semantics as
+  the category branch; RED
+  `test_get_blog_posts_with_covers_uses_curated_items` failed with
+  `img-bystander.jpg` (unrelated product's image picked) -> GREEN. Audience
+  render test seeds the real first-two ASINs per post and asserts the first
+  curated ASIN renders, pinning the items path. Regression gate
+  `venv/bin/python -m pytest tests/test_catalog.py
+  tests/test_editorial_filtering.py tests/test_christmas_guide.py
+  tests/test_seo_landings.py tests/test_blog_guide_sections.py -q` ->
+  `182 passed` (181 pre-existing + the 1 new covers test); sitemap golden
+  UNCHANGED as expected (URLs identical). Real-catalog render sanity
+  (read-only): both posts return exactly 15 products in the approved order
+  (first: "El Hombre en busca de Sentido" 12,25 € / "Virus ..." 12,99 €),
+  all 30 ASINs resolve with 0 missing and 0 dupes; all three items-posts
+  (christmas included) now show covers from their own curated products.
+  Commit `417ac55`.
 
 ## Review workload and delivery
 
@@ -540,5 +566,12 @@ are harmless.
       human product review PENDING (evidence under Observed results)
       (`blog_config.py`, `tests/test_christmas_guide.py`,
       `tests/baselines/editorial_off_sitemap.html`).
+- [x] Plan task 13 curation swap — user-approved 15+15 ASIN hand-curated
+      `criteria["items"]` for both audience posts (mechanical lists rendered
+      badly); covers items branch fix for items-posts (latent christmas
+      random-cover defect); render sanity 15/15 approved order, 30/30 ASINs
+      resolve; sitemap golden unchanged (evidence under Observed results)
+      (`blog_config.py`, `services.py`, `tests/test_christmas_guide.py`,
+      `tests/test_catalog.py`).
 - [ ] T2..T8 implementation.
 - [ ] T9 December re-measure.
