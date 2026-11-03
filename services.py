@@ -255,6 +255,13 @@ def get_blog_posts_list():
     """
     return BLOG_POSTS
 
+
+def _hero(post, products):
+    if products and not post.get("hero_image"):
+        return {**post, "hero_image": products[0].image_url}
+    return post
+
+
 def get_blog_post_detail(session: Session, slug: str):
     """
     Busca un post por slug y resuelve sus productos desde el catálogo.
@@ -284,34 +291,45 @@ def get_blog_post_detail(session: Session, slug: str):
         if limit is not None:
             products = products[:limit]
     else:
-        category_slug = slugify(criteria["category"]) if "category" in criteria else None
+        categories = criteria.get("categories")
+        if isinstance(categories, (list, tuple)) and categories:
+            slugs = [slugify(str(name)) for name in categories]
+        elif "category" in criteria:
+            slugs = [slugify(criteria["category"])]
+        else:
+            # No category at all (e.g. max_price-only posts like
+            # regalos-baratos-menos-20-euros): keep the historical
+            # whole-catalog search by passing category_slug=None.
+            slugs = [None]
 
         products = []
-        page = 1
-        while True:
-            result = search_products(session, CatalogQuery(
-                category_slug=category_slug,
-                max_price=criteria.get("max_price"),
-                page=page,
-                per_page=MAX_PER_PAGE,
-            ))
-            products.extend(result.items)
-            if limit is not None and len(products) >= limit:
-                products = products[:limit]
-                break
-            if page >= result.total_pages or not result.items:
-                break
-            page += 1
+        seen_asins = set()
+        for category_slug in slugs:
+            page = 1
+            while True:
+                result = search_products(session, CatalogQuery(
+                    category_slug=category_slug,
+                    max_price=criteria.get("max_price"),
+                    page=page,
+                    per_page=MAX_PER_PAGE,
+                ))
+                for item in result.items:
+                    if item.asin not in seen_asins:
+                        seen_asins.add(item.asin)
+                        products.append(item)
+                if limit is not None and len(products) >= limit:
+                    products = products[:limit]
+                    return _hero(post, products), products
+                if page >= result.total_pages or not result.items:
+                    break
+                page += 1
 
     # Pagination already runs over the filtered visible set: search_products
     # applies the editorial predicate before computing totals, so the loop above
     # never collects hidden products. A hero image is only ever derived from a
     # non-empty visible list; when filtering empties the list the post keeps its
     # configured hero (or none) and the template renders the curated empty state.
-    if products and not post.get("hero_image"):
-        post = {**post, "hero_image": products[0].image_url}
-
-    return post, products
+    return _hero(post, products), products
 
 
 def get_blog_posts_with_covers(session: Session):
@@ -333,20 +351,28 @@ def get_blog_posts_with_covers(session: Session):
             used_images.add(post["hero_image"])
             continue
         criteria = post.get("criteria", {})
-        category_slug = slugify(criteria["category"]) if "category" in criteria else None
-        result = search_products(session, CatalogQuery(
-            category_slug=category_slug,
-            max_price=criteria.get("max_price"),
-            page=1,
-            per_page=MAX_PER_PAGE,
-        ))
-        cover = next(
-            (item.image_url for item in result.items
-             if item.image_url and item.image_url not in used_images),
-            None,
-        )
-        if cover is None and result.items:
-            cover = result.items[0].image_url
+        categories = criteria.get("categories")
+        if isinstance(categories, (list, tuple)) and categories:
+            slugs = [slugify(str(name)) for name in categories]
+        elif "category" in criteria:
+            slugs = [slugify(criteria["category"])]
+        else:
+            slugs = [None]
+        cover = None
+        for category_slug in slugs:
+            result = search_products(session, CatalogQuery(
+                category_slug=category_slug,
+                max_price=criteria.get("max_price"),
+                page=1,
+                per_page=MAX_PER_PAGE,
+            ))
+            cover = next(
+                (item.image_url for item in result.items
+                 if item.image_url and item.image_url not in used_images),
+                None,
+            ) or (result.items[0].image_url if result.items else None)
+            if cover:
+                break
         if cover:
             used_images.add(cover)
         posts.append({**post, "hero_image": cover})

@@ -472,6 +472,37 @@ def test_get_blog_post_detail_does_not_mutate_shared_post(session, catalog_seed)
     assert shared.get("hero_image") is None  # module-level dict untouched
 
 
+def test_get_blog_post_detail_accepts_category_list(session, catalog_seed):
+    from blog_config import BLOG_POSTS
+    from services import get_blog_post_detail
+
+    # The shared seed covers only one of the two requested categories; add a
+    # minimal toy product so the union of both categories is exercised.
+    session.add(Product(
+        asin="T1", title="Set de construcción", title_normalized=normalize_text("Set de construcción"),
+        image_url="img-t1.jpg", url="https://www.amazon.es/dp/T1", price_numeric=25.0,
+        price_raw="25,00 €", category="Juguetes y juegos",
+        category_slug="juguetes-y-juegos", scraped_at=datetime(2026, 1, 1),
+    ))
+    session.commit()
+
+    BLOG_POSTS.append({
+        "slug": "multi-cat-fixture",
+        "title": "Multi categoría",
+        "description": "prueba",
+        "criteria": {"categories": ["Electrónica", "Juguetes y juegos"], "limit": 3},
+        "hero_image": None,
+    })
+    try:
+        post, products = get_blog_post_detail(session, "multi-cat-fixture")
+        assert len(products) <= 3
+        cats = {p.category_slug for p in products}
+        assert cats <= {"electronica", "juguetes-y-juegos"}
+        assert len(cats) >= 1
+    finally:
+        BLOG_POSTS.pop()
+
+
 def test_get_blog_posts_with_covers_resolves_cover(session, catalog_seed):
     from services import get_blog_posts_with_covers
 
