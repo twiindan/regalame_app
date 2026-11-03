@@ -470,6 +470,22 @@ Observed results: (to be recorded per task)
   all 30 ASINs resolve with 0 missing and 0 dupes; all three items-posts
   (christmas included) now show covers from their own curated products.
   Commit `417ac55`.
+- Plan task 14: appended the characterization test
+  `test_home_links_the_christmas_guide` to `tests/test_seo_landings.py`
+  (reusing the file's `page()` helper). Plan-text amendment: the plan's
+  `-k christmas_guide_link` expression matched nothing (the test name in the
+  plan's own snippet, `test_home_links_the_christmas_guide`, has no `_link`
+  suffix); ran with `-k christmas_guide`. RED
+  `1 failed, 69 deselected` — no anchor to
+  `/blog/regalos-navidad-mas-deseados` in home main. Added the anchor in
+  `templates/index.html`'s "Listas para Navidad y amigo invisible" section
+  next to the existing `/amigo-invisible` link, matching its
+  markup/classes. GREEN `1 passed`. Home golden drift was EXACTLY the new
+  anchor; regenerated ONLY `editorial_off_home.html` with
+  `--editorial-update-baselines`; `git diff tests/baselines/` shows exactly
+  1 inserted line, 0 deletions. Validation
+  `venv/bin/python -m pytest tests/test_seo_landings.py
+  tests/test_editorial_filtering.py -q` -> `102 passed`. Commit `5fe70bc`.
 
 ## Review workload and delivery
 
@@ -573,5 +589,12 @@ are harmless.
       resolve; sitemap golden unchanged (evidence under Observed results)
       (`blog_config.py`, `services.py`, `tests/test_christmas_guide.py`,
       `tests/test_catalog.py`).
+- [x] Plan task 14 — home links the christmas guide (characterization
+      test first: RED, link absent -> added the anchor next to the
+      `/amigo-invisible` link -> GREEN; home golden regenerated with
+      exactly the 1 new anchor line; one plan-text amendment recorded
+      under Observed results) (`templates/index.html`,
+      `tests/test_seo_landings.py`,
+      `tests/baselines/editorial_off_home.html`).
 - [ ] T2..T8 implementation.
 - [ ] T9 December re-measure.
