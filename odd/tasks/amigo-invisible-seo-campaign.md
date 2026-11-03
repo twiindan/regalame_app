@@ -176,6 +176,27 @@ Observed results: (to be recorded per task)
   expected calls amended 3 -> 2, the provisioned third page kept as an
   over-fetch canary; same expected-count arithmetic slip class already
   fixed once in plan task 2 (f472f8c).
+- Plan task 6: `venv/bin/python -m pytest tests/test_gsc_report.py -v`.
+  Pre-main amendment pre-status observed first (task 4 technique, verbatim
+  plan tests): (a) float-formatting FAILED (its genuine RED driver),
+  (b) FAILED `assert 1 == 2`, (c) retry-exhaustion PASSED (pins existing
+  code). Plan defect in (b), same slip class as plan tasks 2/5: with
+  `min_impressions=100` V3 can never be empty because "regalos navidad"
+  carries 200 impressions (>= 100) at position 3.0 with ctr 0.025 — the
+  failure output renders that V3 row — so the pinned
+  `md.count("No data") == 2` ("V2 and V3 empty") is unreachable; the
+  literal was amended 100 -> 1000 per the plan's own rationale ("an empty
+  V3 proves the threshold was passed"), after which the corrected test
+  passes pre-main, confirming it pins the existing knob pass-through.
+  Then full RED: appending the `main` test gave
+  `ImportError: cannot import name 'main' from 'gsc_report'` (file-level
+  collection error) -> GREEN `18 passed`, not the plan's "17 (14 existing
+  + 3 new)": the plan itself specifies four new tests (main + three
+  amendments), so 14 + 4 = 18. Amendment code touches applied exactly as
+  specified (`_table` floats at 2 decimals with ints unchanged, token file
+  `chmod(0o600)` after write, 504 added to the retryable set). Smoke:
+  `venv/bin/python tools/gsc_report.py --help` exited 0 with the full flag
+  list (argparse exits before any credential load).
 
 ## Review workload and delivery
 
@@ -215,6 +236,11 @@ are harmless.
       backoff (`load_credentials`, OAuth fallback, `fetch_rows` against a
       fake transport; three plan-text amendments recorded under Observed
       results) (`tools/gsc_report.py`, `tests/test_gsc_report.py`).
+- [x] Plan task 6 — GSC report CLI entrypoint with flags (`main` argparse
+      entry + `__main__` guard; task 4/5 review amendments: compact float
+      rendering, 0600 token permissions, 504 retryable; one plan-text
+      amendment recorded under Observed results) (`tools/gsc_report.py`,
+      `tests/test_gsc_report.py`).
 - [ ] T2..T8 implementation.
 - [ ] T4 checkpoint (baseline + targets) — recorded here.
 - [ ] T9 December re-measure.
