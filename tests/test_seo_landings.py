@@ -517,3 +517,8 @@ def test_organizer_landing_has_visible_faq_and_faqpage_schema(client):
     assert [a.get_text(strip=True) for a in answers] == [
         q["acceptedAnswer"]["text"] for q in faq["mainEntity"]
     ]
+
+
+def test_home_links_the_christmas_guide(client):
+    soup = page(client, "/")
+    assert soup.main.find("a", href="/blog/regalos-navidad-mas-deseados")
