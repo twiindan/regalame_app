@@ -489,11 +489,32 @@ Observed results: (to be recorded per task)
 
 ## Review workload and delivery
 
-| Work unit | Authored additions + deletions |
-| --- | ---: |
-| (to be recorded per task) | |
+| Work unit | Commits | Authored +/- (git numstat) |
+| --- | --- | ---: |
+| T1 setup guide + deps + ignores | `adb8032` | ~43 |
+| T2 pure layer | `dc4c22c` | ~82 |
+| T3 report views | `6d2df2c` | ~112 |
+| T4 emitter | `0201e4a` | ~61 |
+| T5 auth + fetch | `fc36f5f` | ~174 |
+| T6 CLI + readiness fixes | `513c04f`, `a07ef9d`, `fa9a8d4` | ~133 |
+| T7 country-code fix | `a0b0b43`, `a1ec4ef` | ~18 |
+| T8 on-page FAQ + schema | `1476794` | ~69 |
+| T9 aside flag | `e76f06a` | ~22 |
+| T10 guide sections | `96b4c82` | ~30 |
+| T11 informational posts | `5856d32`, `c02da2f` | ~111 |
+| T12 multi-category + criteria-less fix | `7a987e2`, `62c3744` | ~178 |
+| T13 audience posts + curated swap | `02dcfaa`, `417ac55` | ~232 |
+| T14 home -> christmas link | `5fe70bc` | ~7 |
+| **Total (code, docs commits excluded)** | 44 commits on branch | **1,231** |
 
-- **Delivery: `ask-on-risk`** (forecast exceeds the ~400-line advisory).
+- **Delivery: `single-pr`** (user decision, 2026-11-03): the branch
+  `feature/amigo-invisible-seo-campaign` goes to one PR against `main`;
+  push/PR/merge are user-owned.
+- RDD assess at close: **medium, `review_due: false` (`under_budget`)** —
+  no native review triggered for the slice.
+- Final full-suite gate: **583 passed / 8 failed** — the 8 are the
+  pre-existing environmental failures verified on `main` (see above); zero
+  new failures.
 - RDD is on (global). Known machine issue: native reviewer sub-agent
   sometimes returns empty output (`opencode_task_output_empty`); surface to
   the user if it recurs.
@@ -596,5 +617,11 @@ are harmless.
       under Observed results) (`templates/index.html`,
       `tests/test_seo_landings.py`,
       `tests/baselines/editorial_off_home.html`).
-- [ ] T2..T8 implementation.
-- [ ] T9 December re-measure.
+- [x] T2..T8 implementation.
+- [ ] T9 December re-measure — REMINDER: first week of December 2026, run
+      `venv/bin/python tools/gsc_report.py --days 90 --site
+      sc-domain:regalame.app --out tools/reports/gsc-december.md` and
+      compare against `tools/reports/gsc-baseline-2026-11-03.md` (the
+      esp-filtered run); record the outcome here.
+- [x] Close-out: full suite 583 passed / 0 new failures; delivery strategy
+      `single-pr` chosen by the user (2026-11-03).
