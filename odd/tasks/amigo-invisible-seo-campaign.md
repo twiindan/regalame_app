@@ -417,6 +417,33 @@ Observed results: (to be recorded per task)
   tests/test_seo_landings.py tests/test_blog_guide_sections.py -q` ->
   `177 passed, 0 failed` (the 6 christmas probes pass UNCHANGED). Commit
   `62c3744`.
+- Plan task 13: `venv/bin/python -m pytest tests/test_christmas_guide.py -v`
+  RED `2 failed, 17 passed` — both new
+  `test_audience_post_renders_curated_products[...]` cases hit
+  `assert 404 == 200` (slugs unconfigured). The client fixture's in-memory
+  DB is empty, so the test seeds one visible product per post's leading
+  category (Electrónica at 12.99 €, under the coworkers 15 € cap; Juguetes
+  y juegos for the kids post) and additionally asserts a non-empty
+  `product-card` grid — both are curated lists. GREEN after adding the two
+  `blog_config.py` entries (first production consumers of the task 12
+  `criteria.categories` + `limit`): `19 passed`. Sitemap golden:
+  `venv/bin/python -m pytest tests/test_editorial_filtering.py -q` ->
+  `1 failed, 31 passed` (`test_off_mode_matches_golden_baseline[sitemap]`,
+  drift = the 2 new URLs, intended); regenerated ONLY the sitemap with
+  `--editorial-update-baselines` -> `32 passed`; `git diff
+  tests/baselines/editorial_off_sitemap.html` shows EXACTLY the two new
+  `<url>` blocks (12 inserted lines, 0 deletions). Regression gate
+  `venv/bin/python -m pytest tests/test_catalog.py
+  tests/test_editorial_filtering.py tests/test_christmas_guide.py
+  tests/test_seo_landings.py tests/test_blog_guide_sections.py -q` ->
+  `181 passed` (179 pre-existing green + the 2 new audience tests; the
+  plan's "179 = 177 + 2" arithmetic was stale by 2 on the pre-existing
+  baseline — the observed delta vs the pre-task suites is exactly the 2 new
+  tests, proven by RED collecting 17 -> 19 in test_christmas_guide.py).
+  Copy is the user-approved T4 defaults, byte-identical to the plan text.
+  Human product review of the rendered lists PENDING (post-commit;
+  requested swaps would be a follow-up `fix(blog):` criteria tweak — the
+  criteria are plain config). Commit `02dcfaa`.
 
 ## Review workload and delivery
 
@@ -506,5 +533,12 @@ are harmless.
       RED/GREEN, render sanity and `177 passed` regression gate with the
       christmas probes unchanged recorded under Observed results)
       (`services.py`, `tests/test_catalog.py`).
+- [x] Plan task 13 — two curated audience blog posts (coworkers, kids)
+      using the task 12 `criteria.categories` + `limit`; parametrized
+      render/sitemap tests with a non-empty `product-card` assertion;
+      sitemap golden regenerated with exactly the two new `<url>` blocks;
+      human product review PENDING (evidence under Observed results)
+      (`blog_config.py`, `tests/test_christmas_guide.py`,
+      `tests/baselines/editorial_off_sitemap.html`).
 - [ ] T2..T8 implementation.
 - [ ] T9 December re-measure.
