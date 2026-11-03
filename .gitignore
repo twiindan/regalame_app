@@ -44,4 +44,5 @@ search-console-export.json
 
 # GSC local tooling (never commit credentials or generated reports)
 tools/gsc_service_account.json
+tools/gsc_client_secret.json
 tools/reports/
