@@ -23,6 +23,117 @@ BLOG_POSTS = [
         ],
         "hero_image": None
     },
+    {
+        "slug": "como-organizar-amigo-invisible",
+        "title": "Cómo organizar un amigo invisible paso a paso",
+        "description": "Los pasos concretos para montar el intercambio: fijar presupuesto y fecha, invitar al grupo, hacer el sorteo y consultar las listas de deseos.",
+        "organizer_aside": True,
+        "faq": [
+            {"q": "¿Cuántos participantes necesita un grupo?", "a": "Al menos dos: el administrador inicia el sorteo cuando todos se han unido mediante su cuenta."},
+            {"q": "¿Puedo evitar que me toque alguien concreto?", "a": "Sí. El administrador puede configurar exclusiones antes del sorteo, y este nunca asigna a alguien a sí mismo."},
+            {"q": "¿Dónde veo a quién me toca regalar?", "a": "Dentro de la aplicación: después del sorteo, entra en el grupo y consulta tu asignación junto con la lista de deseos de esa persona."},
+        ],
+        "guide": [
+            {"heading": "Cómo funciona el amigo invisible", "paragraphs": [
+                "El amigo invisible (o amigo secreto) es un intercambio en el que cada participante regala a una sola persona asignada al azar, sin que esta sepa quién le regaló. El sorteo se hace una vez y cada quien prepara su regalo para la fecha acordada.",
+                "En Regálame el sorteo impide que alguien se asigne a sí mismo y permite configurar vetos, útiles cuando dos personas no deberían regalarse entre sí.",
+            ]},
+            {"heading": "Antes del sorteo: presupuesto, fecha y grupo", "paragraphs": [
+                "Acordad primero el presupuesto máximo: es la regla que evita situaciones incómodas. Después fijad la fecha del intercambio y dejad margen para que cada quien piense su regalo.",
+                "Cread el grupo en Regálame, indicad nombre, fecha y presupuesto, y compartid el enlace de invitación por WhatsApp o email. Cada participante se une con su cuenta.",
+            ]},
+            {"heading": "El día del intercambio", "paragraphs": [
+                "Antes de abrir los regalos, cada participante puede repasar la lista de deseos de su asignado: es la referencia más fiable para acertar. Los resultados del sorteo se consultan dentro de la aplicación, nunca se comparten por chat.",
+            ]},
+        ],
+        "hero_image": None,
+    },
+    {
+        "slug": "reglas-del-amigo-invisible",
+        "title": "Reglas del amigo invisible: cómo se juega",
+        "description": "Las reglas básicas del amigo invisible, las variantes más habituales y cómo evitar los malentendidos típicos del intercambio.",
+        "organizer_aside": True,
+        "faq": [
+            {"q": "¿Quién hace el sorteo?", "a": "El administrador del grupo lo inicia desde la aplicación; el resultado es aleatorio y respeta las exclusiones configuradas."},
+            {"q": "¿Se puede cambiar el resultado del sorteo?", "a": "El sorteo se realiza una vez. Si un participante no puede continuar, el administrador gestiona la solución desde el grupo."},
+            {"q": "¿Qué listas de deseos puede ver cada participante?", "a": "Cada persona consulta la lista de deseos de su asignado dentro de la aplicación; las listas públicas también pueden consultarse sin cuenta."},
+        ],
+        "guide": [
+            {"heading": "Las reglas básicas", "paragraphs": [
+                "Presupuesto pactado por todos y respeto estricto del secreto: nadie revela a quién le toca regalar hasta el día del intercambio. El sorteo debe ser aleatorio y excluir la autoasignación.",
+                "Quien no pueda participar debe decirlo antes del sorteo: después suele implicar repetir todo el proceso.",
+            ]},
+            {"heading": "Variantes habituales", "paragraphs": [
+                "Vetos (parejas o enemistades que no deben tocarse), temáticas (productos hechos a mano, libros, locales) o límites de precio por tramos. En grupos grandes, un intervalo de entrega más ancho evita prisas.",
+                "La lista de deseos opcional es la variante más útil: el regalo sigue siendo sorpresa, pero acierta. En Regálame cada participante puede publicar la suya.",
+            ]},
+        ],
+        "hero_image": None,
+    },
+    {
+        "slug": "frases-para-el-amigo-invisible",
+        "title": "Frases para el amigo invisible: para el grupo, el papelito y el regalo",
+        "description": "Frases cortas para invitar al grupo, para el papel del sorteo y para acompañar el regalo, con tono directo y sin cursilerías.",
+        "organizer_aside": True,
+        "faq": [
+            {"q": "¿Puedo usar estas frases para invitar al grupo?", "a": "Sí: comparte el enlace de invitación por WhatsApp o email y acompáñalo con la frase que más encaje con tu grupo."},
+            {"q": "¿Las frases revelan quién es el amigo invisible?", "a": "No: el sorteo se consulta dentro de la aplicación y tu identidad sigue siendo secreta hasta el día del intercambio."},
+            {"q": "¿Sirven también para la nota del regalo?", "a": "Sí: son cortas a propósito, para el papelito, la dedicatoria o el mensaje del grupo."},
+        ],
+        "guide": [
+            {"heading": "Para invitar al grupo", "paragraphs": [
+                "\"Nos falta la mejor parte del plan: el amigo invisible. Entra en el grupo y elige tu lista de deseos.\" · \"Presupuesto ajustado, sorpresas aseguradas: apúntate al intercambio.\"",
+                "\"Si el año pasado te tocó el regalo aburrido, este año toca mejorar: apúntate y pon ideas en tu lista.\"",
+            ]},
+            {"heading": "Para el papelito o la dedicatoria", "paragraphs": [
+                "\"De alguien invisible con mucho gusto.\" · \"Elegido al azar, acertado de verdad.\" · \"El secreto me lo llevo, el regalo te lo llevo a ti.\"",
+                "\"Que no se nota quién fue, pero que se nota que acerté.\" · \"Regalo con vuestra lista por delante: no fallé.\"",
+            ]},
+            {"heading": "Con humor (sin pasarse)", "paragraphs": [
+                "\"Tu amigo invisible te conoce mejor de lo que crees... o tuvimos suerte.\" · \"He respetado el presupuesto. El gusto no tenía límite.\"",
+                "\"Del anonimato más elegante: ni una pista, ni un fallo.\"",
+            ]},
+        ],
+        "hero_image": None,
+    },
+    {
+        "slug": "amigo-invisible-para-companeros-de-trabajo",
+        "title": "Amigo invisible para compañeros de trabajo: ideas que aciertan",
+        "description": "Regalos seguros para la oficina: útiles, neutros y dentro del presupuesto típico del intercambio de empresa.",
+        "criteria": {
+            "items": [
+                "8425432022", "8410138409", "8449333733", "8468299057",
+                "B00ST2GSRK", "B0B7RQ46LD", "B00M9B66BU", "B0BQ19Y53N",
+                "B0CP4XY9QC", "B0B15JK464", "B07L4WH44F", "B008KO2E4S",
+                "B0CHJ139CY", "B0C6Q1PRRG", "B0B2912ZZ5"
+            ]
+        },
+        "faq": [
+            {"q": "¿Qué presupuesto es habitual en la oficina?", "a": "El que acuerde el grupo: fija el límite antes de mirar y compara opciones dentro de ese rango."},
+            {"q": "¿Qué tipo de regalo funciona con compañeros?", "a": "Algo útil y neutro: libros, cuidado personal o pequeños accesorios que sirvan para cualquiera."},
+            {"q": "¿Puedo añadir estos productos a mi lista de deseos?", "a": "Sí: inicia sesión y añade los enlaces que quieras a tu lista; tu amigo invisible verá la referencia exacta."},
+        ],
+        "hero_image": None,
+    },
+    {
+        "slug": "amigo-invisible-para-ninos",
+        "title": "Amigo invisible para niños: regalos que aciertan",
+        "description": "Selección de juguetes y libros para intercambios infantiles, con opciones para varios rangos de edad.",
+        "criteria": {
+            "items": [
+                "8460659666", "B085DTTYP7", "B06XZ9K244", "B005I5M2F8",
+                "B0DM97GPGL", "B0DHSBBV6R", "B00NVDP3ZU", "B0FPXDY3X2",
+                "B07MV3FBWV", "B0BGLTYW59", "B000H6W2GW", "B0DYJXKVJ1",
+                "B0D87L8PKD", "B0CK2B9H51", "8448850610"
+            ]
+        },
+        "faq": [
+            {"q": "¿Para qué edades son estos regalos?", "a": "La selección cubre varios rangos de edad: revisa la descripción de cada producto antes de decidir."},
+            {"q": "¿Quién hace el sorteo en un intercambio infantil?", "a": "Un adulto crea el grupo, invita a los participantes y realiza el sorteo desde la aplicación; cada niño consulta su asignación con su cuenta."},
+            {"q": "¿Cómo evito que dos niños se regalen entre sí?", "a": "El administrador puede configurar exclusiones antes del sorteo para impedir asignaciones concretas."},
+        ],
+        "hero_image": None,
+    },
 
     # --- PRECIO / PRESUPUESTO ---
     {
@@ -32,6 +143,7 @@ BLOG_POSTS = [
         "criteria": {
             "max_price": 10.0
         },
+        "organizer_aside": True,
         "faq": [
             {"q": "¿Qué regalo funciona bien para un amigo invisible con poco presupuesto?", "a": "Los detalles útiles o con un guiño personal suelen funcionar mejor que los objetos grandes. Fija el límite pactado en tu grupo y compara varias opciones dentro de ese rango antes de decidir."},
             {"q": "¿Cómo saber si un regalo barato es de buena calidad?", "a": "Lee la descripción del producto y las condiciones del vendedor: materiales, dimensiones y qué incluye el paquete. Los precios y la disponibilidad pueden cambiar, así que comprueba la ficha actual antes de comprar."},

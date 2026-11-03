@@ -1,0 +1,605 @@
+{
+  "policy_version": "1",
+  "labels": [
+    {
+      "asin": "B0049U0DMC",
+      "expected_state": "",
+      "category": "alimentacion-y-bebidas",
+      "title": "Lavazza, Qualità Oro, Café en Grano Natural, 1 kg | Notas de Frutas y Flores, 100% Arábica, Intensidad 5/10, Tostado Med"
+    },
+    {
+      "asin": "B0BNLXKVNQ",
+      "expected_state": "",
+      "category": "amazon-renewed",
+      "title": "Apple iPhone 14, 128GB, Medianoche (Reacondicionado)"
+    },
+    {
+      "asin": "B0FDT1D44G",
+      "expected_state": "",
+      "category": "aplicaciones-y-juegos",
+      "title": "FiloMirror Pro: Receptor de duplicación de pantalla (Solo compatible con AirPlay)"
+    },
+    {
+      "asin": "B07M98CL6Y",
+      "expected_state": "",
+      "category": "bebe",
+      "title": "Dodot Pañales Bebé Sensitive, Talla 4 (9-14 kg), 192 Pañales + 4 Pants de Regalo, Hasta 12 h De Protección Antifugas y C"
+    },
+    {
+      "asin": "B00M9B66BU",
+      "expected_state": "",
+      "category": "belleza",
+      "title": "REVLON PROFESSIONAL UniqOne All in One Protector Térmico Pelo, Hidratación Profunda Cabello, Tratamiento en Spray sin Ac"
+    },
+    {
+      "asin": "B07T8TR863",
+      "expected_state": "",
+      "category": "bricolaje-y-herramientas",
+      "title": "by Amazon Guantes Desechables de Nitrilo Azules, sin Polvo, sin Látex, Talla M, Paquete de 100"
+    },
+    {
+      "asin": "B0FVNGF9PG",
+      "expected_state": "",
+      "category": "cd-y-vinilos",
+      "title": "Lux"
+    },
+    {
+      "asin": "B00W3Y8238",
+      "expected_state": "",
+      "category": "cheques-regalo",
+      "title": "Amazon Recargas Recarga única"
+    },
+    {
+      "asin": "B0DHVD6TBX",
+      "expected_state": "",
+      "category": "climate-pledge-friendly",
+      "title": "NEW'C 3 Piezas, Protector Pantalla para iPhone 16,iPhone 15 (6,1 Pulgadas), Cristal templado con herramienta de instalac"
+    },
+    {
+      "asin": "B0FHBDDBNT",
+      "expected_state": "",
+      "category": "coche-y-moto",
+      "title": "help flash IoT+, Luz de Emergencia V16 con Geolocalización y más de 290 candelas de potencia, Exigible a partir de 2026,"
+    },
+    {
+      "asin": "B0DYF82545",
+      "expected_state": "",
+      "category": "deportes-y-aire-libre",
+      "title": "Xiaomi Smartband 10, Pantalla AMOLED de 1,72”, Carga rápida, 150+ Modos Deportivos, Monitorización de Salud y sueño, Hyp"
+    },
+    {
+      "asin": "B0CFPWLGF2",
+      "expected_state": "",
+      "category": "dispositivos-amazon-y-accesorios",
+      "title": "Kindle Paperwhite (16 GB) de Amazon (modelo de 2024): pantalla de 7\" sin reflejos y semanas de autonomía | Sin publicida"
+    },
+    {
+      "asin": "B07XLML2YS",
+      "expected_state": "",
+      "category": "electronica",
+      "title": "Tapo C200 - Cámara de Vigilancia WiFi Interior 360º, 1080p, Detección IA | Detección Movimiento, Personas y Llanto de Be"
+    },
+    {
+      "asin": "B079Z9PTT7",
+      "expected_state": "",
+      "category": "grandes-electrodomesticos",
+      "title": "Rayen | Cubre Tendedero con Calefactor, Funda, Extensible, Secado Rápido | Cuida la Ropa Delicada, Protege del Polvo, Ah"
+    },
+    {
+      "asin": "B0C4FHBPRT",
+      "expected_state": "",
+      "category": "hogar-y-cocina",
+      "title": "PURIVITA® Descalcificador Universal Cafetera y Hervidor, 500 ml | Descalcificador antical para cafeteras, máquinas de ca"
+    },
+    {
+      "asin": "B0CC4W2BHG",
+      "expected_state": "",
+      "category": "iluminacion",
+      "title": "HOVVIDA Tira LED 10M, 30 LED/Metro, 1x10M, 24V RGB Luces LED, 300 LED, APP y Mando a distancia, Modo de Música, LED para"
+    },
+    {
+      "asin": "B0CHYVN2D7",
+      "expected_state": "",
+      "category": "industria-empresas-y-ciencia",
+      "title": "Irrigador Bucal Portatil, Vimmk Irrigador Dental Inalámbrico Profesional 8 Boquillas 5 Modos, IPX7 Impermeable 300ML USB"
+    },
+    {
+      "asin": "B00DQGBYDC",
+      "expected_state": "",
+      "category": "informatica",
+      "title": "SanDisk Pendrive 64 GB Ultra Memoria flash USB 3.0 hasta 130 MB/s, (SecureAccess Software, Protección de contraseñas) Ne"
+    },
+    {
+      "asin": "B0BTJD6LCL",
+      "expected_state": "",
+      "category": "instrumentos-musicales",
+      "title": "Sony WH-CH520, Auriculares de diadema inalámbricos Bluetooth, diseño ligero, 50 h de batería, carga rápida, ecualizador,"
+    },
+    {
+      "asin": "B0BM5L4DKK",
+      "expected_state": "",
+      "category": "jardin",
+      "title": "SEESII 6'' Mini Motosierra Bateria 8000mAh, Motosierra Eléctrica Bateria con Depósito Para El Aceite y Cadena Reemplazab"
+    },
+    {
+      "asin": "B0CJ54TF8K",
+      "expected_state": "",
+      "category": "juguetes-y-juegos",
+      "title": "QuickStop - Juego de Mesa para Familia y Amigos - 2 a 7 Jugadores - 15min | Juego rápido y dinámico | Gran Premio del Ju"
+    },
+    {
+      "asin": "8491294287",
+      "expected_state": "",
+      "category": "libros",
+      "title": "La asistenta: El adictivo thriller viral que está arrasando internacionalmente: 1 (SUMA)"
+    },
+    {
+      "asin": "B0D44WM77X",
+      "expected_state": "",
+      "category": "moda",
+      "title": "Búfalo - Spray Impermeabilizante Calzado 250ml - Spray Protector Zapatillas Transparente- 100% Repelente al Agua y a la "
+    },
+    {
+      "asin": "B0CY8BX5VJ",
+      "expected_state": "",
+      "category": "nuevos-descubrimientos",
+      "title": "GORGECRAFT Kits de Deshuesado de Corsé de 5mX5mm Varillas de Modelado de Deshuesado de Corsé de Acero Plano con 20 Punta"
+    },
+    {
+      "asin": "B0F9LLMS1R",
+      "expected_state": "",
+      "category": "oficina-y-papeleria",
+      "title": "Finocam - Calendario de pared 2026 Mes Vista Enero - Diciembre (12 meses) | Calendario 2026 para anotar | Planificador m"
+    },
+    {
+      "asin": "B0FY36T6FG",
+      "expected_state": "",
+      "category": "peliculas-y-tv",
+      "title": "Devuélvemela"
+    },
+    {
+      "asin": "B0DS999MLG",
+      "expected_state": "",
+      "category": "productos-handmade",
+      "title": "CUBIBOO ART Número Madera 50 Cumpleaños Mujer, Hombre - 50 Aniversario Bodas Oro - Bodas de Oro 50 Aniversario - Regalos"
+    },
+    {
+      "asin": "B083VBXG2S",
+      "expected_state": "",
+      "category": "productos-para-mascotas",
+      "title": "by Amazon Arena Prémium de Bentonita con Aroma a Talco para Gatos, 10L (Paquete de 1) (Anteriormente Marca Lifelong, Mis"
+    },
+    {
+      "asin": "B0976YC7BM",
+      "expected_state": "",
+      "category": "salud-y-cuidado-personal",
+      "title": "Oral-B iO Ultimate Clean Cabezales de Recambio Originales, Negro, Pack de 4 | Recambios para Cepillos de Dientes Eléctri"
+    },
+    {
+      "asin": "B0BPYCBN2R",
+      "expected_state": "",
+      "category": "software",
+      "title": "Norton 360 Premium+Utilities 2026 | Antivírus 10 Dispositivos|1 año con renovación automática| Descarga digital"
+    },
+    {
+      "asin": "B0GHL75H9V",
+      "expected_state": "",
+      "category": "tienda-kindle",
+      "title": "Eres todo para mí"
+    },
+    {
+      "asin": "B081KJ9R3T",
+      "expected_state": "",
+      "category": "videojuegos",
+      "title": "Tarjeta regalo digital de Roblox - 800 Robux [Incluye un objeto virtual exclusivo] [Código de juego online]"
+    },
+    {
+      "asin": "B00A49XRHU",
+      "expected_state": "",
+      "category": "alimentacion-y-bebidas",
+      "title": "Gourmet Latino - Pack de 36 Bocadillos de Guayaba - 950 g - Sabor Dulce | Valor Energético 23g Hc por Bocadillo - Alto C"
+    },
+    {
+      "asin": "B09MJSV5WB",
+      "expected_state": "",
+      "category": "amazon-renewed",
+      "title": "Apple iPhone 13 128GB - Blanco Estrella (Reacondicionado)"
+    },
+    {
+      "asin": "B0FZVLXP1F",
+      "expected_state": "",
+      "category": "aplicaciones-y-juegos",
+      "title": "Administrador de Descargas para Fire TV"
+    },
+    {
+      "asin": "B08MXT5VDK",
+      "expected_state": "",
+      "category": "bebe",
+      "title": "WaterWipes Sensitive+ Newborn & Baby Wipes, Toallitas Para Recién Nacidos y Bebés, 540 unidades (paquete de 9), 3 en 1 L"
+    },
+    {
+      "asin": "B087R9HVRR",
+      "expected_state": "",
+      "category": "belleza",
+      "title": "Alpecin Caffeine Shampoo C1 2x 375ml | Champu anticaida hombre y con cafeina | Tratamiento para la caida del cabello | A"
+    },
+    {
+      "asin": "B0CGHXYM1Y",
+      "expected_state": "",
+      "category": "bricolaje-y-herramientas",
+      "title": "MEKO Alcachofa de Ducha con Filtro de 15 Pasos, Manguera, Alta Presión | Alcachofa Ducha Antical con Manguera de 1.5M, F"
+    },
+    {
+      "asin": "B0FYQLMLLQ",
+      "expected_state": "",
+      "category": "cd-y-vinilos",
+      "title": "DeBÍ TiRAR MáS FOToS"
+    },
+    {
+      "asin": "B07SS5PFJK",
+      "expected_state": "",
+      "category": "cheques-regalo",
+      "title": "Tarjeta regalo digital de Amazon | Amazon"
+    },
+    {
+      "asin": "B008YETL18",
+      "expected_state": "",
+      "category": "climate-pledge-friendly",
+      "title": "De'Longhi EcoDecalk Descalcificador DLSC500, 5 Dosis De Descalcificación, Accesorio De Mantenimiento Para Máquina De Caf"
+    },
+    {
+      "asin": "B0FH6VVHBL",
+      "expected_state": "",
+      "category": "coche-y-moto",
+      "title": "HIBRON EXTRASTAR Luz Emergencia Baliza V16 Homologada DGT con Geolocalización, Baliza Coche Conectada DGT 3.0, Datos Inc"
+    },
+    {
+      "asin": "B0DK6ZC5ZC",
+      "expected_state": "",
+      "category": "deportes-y-aire-libre",
+      "title": "Xiaomi Smart Band 9 Active, Schermo TFT 1.47\", Monitoraggio Salute: SpO2, Frequenza Cardiaca, Sonno e Stress, 50 modalit"
+    },
+    {
+      "asin": "B0CN41GMDK",
+      "expected_state": "",
+      "category": "dispositivos-amazon-y-accesorios",
+      "title": "Amazon Fire TV Stick 4K Select: comienza a reproducir contenido 4K en streaming, ve cientos de miles de películas y epis"
+    },
+    {
+      "asin": "B095CLQ1PT",
+      "expected_state": "",
+      "category": "electronica",
+      "title": "Tapo C210 - Cámara de Vigilancia WiFi Interior 360º, 2K 3MP, Detección IA | Detección Movimiento, Personas y Llanto de B"
+    },
+    {
+      "asin": "B0DB5KDB38",
+      "expected_state": "",
+      "category": "grandes-electrodomesticos",
+      "title": "NIUXX Kit de Unión Universal para Lavadoras y Secadoras | Kit Apilado Universal con Cuerda de Trinquete-para Lavadora y "
+    },
+    {
+      "asin": "B0BSXDL388",
+      "expected_state": "",
+      "category": "hogar-y-cocina",
+      "title": "BRITA Cartuchos de filtro de agua MAXTRA PRO Pure Performance - Pack 4 | Recambio original compatible para jarras BRITA "
+    },
+    {
+      "asin": "B0F1C56SR1",
+      "expected_state": "",
+      "category": "iluminacion",
+      "title": "Gritin Luz de Armario Recargable, 26CM Superbrillantes Luces Cocina, 2 uds. | 3 Colores & 5 Niveles de Brillo, 4 Modos, "
+    },
+    {
+      "asin": "B0CR1DBBFN",
+      "expected_state": "",
+      "category": "industria-empresas-y-ciencia",
+      "title": "eSUN PLA Filamento 1.75mm 1KG Negro, PLA Basic 3D Impresora Filamento | Filamento PLA Basic para Impresora 3D, Precisión"
+    },
+    {
+      "asin": "B007PFF28I",
+      "expected_state": "",
+      "category": "informatica",
+      "title": "Philips Usb 2.0 Palillo De 32 Gb, Nieve Edición, Blanco, Gris"
+    },
+    {
+      "asin": "B0FKL8JYGQ",
+      "expected_state": "",
+      "category": "instrumentos-musicales",
+      "title": "dji Mic Mini (2 TX + 1 RX), Audio Rico en Detalles, micrófono lavalier inalámbrico para cámara/Android, vlog para 2 Pers"
+    },
+    {
+      "asin": "B08CC9JM62",
+      "expected_state": "",
+      "category": "jardin",
+      "title": "NOVAR ECOGEL Jeringuilla contra cucarachas | Eficacia Profesional| Elimina 50 cucarachas con una Sola Gota, insectos | 1"
+    },
+    {
+      "asin": "B0DHSBBV6R",
+      "expected_state": "",
+      "category": "juguetes-y-juegos",
+      "title": "LEGO Speed Champions Coche de Carreras Ferrari SF-24 F1 77242 | Juguetes para niños de 10+ años, maqueta de vehículo roj"
+    },
+    {
+      "asin": "8431680253",
+      "expected_state": "",
+      "category": "libros",
+      "title": "El Lazarillo De Tormes (Clásicos Adaptados) - 9788431680251"
+    },
+    {
+      "asin": "B07H299DK5",
+      "expected_state": "",
+      "category": "moda",
+      "title": "Joma Camiseta Deportiva Manga Corta Hombre, 6XS - 3XL - Ligera y Transpirable, Óptima para Running y Gym - Combi"
+    },
+    {
+      "asin": "B0CZ7Y57TP",
+      "expected_state": "",
+      "category": "nuevos-descubrimientos",
+      "title": "80 Piezas Marcapaginas Personalizado,Marcador de Bricolaje Casero Transparente,Marcapaginas Niños Para Lectores,Regalos "
+    },
+    {
+      "asin": "B01FSGVN4M",
+      "expected_state": "",
+      "category": "oficina-y-papeleria",
+      "title": "Amazon Basics Papel multiusos para impresora A4 80gsm, 2500 Unidad, 5 Paquetes de 500, Blanco"
+    },
+    {
+      "asin": "B0FHW8Q6PP",
+      "expected_state": "",
+      "category": "peliculas-y-tv",
+      "title": "Master and Commander: Al Otro Lado del Mundo (Master and Commander: The Far Side of the World) (2003) (Peter Weir) (4K U"
+    },
+    {
+      "asin": "B0D42DTW87",
+      "expected_state": "",
+      "category": "productos-handmade",
+      "title": "MPZONLINE Letra con nombre personalizada decorativa, mesas dulces, comuniones, decoración habitación, letrero identifica"
+    },
+    {
+      "asin": "B00O4B8ISW",
+      "expected_state": "",
+      "category": "productos-para-mascotas",
+      "title": "Sanicat - Arena para Gatos Aglomerante Sin Perfume | Hecha de minerales con Control de Olor garantizado | Absorbe la Hum"
+    },
+    {
+      "asin": "B07M7L3J7Y",
+      "expected_state": "",
+      "category": "salud-y-cuidado-personal",
+      "title": "Citrato de Magnesio 1545mg + Magnesio Bisglicinato 600mg | Reduce Cansancio y Fatiga, Biodisponibilidad Veganas,120 Cáps"
+    },
+    {
+      "asin": "B07HWXT1T5",
+      "expected_state": "",
+      "category": "software",
+      "title": "Microsoft 365 Personal | 12 meses | 1 persona | Apps Office con IA | 1TB de Almacenamiento OneDrive | Código de activaci"
+    },
+    {
+      "asin": "B0CJ9T7DL2",
+      "expected_state": "",
+      "category": "tienda-kindle",
+      "title": "La cirujana: Un thriller trepidante y adictivo de suspense"
+    },
+    {
+      "asin": "B07JH6VD7T",
+      "expected_state": "",
+      "category": "videojuegos",
+      "title": "10€ PlayStation Store Tarjeta Regalo | Cuenta española [Código por correo]"
+    },
+    {
+      "asin": "B085LCQNZV",
+      "expected_state": "",
+      "category": "alimentacion-y-bebidas",
+      "title": "NESCAFÉ Dolce Gusto Café con Leche Intenso 48 cápsulas (3x16)"
+    },
+    {
+      "asin": "B09MGFJK73",
+      "expected_state": "",
+      "category": "amazon-renewed",
+      "title": "Apple iPhone 13, 128GB, Medianoche (Reacondicionado)"
+    },
+    {
+      "asin": "B0F1LTCS5M",
+      "expected_state": "",
+      "category": "aplicaciones-y-juegos",
+      "title": "Instalador de APK para Fire TV"
+    },
+    {
+      "asin": "B07N7Z2L26",
+      "expected_state": "",
+      "category": "bebe",
+      "title": "Dodot Pañales Bebé-Seco, Talla 6 (13-18 kg), 132 Pañales + 1 Pack de 10 Toallitas Regalo de Aqua Plastic Free, Una Noche"
+    },
+    {
+      "asin": "B00ST2GSRK",
+      "expected_state": "",
+      "category": "belleza",
+      "title": "La Roche-Posay, Cicaplast Baume B5+, Bálsamo Calmante Reparador, 40 ml | Bálsamo ultrarreparador, pieles irritadas o fra"
+    },
+    {
+      "asin": "B00BFXVJ4C",
+      "expected_state": "",
+      "category": "bricolaje-y-herramientas",
+      "title": "Loctite Super Glue-3 Monodosis, Pegamento Instantáneo Transparente, 3 x 1 g | Secado en 3 s, Resistente a Agua/Golpes/Te"
+    },
+    {
+      "asin": "B0FVNV8CK3",
+      "expected_state": "",
+      "category": "cd-y-vinilos",
+      "title": "Lux"
+    },
+    {
+      "asin": "B08ZQ79Q2V",
+      "expected_state": "",
+      "category": "cheques-regalo",
+      "title": "Código de Google Play (envío por correo electrónico; válido solo para España)"
+    },
+    {
+      "asin": "B08T1HR5CS",
+      "expected_state": "",
+      "category": "climate-pledge-friendly",
+      "title": "HP 305 6ZD17AE Pack de 2 Cartuchos de Tinta Negra y Tricolor Originales"
+    },
+    {
+      "asin": "B07DWN7264",
+      "expected_state": "",
+      "category": "coche-y-moto",
+      "title": "RD9 - Cadenas de nieve metálicas RD9 mm, talla Nº 90, set 2 uds, guantes incluidos"
+    },
+    {
+      "asin": "B078XXP3RH",
+      "expected_state": "",
+      "category": "deportes-y-aire-libre",
+      "title": "Amazon Basics Par de mancuernas de neopreno"
+    },
+    {
+      "asin": "B0CP32JG8B",
+      "expected_state": "",
+      "category": "dispositivos-amazon-y-accesorios",
+      "title": "Amazon Kindle 16 GB (modelo de 2024): ligero y compacto, con pasadas de página fluidas y contraste alto | Sin publicidad"
+    },
+    {
+      "asin": "B00LH3DMUO",
+      "expected_state": "",
+      "category": "electronica",
+      "title": "Amazon Basics - Paquete de 36 pilas alcalinas AAA de alto rendimiento, 1,5 voltios, vida útil de 10 años"
+    },
+    {
+      "asin": "B0CPFXM5PC",
+      "expected_state": "",
+      "category": "grandes-electrodomesticos",
+      "title": "Cecotec Campana Extractora Piramidal de 60cm Bolero Flux PM 603500 Inox B. Motor 65W, Acabado Inox, Succión 350m3/h, Con"
+    },
+    {
+      "asin": "B00E3862DE",
+      "expected_state": "",
+      "category": "hogar-y-cocina",
+      "title": "Philips Quitapelusas – para Todo Tipo de Prendas, Cuchilla de Alta Velocidad 8800 RPM, Compacto y Ligero, Depósito de Pe"
+    },
+    {
+      "asin": "B08GG42WXY",
+      "expected_state": "",
+      "category": "iluminacion",
+      "title": "Gritin Luz de Lectura Recargable, Lampara Libro de Lectura con 9 LED | 3 Modos de Protección de Los Ojos - Atenuación Co"
+    },
+    {
+      "asin": "B07ZHLHKV2",
+      "expected_state": "",
+      "category": "industria-empresas-y-ciencia",
+      "title": "Limpiezabarata Toalla Papel Secamanos Tejido Zig Zag, Laminadas Doble Capa, Caja 3000 Unidades"
+    },
+    {
+      "asin": "B00A0VCJPI",
+      "expected_state": "",
+      "category": "informatica",
+      "title": "TP-Link TL-WA850RE - Repetidor WiFi 4 300 Mbps, 1 Puerto 10/100Mbps | Amplificador de Señal WiFi. Conexión Estable. Modo"
+    },
+    {
+      "asin": "B0002M6CVC",
+      "expected_state": "",
+      "category": "instrumentos-musicales",
+      "title": "Ernie Ball Regular Slinky - Cuerdas para guitarra eléctrica, entorchado de níquel, 1 paquete, calibre 10-46"
+    },
+    {
+      "asin": "B07TV364MZ",
+      "expected_state": "",
+      "category": "jardin",
+      "title": "TempPro TP49 Pequeño higrómetro digital, termómetro de interior, Blanco | controlar temperatura y medir humedad para com"
+    },
+    {
+      "asin": "B0B3RVC43L",
+      "expected_state": "",
+      "category": "juguetes-y-juegos",
+      "title": "Hitster Original - Juego Musical para Adultos - Juego de Fiesta (ES) | Juego musical para adultos (+16 años). Escanea ca"
+    },
+    {
+      "asin": "8419835730",
+      "expected_state": "",
+      "category": "libros",
+      "title": "El secreto de la asistenta (La asistenta 2) (SUMA)"
+    },
+    {
+      "asin": "B01M01K39E",
+      "expected_state": "",
+      "category": "moda",
+      "title": "Skechers Mujer Graceful Get Connected Trainers"
+    },
+    {
+      "asin": "B0CL4XBSHR",
+      "expected_state": "",
+      "category": "nuevos-descubrimientos",
+      "title": "VaryPaper Suelos de Vinilo Adhesivos para Suelos Oscuro 90cmx15cm 20 Piezas Baldosas Adhesivas Suelo Vinilo Suelo Autoad"
+    },
+    {
+      "asin": "B0FQPL3NQF",
+      "expected_state": "",
+      "category": "oficina-y-papeleria",
+      "title": "Mr. Wonderful - Agenda Anual Wonder 2026 Vista Diaria + Bolígrafo Bobo Borrable - Sigue intentándolo"
+    },
+    {
+      "asin": "B07H9FBYZ6",
+      "expected_state": "",
+      "category": "peliculas-y-tv",
+      "title": "Shrek - Temporadas 1-4 [Blu-ray]"
+    },
+    {
+      "asin": "B0BXTTQCD7",
+      "expected_state": "",
+      "category": "productos-handmade",
+      "title": "Qué Kawaii® ORIGINAL Kit ratoncito Pérez MÁGICO. Puerta NATURAL de ABETO QUE ABRE Y BRILLA EN LA OSCURIDAD!!!.. + caja g"
+    },
+    {
+      "asin": "B00MW8G62E",
+      "expected_state": "",
+      "category": "productos-para-mascotas",
+      "title": "Amazon Basics Almohadillas de adiestramiento de Perros y Cachorros, diseño de 5 Capas a Prueba de Fugas con Superficie d"
+    },
+    {
+      "asin": "B0F9X3BYG9",
+      "expected_state": "",
+      "category": "salud-y-cuidado-personal",
+      "title": "OMRON X2 Essential Tensiómetro de brazo digital Validado clínicamente | Medidor de la tensión arterial con indicador de "
+    },
+    {
+      "asin": "B0BGPKX8VT",
+      "expected_state": "",
+      "category": "software",
+      "title": "McAfee Total Protection para 10 Dispositivos 2026, 15 meses, Exclusivos de Amazon | Antivirus, VPN, software de segurida"
+    },
+    {
+      "asin": "B0DXFXJ895",
+      "expected_state": "",
+      "category": "tienda-kindle",
+      "title": "Enemigos por contrato: Dos abogados condenados a perder el juicio (Abogados, enemigos y otros problemas nº 1)"
+    },
+    {
+      "asin": "B01NCLG45T",
+      "expected_state": "",
+      "category": "videojuegos",
+      "title": "8Bitdo - Wireless USB Adapter 2 for Switch OLED, Windows PC, Mac and Raspberry Pi, PS5, PS4, Switch Pro Controller and M"
+    },
+    {
+      "asin": "B0FL2N3KY2",
+      "expected_state": "",
+      "category": "alimentacion-y-bebidas",
+      "title": "by Amazon Cápsulas de Café Espresso Compatibles con Nespresso, 100 Unidades (5 Paquetes de 20), Certificadas por Rainfor"
+    },
+    {
+      "asin": "B0CVJXXPFL",
+      "expected_state": "",
+      "category": "amazon-renewed",
+      "title": "Apple iPhone 15 Pro 256 GB - Titanio Blanco (Reacondicionado)"
+    },
+    {
+      "asin": "B0FRB23QN1",
+      "expected_state": "",
+      "category": "aplicaciones-y-juegos",
+      "title": "HOW Do Install Google Play On Kindle Fire / Updater For Google Play Store"
+    },
+    {
+      "asin": "B0CP5XJWHJ",
+      "expected_state": "",
+      "category": "bebe",
+      "title": "Dodot Pure Aqua Touch Toallitas Para Bebé 9 Paquetes De 48 Unidades = 432 Toallitas, Textura Suave & Loción Con 99% De A"
+    }
+  ]
+}

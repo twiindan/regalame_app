@@ -472,6 +472,65 @@ def test_get_blog_post_detail_does_not_mutate_shared_post(session, catalog_seed)
     assert shared.get("hero_image") is None  # module-level dict untouched
 
 
+def test_get_blog_post_detail_accepts_category_list(session, catalog_seed):
+    from blog_config import BLOG_POSTS
+    from services import get_blog_post_detail
+
+    # The shared seed covers only one of the two requested categories; add a
+    # minimal toy product so the union of both categories is exercised.
+    session.add(Product(
+        asin="T1", title="Set de construcción", title_normalized=normalize_text("Set de construcción"),
+        image_url="img-t1.jpg", url="https://www.amazon.es/dp/T1", price_numeric=25.0,
+        price_raw="25,00 €", category="Juguetes y juegos",
+        category_slug="juguetes-y-juegos", scraped_at=datetime(2026, 1, 1),
+    ))
+    session.commit()
+
+    BLOG_POSTS.append({
+        "slug": "multi-cat-fixture",
+        "title": "Multi categoría",
+        "description": "prueba",
+        "criteria": {"categories": ["Electrónica", "Juguetes y juegos"], "limit": 3},
+        "hero_image": None,
+    })
+    try:
+        post, products = get_blog_post_detail(session, "multi-cat-fixture")
+        assert len(products) <= 3
+        cats = {p.category_slug for p in products}
+        assert cats <= {"electronica", "juguetes-y-juegos"}
+        assert len(cats) >= 1
+    finally:
+        BLOG_POSTS.pop()
+
+
+def test_get_blog_post_detail_criterialess_post_has_no_products(session, catalog_seed):
+    from blog_config import BLOG_POSTS
+    from services import get_blog_post_detail
+
+    BLOG_POSTS.append({
+        "slug": "criterialess-fixture",
+        "title": "Guía sin productos",
+        "description": "prueba",
+        "hero_image": None,
+    })
+    try:
+        post, products = get_blog_post_detail(session, "criterialess-fixture")
+        assert products == []
+        assert post["hero_image"] is None
+    finally:
+        BLOG_POSTS.pop()
+
+
+def test_get_blog_post_detail_max_price_only_post_keeps_catalog_search(session, catalog_seed):
+    from services import get_blog_post_detail
+
+    # The seed has A1 at 10.0 € (<= 20) and A2 at 100.0 €: the historical
+    # whole-catalog search for max_price-only posts must keep returning it.
+    post, products = get_blog_post_detail(session, "regalos-baratos-menos-20-euros")
+    assert post is not None
+    assert {p.asin for p in products} == {"A1"}
+
+
 def test_get_blog_posts_with_covers_resolves_cover(session, catalog_seed):
     from services import get_blog_posts_with_covers
 
@@ -535,6 +594,46 @@ def test_get_blog_posts_with_covers_falls_back_when_no_unused_image(session):
     # image, so it falls back to the first visible image instead of raising.
     assert posts["regalos-amigo-invisible-10-euros"]["hero_image"] == "img-only.jpg"
     assert posts["regalos-baratos-menos-20-euros"]["hero_image"] == "img-only.jpg"
+
+
+def test_get_blog_posts_with_covers_uses_curated_items(session, monkeypatch):
+    import services
+    from services import get_blog_posts_with_covers
+
+    # Catalog bystander that no curated list selects: a cover must never come
+    # from a whole-catalog search, only from the authored ASINs.
+    bystander = Product(
+        asin="E9", title="Producto no curado", title_normalized=normalize_text("Producto no curado"),
+        image_url="img-bystander.jpg", url="https://www.amazon.es/dp/E9", price_numeric=5.0,
+        price_raw="5,00 €", category="Alimentación y bebidas",
+        category_slug="alimentacion-y-bebidas", scraped_at=datetime(2026, 1, 1),
+    )
+    curated = Product(
+        asin="E2", title="Regalo curado", title_normalized=normalize_text("Regalo curado"),
+        image_url="img-curated.jpg", url="https://www.amazon.es/dp/E2", price_numeric=12.0,
+        price_raw="12,00 €", category="Libros",
+        category_slug="libros", scraped_at=datetime(2026, 1, 1),
+    )
+    session.add_all([bystander, curated])
+    session.commit()
+
+    monkeypatch.setattr(services, "BLOG_POSTS", [
+        {"slug": "items-cover", "title": "T", "description": "D",
+         "criteria": {"items": ["E2"]}, "hero_image": None},
+        {"slug": "items-advance", "title": "T", "description": "D",
+         "criteria": {"items": ["E2", "E9"]}, "hero_image": None},
+        {"slug": "items-fallback", "title": "T", "description": "D",
+         "criteria": {"items": ["E2"]}, "hero_image": None},
+    ])
+
+    posts = {p["slug"]: p for p in get_blog_posts_with_covers(session)}
+
+    # The cover comes from the curated item's product, not the bystander.
+    assert posts["items-cover"]["hero_image"] == "img-curated.jpg"
+    # Dedup: the second card advances to the next curated item's unused image.
+    assert posts["items-advance"]["hero_image"] == "img-bystander.jpg"
+    # Every candidate image already used: fall back to the first item's image.
+    assert posts["items-fallback"]["hero_image"] == "img-curated.jpg"
 
 
 def test_search_treats_percent_as_literal(session, catalog_seed):

@@ -70,6 +70,17 @@ def test_organizer_explains_actual_workflow_and_limits(client):
         assert phrase in text
 
 
+def test_organizer_aside_matches_config_flag(client):
+    from blog_config import BLOG_POSTS
+    for post in BLOG_POSTS:
+        soup = page(client, f"/blog/{post['slug']}")
+        links = soup.main.find_all("a", href="/amigo-invisible")
+        if post.get("organizer_aside"):
+            assert links, post["slug"]
+        else:
+            assert not links, post["slug"]
+
+
 def test_amigo_invisible_landing_renders_faq(client):
     soup = page(client, "/amigo-invisible")
     heading = soup.main.find("h2", string="Preguntas frecuentes")
@@ -103,13 +114,6 @@ def test_amigo_invisible_emits_faqpage_json_ld(client):
         assert answer["text"]
 
 
-@pytest.mark.parametrize("slug", [post["slug"] for post in BLOG_POSTS])
-def test_only_relevant_blog_post_links_to_organizer(client, slug):
-    soup = page(client, f"/blog/{slug}")
-    links = soup.main.find_all("a", href="/amigo-invisible")
-    assert len(links) == (1 if slug == "regalos-amigo-invisible-10-euros" else 0)
-
-
 @pytest.mark.parametrize("domain", ["https://regalame.app", "https://landing.example/"])
 @pytest.mark.parametrize("path", ["/", "/amigo-invisible"])
 def test_landings_opt_in_to_clean_configured_identity(client, monkeypatch, domain, path):
@@ -135,7 +139,10 @@ def test_shared_metadata_is_valid_and_does_not_invent_claims(client, path):
     assert software["name"] == "Regálame"
     assert software["operatingSystem"] == "Web"
     assert "aggregateRating" not in software
-    assert all(item["@type"] != "FAQPage" for item in schemas)
+    # The organizer landing intentionally emits FAQPage; the other paths here
+    # must remain FAQPage-free.
+    if path != "/amigo-invisible":
+        assert all(item["@type"] != "FAQPage" for item in schemas)
     claims = " ".join([software["description"], soup.find(
         "meta", attrs={"name": "description"}
     )["content"], soup.find("meta", property="og:description")["content"],
@@ -569,3 +576,37 @@ def test_category_page_unknown_slug_keeps_existing_404_policy(client, catalog_se
     robots = soup.find("meta", attrs={"name": "robots"})
     assert robots and "noindex" in robots["content"]
     assert all(item["@type"] != "FAQPage" for item in _json_ld(soup))
+
+
+# --- Organizer landing FAQ + category ideas (plan task 8) ---
+
+
+def test_organizer_landing_links_category_ideas(client):
+    soup = page(client, "/amigo-invisible")
+    assert soup.main.find("a", href="/ideas")
+
+
+def test_organizer_landing_has_visible_faq_and_faqpage_schema(client):
+    soup = page(client, "/amigo-invisible")
+    faq_heading = soup.main.find("h2", string="Preguntas frecuentes")
+    assert faq_heading
+    questions = [h3.get_text(strip=True) for h3 in faq_heading.find_next("div").find_all("h3")]
+    assert 4 <= len(questions) <= 6
+
+    schemas = _json_ld(soup)
+    faq = next(item for item in schemas if item.get("@type") == "FAQPage")
+    names = [q["name"] for q in faq["mainEntity"]]
+    for question in questions:
+        assert question in names
+    # Visible FAQ and schema render from the same faq_items source: they must
+    # stay identical (questions AND answers), whatever the content is.
+    answers = soup.main.find("h2", string="Preguntas frecuentes").find_next("div").find_all("p")
+    assert [a.get_text(strip=True) for a in answers] == [
+        q["acceptedAnswer"]["text"] for q in faq["mainEntity"]
+    ]
+    assert len(faq["mainEntity"]) == len(questions) == len(answers)
+
+
+def test_home_links_the_christmas_guide(client):
+    soup = page(client, "/")
+    assert soup.main.find("a", href="/blog/regalos-navidad-mas-deseados")

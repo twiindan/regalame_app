@@ -189,3 +189,104 @@ def test_christmas_guide_does_not_show_the_organizer_aside(client):
 
     assert soup.main.find("a", href="/amigo-invisible") is None
 
+
+# --------------------------------------------------------------------------- #
+# WU-4 — informational amigo-invisible guides (text-only, guide + aside)
+# --------------------------------------------------------------------------- #
+
+NEW_GUIDE_SLUGS = [
+    "como-organizar-amigo-invisible",
+    "reglas-del-amigo-invisible",
+    "frases-para-el-amigo-invisible",
+]
+
+
+@pytest.mark.parametrize("slug", NEW_GUIDE_SLUGS, ids=NEW_GUIDE_SLUGS)
+def test_informational_guide_renders_with_organizer_aside(client, slug):
+    from blog_config import BLOG_POSTS
+
+    response = client.get(f"/blog/{slug}")
+
+    assert response.status_code == 200
+    post = next(p for p in BLOG_POSTS if p["slug"] == slug)
+    soup = BeautifulSoup(response.text, "html.parser")
+    assert len(soup.find_all("h1")) == 1
+    assert soup.h1.get_text(" ", strip=True) == post["title"]
+    assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [
+        f"https://regalame.app/blog/{slug}"
+    ]
+    assert len(soup.find_all("h2")) >= 2
+    assert soup.main.find("a", href="/amigo-invisible") is not None
+
+    sitemap = client.get("/sitemap.xml")
+    assert sitemap.status_code == 200
+    assert f"/blog/{slug}" in sitemap.text
+
+
+# --------------------------------------------------------------------------- #
+# WU-5 — audience posts (multi-category curated product lists)
+# --------------------------------------------------------------------------- #
+
+NEW_AUDIENCE_SLUGS = [
+    "amigo-invisible-para-companeros-de-trabajo",
+    "amigo-invisible-para-ninos",
+]
+
+
+def _seed_audience_products(session):
+    """Real-catalog products matching each audience post's curated items.
+
+    Seeds the first two ASINs of each post's `criteria["items"]` so the
+    render exercises the hand-curated `products_by_asins` path.
+    """
+    from datetime import datetime
+
+    from catalog import normalize_text
+    from models import Product
+
+    for asin, title, category, slug, price in [
+        ("8425432022", "El Hombre en busca de Sentido", "Libros", "libros", 12.25),
+        ("B00ST2GSRK", "La Roche Posay Cicaplast", "Belleza", "belleza", 8.99),
+        ("8460659666", "Virus", "Juguetes y juegos", "juguetes-y-juegos", 12.99),
+        ("B0DHSBBV6R", "LEGO Speed Champions Ferrari", "Juguetes y juegos", "juguetes-y-juegos", 21.99),
+    ]:
+        session.add(Product(
+            asin=asin,
+            title=title,
+            title_normalized=normalize_text(title),
+            image_url=f"https://cdn.example/{asin}.jpg",
+            url=f"https://www.amazon.es/dp/{asin}",
+            category=category,
+            category_slug=slug,
+            price_numeric=price,
+            price_raw=f"{price} €",
+            scraped_at=datetime(2026, 1, 1),
+        ))
+    session.commit()
+
+
+@pytest.mark.parametrize("slug", NEW_AUDIENCE_SLUGS, ids=NEW_AUDIENCE_SLUGS)
+def test_audience_post_renders_curated_products(client, session, slug):
+    from blog_config import BLOG_POSTS
+
+    _seed_audience_products(session)
+
+    response = client.get(f"/blog/{slug}")
+
+    assert response.status_code == 200
+    post = next(p for p in BLOG_POSTS if p["slug"] == slug)
+    soup = BeautifulSoup(response.text, "html.parser")
+    assert len(soup.find_all("h1")) == 1
+    assert soup.h1.get_text(" ", strip=True) == post["title"]
+    assert [item["href"] for item in soup.find_all("link", rel="canonical")] == [
+        f"https://regalame.app/blog/{slug}"
+    ]
+    assert soup.find_all(class_="product-card")
+    # The seeded curated ASIN must render — pins the items path, not a
+    # leftover category search.
+    assert post["criteria"]["items"][0] in response.text
+
+    sitemap = client.get("/sitemap.xml")
+    assert sitemap.status_code == 200
+    assert f"/blog/{slug}" in sitemap.text
+

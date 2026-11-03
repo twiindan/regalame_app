@@ -41,3 +41,8 @@ client_secret_*.json
 search-console-token.json
 search-console-export.json
 .search-console-*
+
+# GSC local tooling (never commit credentials or generated reports)
+tools/gsc_service_account.json
+tools/gsc_client_secret.json
+tools/reports/
