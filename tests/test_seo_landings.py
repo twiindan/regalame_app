@@ -101,7 +101,10 @@ def test_shared_metadata_is_valid_and_does_not_invent_claims(client, path):
     assert software["name"] == "Regálame"
     assert software["operatingSystem"] == "Web"
     assert "aggregateRating" not in software
-    assert all(item["@type"] != "FAQPage" for item in schemas)
+    # The organizer landing intentionally emits FAQPage; the other paths here
+    # must remain FAQPage-free.
+    if path != "/amigo-invisible":
+        assert all(item["@type"] != "FAQPage" for item in schemas)
     claims = " ".join([software["description"], soup.find(
         "meta", attrs={"name": "description"}
     )["content"], soup.find("meta", property="og:description")["content"],
@@ -466,8 +469,10 @@ def test_related_guides_prefer_a_matching_category():
     assert fallback
 
 
-def test_faqpage_is_confined_to_category_landings(client, catalog_seed):
-    for path in ["/", "/amigo-invisible", "/catalog", "/blog",
+def test_faqpage_does_not_leak_onto_unrelated_pages(client, catalog_seed):
+    # The organizer landing and category landings intentionally emit FAQPage;
+    # unrelated pages must stay FAQPage-free.
+    for path in ["/", "/catalog", "/blog",
                  "/blog/regalos-amigo-invisible-10-euros"]:
         soup = page(client, path)
         assert all(item["@type"] != "FAQPage" for item in _json_ld(soup)), path
@@ -481,3 +486,25 @@ def test_category_page_unknown_slug_keeps_existing_404_policy(client, catalog_se
     robots = soup.find("meta", attrs={"name": "robots"})
     assert robots and "noindex" in robots["content"]
     assert all(item["@type"] != "FAQPage" for item in _json_ld(soup))
+
+
+# --- Organizer landing FAQ + category ideas (plan task 8) ---
+
+
+def test_organizer_landing_links_category_ideas(client):
+    soup = page(client, "/amigo-invisible")
+    assert soup.main.find("a", href="/ideas")
+
+
+def test_organizer_landing_has_visible_faq_and_faqpage_schema(client):
+    soup = page(client, "/amigo-invisible")
+    faq_heading = soup.main.find("h2", string="Preguntas frecuentes")
+    assert faq_heading
+    questions = [h3.get_text(strip=True) for h3 in faq_heading.find_next("div").find_all("h3")]
+    assert len(questions) == 3
+
+    schemas = _json_ld(soup)
+    faq = next(item for item in schemas if item.get("@type") == "FAQPage")
+    names = [q["name"] for q in faq["mainEntity"]]
+    for question in questions:
+        assert question in names

@@ -3,6 +3,23 @@
 {% block title %}Amigo invisible online: organiza tu sorteo | Regálame{% endblock %}
 {% block description %}Organiza tu amigo invisible: crea un grupo, invita a los participantes y realiza el sorteo. Cada participante necesita una cuenta y puede compartir su lista de deseos.{% endblock %}
 
+{% block extra_schema %}
+<script type="application/ld+json">
+{{ {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+        {"@type": "Question", "name": "¿Es gratis organizar el amigo invisible?",
+         "acceptedAnswer": {"@type": "Answer", "text": "Sí. Crear un grupo, invitar participantes y realizar el sorteo es gratuito."}},
+        {"@type": "Question", "name": "¿Cada participante necesita una cuenta?",
+         "acceptedAnswer": {"@type": "Answer", "text": "Sí. Para unirse al grupo y consultar a quién le toca regalar, cada persona inicia sesión con su cuenta."}},
+        {"@type": "Question", "name": "¿Cómo invito a mi grupo?",
+         "acceptedAnswer": {"@type": "Answer", "text": "Comparte el enlace de invitación por WhatsApp o email. Cada persona entra con el enlace y se une con su cuenta."}}
+    ]
+} | tojson }}
+</script>
+{% endblock %}
+
 {% block content %}
 <div class="max-w-3xl mx-auto space-y-10">
     <header class="text-center">
@@ -27,6 +44,25 @@
         <div class="flex flex-wrap gap-4">
             <a href="/" class="text-pink-300 hover:text-white underline">Crear mi lista de regalos</a>
             <a href="/blog/regalos-amigo-invisible-10-euros" class="text-pink-300 hover:text-white underline">Ideas de regalos de amigo invisible por menos de 10 €</a>
+            <a href="/ideas" class="text-pink-300 hover:text-white underline">Ideas de regalos por categoría</a>
+        </div>
+    </section>
+
+    <section class="glass-panel rounded-2xl p-8">
+        <h2 class="text-2xl font-bold mb-4">Preguntas frecuentes</h2>
+        <div class="space-y-6 text-gray-300">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-200 mb-2">¿Es gratis organizar el amigo invisible?</h3>
+                <p>Sí. Crear un grupo, invitar participantes y realizar el sorteo es gratuito.</p>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold text-gray-200 mb-2">¿Cada participante necesita una cuenta?</h3>
+                <p>Sí. Para unirse al grupo y consultar a quién le toca regalar, cada persona inicia sesión con su cuenta.</p>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold text-gray-200 mb-2">¿Cómo invito a mi grupo?</h3>
+                <p>Comparte el enlace de invitación por WhatsApp o email. Cada persona entra con el enlace y se une con su cuenta.</p>
+            </div>
         </div>
     </section>
 </div>
