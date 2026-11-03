@@ -37,7 +37,7 @@ campaign.
 - Authorized: local implementation, strict TDD, tests, edits to
   `main.py`/templates/`blog_config.py`/`blog` config surface,
   `tools/gsc_report.py` + its tests, `.gitignore` additions, docs, work-unit
-  commits on `feature/amigo-invisible-seo-campaign` (base `main` @ `917b4e7`),
+  commits on `feat/amigo-invisible-seo-campaign` (base `main` @ `917b4e7`),
   ODD doc + design spec.
 - Not authorized: push, PR, merge (user-owned), production dependency
   changes (GSC deps stay in `requirements-search-console.txt`, local CLI
@@ -158,12 +158,16 @@ page-level signal to act on, so the plan's defaults hold:
 **Mode: strict TDD on** (`openspec/config.yaml`: `strict_tdd: true`,
 `apply.tdd: true`). Runner: `venv/bin/python -m pytest`.
 
-**Known environmental failures (pre-existing on main @ `917b4e7`, verified
-via a detached temp worktree — NOT campaign regressions):** 8 failures in
-`tests/test_e2e.py` (2, playwright) and `tests/test_scraper.py` +
-`tests/test_refresh_catalog.py` (6, async/ordering). Campaign acceptance for
-full-suite runs: zero NEW failures vs this baseline (568 passed / 8 failed
-observed on the branch).
+**Test-environment corrections (pre-PR, 2026-11-03):** an earlier diagnosis
+claimed 8 pre-existing failures on `main` (2 e2e + 6 scraper/refresh). The 6
+scraper/refresh failures were **not** environmental: Task 1's local pin
+`requests==2.32.3` downgraded the shared venv (prod pins `2.32.5`), and the
+pin was the cause — with `2.32.5` they pass. The pin is aligned
+(`requirements-search-console.txt` now pins `2.32.5`). Remaining local-only
+failures: `tests/test_e2e.py` (2, playwright against a live server) — CI
+excludes that file by design (`--ignore=tests/test_e2e.py`). **CI-equivalent
+gate: `venv/bin/python -m pytest -q --ignore=tests/test_e2e.py` → 589
+passed, 0 failed.**
 
 Observed results: (to be recorded per task)
 
@@ -508,7 +512,7 @@ Observed results: (to be recorded per task)
 | **Total (code, docs commits excluded)** | 44 commits on branch | **1,231** |
 
 - **Delivery: `single-pr`** (user decision, 2026-11-03): the branch
-  `feature/amigo-invisible-seo-campaign` goes to one PR against `main`;
+  `feat/amigo-invisible-seo-campaign` goes to one PR against `main`;
   push/PR/merge are user-owned.
 - RDD assess at close: **medium, `review_due: false` (`under_budget`)** —
   no native review triggered for the slice.
