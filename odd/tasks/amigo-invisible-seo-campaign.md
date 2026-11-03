@@ -197,6 +197,23 @@ Observed results: (to be recorded per task)
   `chmod(0o600)` after write, 504 added to the retryable set). Smoke:
   `venv/bin/python tools/gsc_report.py --help` exited 0 with the full flag
   list (argparse exits before any credential load).
+- Plan task 6 readiness fixes (quality review of the GSC report CLI): (a)
+  `.gitignore` gap — `docs/gsc-setup-guide.md` Option B references
+  `tools/gsc_client_secret.json`, but only `tools/gsc_service_account.json`
+  and `tools/reports/` were ignored; the OAuth client-secret path is now
+  ignored too. Proof: `git check-ignore -v tools/gsc_client_secret.json` ->
+  `.gitignore:47:tools/gsc_client_secret.json`. (b) Error-body surfacing:
+  RED `test_fetch_rows_surfaces_api_error_body` FAILED — a real 403 (e.g.
+  service account added but permissions not propagated) surfaced as the
+  opaque `RuntimeError: HTTP 403` (regex 'sufficient permissions' did not
+  match) -> GREEN `19 passed`: `fetch_rows` wraps `raise_for_status()` and
+  re-raises `RuntimeError("GSC API error ({status}): {first 500 chars of
+  body}")` chained from the original exception; the existing retry tests
+  stay green because the fake's RuntimeError and requests' HTTPError are
+  both caught and re-wrapped. One fake amendment: `_FakeResponse` gained a
+  `text` property (json.dumps of the payload) — the plan-verbatim GREEN
+  implementation reads `response.text`, which the fake lacked, so without
+  it the pinned `19 passed` observable was unreachable.
 
 ## Review workload and delivery
 
@@ -240,6 +257,11 @@ are harmless.
       entry + `__main__` guard; task 4/5 review amendments: compact float
       rendering, 0600 token permissions, 504 retryable; one plan-text
       amendment recorded under Observed results) (`tools/gsc_report.py`,
+      `tests/test_gsc_report.py`).
+- [x] Plan task 6 readiness fixes — `.gitignore` OAuth client-secret path
+      + error-body surfacing in `fetch_rows` on non-retryable GSC failures
+      (quality-review findings; `_FakeResponse` text amendment recorded
+      under Observed results) (`.gitignore`, `tools/gsc_report.py`,
       `tests/test_gsc_report.py`).
 - [ ] T2..T8 implementation.
 - [ ] T4 checkpoint (baseline + targets) — recorded here.
